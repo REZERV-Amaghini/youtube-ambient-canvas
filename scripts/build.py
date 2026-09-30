@@ -10,7 +10,7 @@ VERSION = json.loads((ROOT / "manifest.json").read_text(encoding="utf-8"))["vers
 EXTENSION_FILES = ["renderer.js", "ambient.js", "ambient.css", "LICENSE"] + [
     f"assets/icon-{size}.png" for size in (16, 32, 48, 96, 128)
 ]
-SOURCE_FILES = ["manifest.json", "README.md", "PRIVACY.md", "CONTRIBUTING.md",
+SOURCE_FILES = ["manifest.json", "README.md", "PRIVACY.md", "CONTRIBUTING.md", "assets/preview-hardwell-ja.gif",
                 "LICENSE", ".gitignore", "package.json", "scripts/build.py",
                 "scripts/create_assets.py", "tests/fixture.html",
                 "tests/server.cjs", "tests/check-renderer.js", "tests/firefox-check.html", "tests/chat-fixture.html"]

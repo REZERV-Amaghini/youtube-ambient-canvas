@@ -1,11 +1,11 @@
-# 公開手順 — 0.2.1
+# 公開手順 — 0.2.2
 
 |提出物|用途|
 |---|---|
-|`dist/youtube-ambient-canvas-chrome-0.2.1.zip`|Chrome Web Store|
-|`dist/youtube-ambient-canvas-firefox-0.2.1.zip`|Firefox AMO|
-|`dist/youtube-ambient-canvas-source-0.2.1.zip`|公開ソース／AMOのソース資料|
-|`dist/youtube-ambient-canvas-store-assets-0.2.1.zip`|説明文・アイコン・画像|
+|`dist/youtube-ambient-canvas-chrome-0.2.2.zip`|Chrome Web Store|
+|`dist/youtube-ambient-canvas-firefox-0.2.2.zip`|Firefox AMO|
+|`dist/youtube-ambient-canvas-source-0.2.2.zip`|公開ソース／AMOのソース資料|
+|`dist/youtube-ambient-canvas-store-assets-0.2.2.zip`|説明文・アイコン・画像|
 |`dist/SHA256SUMS.txt`|チェックサム|
 
 本体ZIPは実行コード、マニフェスト、アイコン、ライセンスのみです。
@@ -35,8 +35,8 @@ Chrome版からFirefox固有項目を除き、Firefox版は収集なしを宣言
 
 Firefox 140以降を対象に、[データ同意仕様](https://extensionworkshop.com/documentation/develop/firefox-builtin-data-consent/)
 に従って`required: ["none"]`を宣言しています。
-データ同意項目に対応するAndroid側の最低バージョンは142と宣言していますが、
-今回の対応・検証範囲はデスクトップです。AMOではデスクトップ向けとして提出します。
+今回の対応・検証範囲はデスクトップです。Android互換性をマニフェストで宣言せず、
+AMOの互換性選択でもAndroidを外してデスクトップ向けとして提出します。
 [パッケージ仕様](https://extensionworkshop.com/documentation/publish/package-your-extension/)も参照。
 
 ## GitHub

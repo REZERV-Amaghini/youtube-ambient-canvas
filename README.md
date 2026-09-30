@@ -10,8 +10,8 @@ Chrome Web Store版：公開後、この欄にストアの直接リンクを追�
 Firefox AMO版：公開後、この欄にストアの直接リンクを追加します。
 
 審査前の開発版は[GitHub Releases](https://github.com/REZERV-Amaghini/youtube-ambient-canvas/releases)からChrome用・Firefox用ZIPを取得できます。
-([Chrome用ZIP](https://github.com/REZERV-Amaghini/youtube-ambient-canvas/releases/download/v0.2.1/youtube-ambient-canvas-chrome-0.2.1.zip) /
-[Firefox用ZIP](https://github.com/REZERV-Amaghini/youtube-ambient-canvas/releases/download/v0.2.1/youtube-ambient-canvas-firefox-0.2.1.zip))
+([Chrome用ZIP](https://github.com/REZERV-Amaghini/youtube-ambient-canvas/releases/download/v0.2.2/youtube-ambient-canvas-chrome-0.2.2.zip) /
+[Firefox用ZIP](https://github.com/REZERV-Amaghini/youtube-ambient-canvas/releases/download/v0.2.2/youtube-ambient-canvas-firefox-0.2.2.zip))
 Chromeは展開して「パッケージ化されていない拡張機能」として読み込みます。
 Firefoxの永続インストールにはAMOの署名が必要です。
 
@@ -78,7 +78,9 @@ SHA-256一覧を`dist/`に生成します。明示したファイルだけを梱
 [ストア説明](docs/LISTING.md)・[対応候補](docs/TARGETS.md)・
 [検証結果](docs/VALIDATION.md)
 
-![Demonstration with original graphics](assets/store-screenshot-1280x800.png)
+![YouTube Ambient Canvas — 実際のYouTube画面と日本語設定](assets/preview-hardwell-ja.gif)
+
+実際のYouTubeでの動作例です。映像はHardwellの動画を使用しています。
 
 ## English
 

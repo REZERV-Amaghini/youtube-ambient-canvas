@@ -1,5 +1,5 @@
 {
-  "name": "youtube-ambient-canvas", "version": "0.2.1", "private": true,
+  "name": "youtube-ambient-canvas", "version": "0.2.2", "private": true,
   "description": "YouTube-only ambient background browser extension", "license": "MIT",
   "scripts": {
     "check": "node --check renderer.js && node --check ambient.js && node --check tests/server.cjs",
