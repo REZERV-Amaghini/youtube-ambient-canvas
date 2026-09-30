@@ -1,11 +1,11 @@
-# 公開手順 — 0.2.3
+# 公開手順 — 0.2.4
 
 |提出物|用途|
 |---|---|
-|`dist/youtube-ambient-canvas-chrome-0.2.3.zip`|Chrome Web Store|
-|`dist/youtube-ambient-canvas-firefox-0.2.3.zip`|Firefox AMO|
-|`dist/youtube-ambient-canvas-source-0.2.3.zip`|公開ソース／AMOのソース資料|
-|`dist/youtube-ambient-canvas-store-assets-0.2.3.zip`|説明文・アイコン・画像|
+|`dist/youtube-ambient-canvas-chrome-0.2.4.zip`|Chrome Web Store|
+|`dist/youtube-ambient-canvas-firefox-0.2.4.zip`|Firefox AMO|
+|`dist/youtube-ambient-canvas-source-0.2.4.zip`|公開ソース／AMOのソース資料|
+|`dist/youtube-ambient-canvas-store-assets-0.2.4.zip`|説明文・アイコン・画像|
 |`dist/SHA256SUMS.txt`|チェックサム|
 
 本体ZIPは実行コード、マニフェスト、アイコン、ライセンスのみです。

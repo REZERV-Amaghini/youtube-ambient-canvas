@@ -50,6 +50,12 @@
     'body', 'ytd-app', 'ytd-app > #content', '#page-manager', 'ytd-page-manager',
     'ytd-watch-flexy', 'ytd-watch-grid', 'ytd-masthead', 'ytd-masthead #background',
     ':is(ytd-watch-flexy,ytd-watch-grid) :is(#columns,#primary,#primary-inner,#secondary,#secondary-inner,#below,#panels,#full-bleed-container,#related,#comments,#description,#description-inner,ytd-comments,ytd-watch-metadata,ytd-playlist-panel-renderer,ytd-item-section-renderer,ytd-rich-grid-renderer,yt-chip-cloud-renderer)',
+    ':is(ytd-watch-flexy,ytd-watch-grid) :is(.box.ytd-watch-flexy,.box.ytd-watch-grid,ytd-watch-next-secondary-results-renderer)',
+    ':is(ytd-watch-flexy,ytd-watch-grid) :is(ytd-engagement-panel-section-list-renderer,ytd-engagement-panel-title-header-renderer,ytd-transcript-renderer,ytd-transcript-search-panel-renderer,ytd-transcript-search-box-renderer,ytd-transcript-segment-list-renderer,ytd-transcript-body-renderer,.input-container.ytd-transcript-search-box-renderer)',
+    ':is(ytd-watch-flexy,ytd-watch-grid) ytd-engagement-panel-section-list-renderer :is(#content,#header,#subheader,#panel-content)',
+    ':is(ytd-watch-flexy,ytd-watch-grid)[theater] :is(#player,#player-container,#player-container-outer,#player-container-inner,#ytd-player,.player-container-background)',
+    ':is(ytd-watch-flexy,ytd-watch-grid)[theater] #movie_player:not(.ytp-fullscreen):not(.ytp-miniplayer-ui)',
+    ':is(ytd-watch-flexy,ytd-watch-grid)[theater] #movie_player:not(.ytp-fullscreen):not(.ytp-miniplayer-ui) :is(.html5-video-container,video.html5-main-video)',
     ':is(ytd-watch-flexy,ytd-watch-grid) ytd-playlist-panel-renderer :is(#container,#header,#items)'
   ].join(',');
   const savedSurfaces = new Map();
@@ -285,7 +291,10 @@
     panel.style.bottom = bottom + 'px';
     panel.style.maxHeight = Math.max(1, player.clientHeight - bottom - 8) + 'px';
   }
-  const panelResizeObserver = new ResizeObserver(positionPanel);
+  const panelResizeObserver = new ResizeObserver(() => {
+    positionPanel();
+    syncPageSurfaces(document.documentElement.classList.contains('yac-active'));
+  });
   function clearChat() {
     chatDocument?.documentElement?.classList.remove('yac-chat-active');
     chatDocument?.getElementById(chatStyleId)?.remove();

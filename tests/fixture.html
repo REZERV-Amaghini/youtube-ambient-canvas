@@ -6,6 +6,7 @@ html,body{margin:0;color:white;background:#0f0f0f;font:14px system-ui}ytd-app{di
 #movie_player{position:relative;aspect-ratio:16/9;background:#000;overflow:hidden}.html5-video-container{position:absolute;inset:0}video{width:100%;height:100%;object-fit:contain}
 .ytp-chrome-bottom{position:absolute;z-index:60;bottom:0;left:12px;right:12px;height:48px;background:#0007}.ytp-right-controls{display:flex;justify-content:flex-end;height:40px}.ytp-right-controls-left,.ytp-right-controls-right{display:flex;height:40px}
 .ytp-button{border:0;color:white;background:transparent;width:48px;height:40px;cursor:pointer}#below,#description{background:#222;padding:16px}button{border-radius:8px;background:#303030;color:white;padding:8px;border:0}.thumb{height:110px;background:linear-gradient(45deg,#904eff,#ff823d);margin-bottom:12px;border-radius:10px}
+#full-bleed-container{display:none}ytd-watch-flexy[theater] #full-bleed-container{display:block;height:44vh;background:#000}ytd-watch-flexy[theater] #movie_player{width:100%;height:100%;aspect-ratio:auto}ytd-watch-flexy[theater] .html5-video-container{background:#000}
 </style><link rel="stylesheet" href="/ambient.css"></head>
 <body><ytd-app><ytd-masthead><div id="background">YouTube-style verification fixture</div></ytd-masthead>
 <div id="content"><div id="page-manager"><ytd-watch-flexy><div id="columns"><div id="primary"><div id="primary-inner">
@@ -16,10 +17,28 @@ html,body{margin:0;color:white;background:#0f0f0f;font:14px system-ui}ytd-app{di
 const browser={storage:{local:{get:async()=>({ambient:JSON.parse(localStorage.getItem('ambient')||'null')}),set:async({ambient})=>localStorage.setItem('ambient',JSON.stringify(ambient))}}};
 const sample=document.createElement('canvas');sample.width=640;sample.height=360;
 if(new URLSearchParams(location.search).has('theme')){
+  if(new URLSearchParams(location.search).get('theme')==='deepdark'){
+    const fullTheme=document.createElement('link');
+    fullTheme.rel='stylesheet';fullTheme.href='/test-theme.css';document.head.append(fullTheme);
+  }
   // Model a theme extension's more specific page backgrounds without its code.
   const theme=document.createElement('style');
   theme.textContent='#content #page-manager ytd-watch-flexy,#content #page-manager #columns,#content #page-manager #primary,#content #page-manager #below,#content #page-manager #secondary{background-color:#212121!important}';
+  theme.textContent+='#content #page-manager .box,#content #page-manager ytd-watch-next-secondary-results-renderer{background-color:#212121!important}ytd-engagement-panel-section-list-renderer #content,ytd-engagement-panel-title-header-renderer #header,ytd-transcript-search-panel-renderer{background-color:#272727!important}';
   document.head.append(theme);
+  const metadataBox=document.createElement('div');
+  metadataBox.className='box style-scope ytd-watch-flexy';
+  metadataBox.id='fixture-metadata-box';
+  const below=document.querySelector('#below');
+  metadataBox.append(...below.childNodes);below.append(metadataBox);
+  const related=document.createElement('ytd-watch-next-secondary-results-renderer');
+  related.className='style-scope ytd-watch-flexy';related.style.display='block';
+  const secondary=document.querySelector('#secondary');
+  related.append(...secondary.childNodes);secondary.append(related);
+  const panel=document.createElement('ytd-engagement-panel-section-list-renderer');
+  panel.style.display='block';
+  panel.innerHTML='<ytd-engagement-panel-title-header-renderer style="display:block"><div id="header">Transcript panel <button>Close panel</button></div></ytd-engagement-panel-title-header-renderer><div id="content"><ytd-transcript-search-panel-renderer style="display:block;padding:12px">Transcript text stays visible</ytd-transcript-search-panel-renderer></div>';
+  secondary.prepend(panel);
   document.querySelector('#secondary').style.setProperty('background-color','#282233','important');
   document.querySelector('#secondary').style.setProperty('background-image','linear-gradient(#282233,#121212)','important');
   document.querySelector('#secondary').style.setProperty('box-shadow','0 0 4px #000','important');
@@ -57,6 +76,9 @@ if(new URLSearchParams(location.search).has('store')){
 frame();setInterval(frame,1000/60);
 document.querySelector('video').srcObject=sample.captureStream(60);
 document.querySelector('.ytp-settings-button').onclick=e=>{const b=e.currentTarget;b.setAttribute('aria-expanded',String(b.getAttribute('aria-expanded')!=='true'));};
-document.querySelector('.ytp-size-button').onclick=()=>{const c=document.querySelector('#columns');c.style.maxWidth=c.style.maxWidth?'':'1500px';window.dispatchEvent(new Event('resize'));};
+const theaterContainer=document.createElement('div');theaterContainer.id='full-bleed-container';
+const watch=document.querySelector('ytd-watch-flexy'),moviePlayer=document.querySelector('#movie_player'),originalPlayerParent=moviePlayer.parentElement;
+watch.prepend(theaterContainer);
+document.querySelector('.ytp-size-button').onclick=()=>{const theater=!watch.hasAttribute('theater');watch.toggleAttribute('theater',theater);if(theater)theaterContainer.append(moviePlayer);else originalPlayerParent.prepend(moviePlayer);window.dispatchEvent(new Event('resize'));};
 document.querySelector('.ytp-fullscreen-button').onclick=()=>{if(document.fullscreenElement)document.exitFullscreen();else document.querySelector('#movie_player').requestFullscreen();};
 </script><script src="/renderer.js"></script><script src="/ambient.js"></script></body></html>

@@ -1,4 +1,15 @@
-# 検証結果 — 0.2.3 / 2026-10-01
+# 検証結果 — 0.2.4 development / 2026-10-01
+
+## 0.2.4 theme surfaces and theater margins
+
+- User testing of 0.2.3 on Firefox still showed black information, related-video and transcript-panel backgrounds.
+- Reproduced these missing inner surfaces using YouTube's observed layout boxes and a nested transcript fixture.
+- Verified transparent inner surfaces and original-style restoration in Chromium with the complete Material/Pink CSS bundled in Enhancer for YouTube 2.0.136.
+- Verified theater margins show ambient even with encoded-black-bar replacement switched off. Picture size, controls, button background and thumbnails are preserved.
+- Verified fullscreen restores the player's black background and pauses ambient; leaving theater mode restores the original normal-player background while surrounding surfaces remain transparent.
+- The GPL theme is an ignored local test input and is excluded from public source and extension packages.
+
+Actual Firefox playback with 0.2.4 and Enhancer enabled remains unconfirmed. Store submissions use the normal 0.2.2 version; 0.2.4 is a development package until that check completes.
 
 ## 0.2.3 theme compatibility verification
 

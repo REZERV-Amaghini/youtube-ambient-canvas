@@ -1,8 +1,10 @@
-# Theme compatibility - 0.2.3
+# Theme compatibility - 0.2.4 development revision
 
 Some YouTube theme extensions apply high-specificity `!important` backgrounds.
 With Enhancer for YouTube's dark theme, these rules can cover the ambient canvas
-on the watch page while leaving the header visible.
+on the watch page while leaving the header visible. Version 0.2.3 covered outer
+surfaces but missed unnamed layout boxes, the related-results wrapper and
+transcript-panel surfaces. Those inner backgrounds are included in 0.2.4.
 
 Ambient Canvas overrides background color, background image and box shadow only
 on selected surrounding page surfaces while ambient is active. The app container
@@ -23,7 +25,22 @@ Toggle ambient off and on, change the theme background while it is active, and
 enter and exit fullscreen. The active page surfaces should stay transparent;
 turning ambient off should restore the latest theme background, image and shadow.
 
-The fixture is self-authored and does not redistribute any theme extension code.
-Local Chromium verification covers this conflict and restoration behavior.
-Actual Firefox playback with Enhancer enabled remains to be confirmed by loading
-the updated extension and refreshing YouTube.
+For a full-theme check, place a locally obtained, compiled DeepDark stylesheet
+at `.tool-cache/deepdark.css` and use `?theme=deepdark`. The development server
+serves this optional file locally. It is ignored by Git and excluded from every
+distribution archive. Preserve its original license and attribution.
+
+The fixture is self-authored. Local Chromium verification used the complete
+Material/Pink CSS included in Enhancer for YouTube 2.0.136, with its GPL notices
+preserved in the local test copy. The theme is not redistributed with Ambient
+Canvas. Actual Firefox playback with the updated extension remains to be
+confirmed. The usual distribution stays on 0.2.2 while compatibility is tested.
+
+## Theater margins
+
+While ambient is active, theater mode always reveals the ambient background in
+the player's unused space around the picture. This behavior has no additional
+switch and is independent of the optional replacement of black bars encoded in
+the video. It changes only container/video-element backgrounds; it preserves
+picture geometry, pixels and player controls. Returning to normal mode,
+fullscreen or ambient off restores the previous player backgrounds.
