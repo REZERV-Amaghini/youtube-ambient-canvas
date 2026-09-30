@@ -67,7 +67,10 @@ Single purpose: Render a customizable ambient background on YouTube watch pages.
 Website access: Read the YouTube video element's pixels and add background
 canvases and settings controls. Only `https://www.youtube.com/*` is requested.
 
-Remote code: No. Data collection / transmission: None.
+Remote code: No. External collection / transmission: None.
+Chrome data disclosure: Website content (video pixels processed locally in
+temporary memory only, for ambient visuals; no developer access or retention).
+Firefox data collection permission: None (no data is sent off the device).
 
 Privacy URL: https://github.com/REZERV-Amaghini/youtube-ambient-canvas/blob/main/PRIVACY.md
 
