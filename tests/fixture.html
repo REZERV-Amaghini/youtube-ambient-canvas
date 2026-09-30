@@ -6,6 +6,7 @@ html,body{margin:0;color:white;background:#0f0f0f;font:14px system-ui}ytd-app{di
 #movie_player{position:relative;aspect-ratio:16/9;background:#000;overflow:hidden}.html5-video-container{position:absolute;inset:0}video{width:100%;height:100%;object-fit:contain}
 .ytp-chrome-bottom{position:absolute;z-index:60;bottom:0;left:12px;right:12px;height:48px;background:#0007}.ytp-right-controls{display:flex;justify-content:flex-end;height:40px}.ytp-right-controls-left,.ytp-right-controls-right{display:flex;height:40px}
 .ytp-button{border:0;color:white;background:transparent;width:48px;height:40px;cursor:pointer}#below,#description{background:#222;padding:16px}button{border-radius:8px;background:#303030;color:white;padding:8px;border:0}.thumb{height:110px;background:linear-gradient(45deg,#904eff,#ff823d);margin-bottom:12px;border-radius:10px}
+.ytSpecButtonShapeNextFilled{background:#f1f1f1;color:#0f0f0f}
 #full-bleed-container{display:none}ytd-watch-flexy[theater] #full-bleed-container{display:block;height:44vh;background:#000}ytd-watch-flexy[theater] #movie_player{width:100%;height:100%;aspect-ratio:auto}ytd-watch-flexy[theater] .html5-video-container{background:#000}
 </style><link rel="stylesheet" href="/ambient.css"></head>
 <body><ytd-app><ytd-masthead><div id="background">YouTube-style verification fixture</div></ytd-masthead>
@@ -31,10 +32,27 @@ if(new URLSearchParams(location.search).has('theme')){
   metadataBox.id='fixture-metadata-box';
   const below=document.querySelector('#below');
   metadataBox.append(...below.childNodes);below.append(metadataBox);
+  const infoWrapper=document.createElement('div');
+  infoWrapper.className='style-scope ytd-watch-flexy';
+  infoWrapper.id='fixture-info-wrapper';
+  infoWrapper.append(...metadataBox.childNodes);metadataBox.append(infoWrapper);
+  const ticketShelf=document.createElement('div');
+  ticketShelf.id='ticket-shelf';ticketShelf.className='style-scope ytd-watch-flexy';
+  ticketShelf.innerHTML='<ytd-ticket-shelf-renderer class="style-scope ytd-watch-flexy" style="display:block;padding:16px">Event tickets <button class="ytSpecButtonShapeNextHost ytSpecButtonShapeNextMono ytSpecButtonShapeNextTonal">Show tickets</button></ytd-ticket-shelf-renderer>';
+  infoWrapper.append(ticketShelf);
+  const actions=document.createElement('ytd-menu-renderer');
+  actions.className='style-scope ytd-watch-metadata';
+  actions.id='fixture-action-menu';
+  actions.innerHTML='<button class="ytSpecButtonShapeNextHost ytSpecButtonShapeNextMono ytSpecButtonShapeNextTonal">Share <yt-touch-feedback-shape class="ytSpecTouchFeedbackShapeHost"><div class="ytSpecTouchFeedbackShapeFill" style="opacity:0;background:white"></div></yt-touch-feedback-shape></button><button class="ytSpecButtonShapeNextHost ytSpecButtonShapeNextMono ytSpecButtonShapeNextFilled">Subscribe</button>';
+  theme.textContent+='yt-touch-feedback-shape .ytSpecTouchFeedbackShapeFill{opacity:0;transition:opacity .1s}button:hover yt-touch-feedback-shape .ytSpecTouchFeedbackShapeFill{opacity:.16!important}';
+  infoWrapper.append(actions);
   const related=document.createElement('ytd-watch-next-secondary-results-renderer');
   related.className='style-scope ytd-watch-flexy';related.style.display='block';
   const secondary=document.querySelector('#secondary');
   related.append(...secondary.childNodes);secondary.append(related);
+  const chips=document.createElement('yt-chip-cloud-renderer');
+  chips.innerHTML='<yt-chip-cloud-chip-renderer selected><button class="ytChipShapeButtonReset" role="tab" aria-selected="true"><div class="ytChipShapeActive">All</div></button></yt-chip-cloud-chip-renderer><yt-chip-cloud-chip-renderer><button class="ytChipShapeButtonReset" role="tab" aria-selected="false"><div class="ytChipShapeInactive">Related</div></button></yt-chip-cloud-chip-renderer>';
+  secondary.prepend(chips);
   const panel=document.createElement('ytd-engagement-panel-section-list-renderer');
   panel.style.display='block';
   panel.innerHTML='<ytd-engagement-panel-title-header-renderer style="display:block"><div id="header">Transcript panel <button>Close panel</button></div></ytd-engagement-panel-title-header-renderer><div id="content"><ytd-transcript-search-panel-renderer style="display:block;padding:12px">Transcript text stays visible</ytd-transcript-search-panel-renderer></div>';
@@ -78,7 +96,8 @@ document.querySelector('video').srcObject=sample.captureStream(60);
 document.querySelector('.ytp-settings-button').onclick=e=>{const b=e.currentTarget;b.setAttribute('aria-expanded',String(b.getAttribute('aria-expanded')!=='true'));};
 const theaterContainer=document.createElement('div');theaterContainer.id='full-bleed-container';
 const watch=document.querySelector('ytd-watch-flexy'),moviePlayer=document.querySelector('#movie_player'),originalPlayerParent=moviePlayer.parentElement;
+const fullBleedPlayer=document.createElement('div');fullBleedPlayer.id='player-full-bleed-container';fullBleedPlayer.className='style-scope ytd-watch-flexy';fullBleedPlayer.style.height='100%';theaterContainer.append(fullBleedPlayer);
 watch.prepend(theaterContainer);
-document.querySelector('.ytp-size-button').onclick=()=>{const theater=!watch.hasAttribute('theater');watch.toggleAttribute('theater',theater);if(theater)theaterContainer.append(moviePlayer);else originalPlayerParent.prepend(moviePlayer);window.dispatchEvent(new Event('resize'));};
+document.querySelector('.ytp-size-button').onclick=()=>{const theater=!watch.hasAttribute('theater');watch.toggleAttribute('theater',theater);if(theater)fullBleedPlayer.append(moviePlayer);else originalPlayerParent.prepend(moviePlayer);window.dispatchEvent(new Event('resize'));};
 document.querySelector('.ytp-fullscreen-button').onclick=()=>{if(document.fullscreenElement)document.exitFullscreen();else document.querySelector('#movie_player').requestFullscreen();};
 </script><script src="/renderer.js"></script><script src="/ambient.js"></script></body></html>

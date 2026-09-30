@@ -52,6 +52,18 @@ html.yac-active ytd-masthead #background {
 }
 
 html.yac-active #cinematics { display: none !important; }
+/* Keep the selected filter visible after removing its opaque theme fill. */
+html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-chip-cloud-renderer :is(.ytChipShapeActive,.YtChipShapeActive),
+html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-chip-cloud-chip-renderer[selected] #chip-container {
+  outline: 1px solid currentColor;
+  outline-offset: -1px;
+  color: #f1f1f1 !important;
+}
+/* Filled controls originally use dark text on a light, now-transparent fill. */
+html.yac-active ytd-masthead :is(.ytSpecButtonShapeNextMono.ytSpecButtonShapeNextFilled,.yt-spec-button-shape-next--mono.yt-spec-button-shape-next--filled),
+html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) :is(#below,#secondary) :is(.ytSpecButtonShapeNextMono.ytSpecButtonShapeNextFilled,.yt-spec-button-shape-next--mono.yt-spec-button-shape-next--filled) {
+  color: #f1f1f1 !important;
+}
 html.yac-active ytd-watch-flexy ytd-live-chat-frame,
 html.yac-active ytd-watch-flexy ytd-live-chat-frame #chatframe {
   background: transparent !important;

@@ -1,4 +1,16 @@
-# 検証結果 — 0.2.4 development / 2026-10-01
+# 検証結果 — 0.2.5 development / 2026-10-01
+
+## 0.2.5 screenshot-guided surfaces
+
+- User testing confirmed 0.2.4 still leaves some theme backgrounds opaque. Screenshots identify the event-ticket shelf, action buttons, masthead button faces, filter chips and full-bleed player margins.
+- The more faithful fixture reproduces black anonymous information wrappers, ticket-shelf containers/renderers and the player-full-bleed container under the complete Enhancer DeepDark theme.
+- Development 0.2.5 expands only these surrounding surfaces and button fills, preserves touch-feedback children, and marks the selected filter with an outline.
+- Verified all reproduced information/ticket/button/chip backgrounds become transparent under the complete theme. Filled-button text stays light, selected-chip outline remains visible and thumbnails keep their image gradients.
+- Verified mouse hover still activates the native feedback child (opacity 0.16) and clicking still focuses the action button. Turning ambient off restores the original theme fills and removes our inline background overrides.
+- Verified the full-bleed theater wrapper and player margins are transparent with black-bar replacement off. Entering fullscreen pauses ambient and restores the original black player; returning to normal mode keeps the surrounding page transparent and restores the normal player background.
+- Actual Firefox verification remains pending; normal 0.2.2 publication continues.
+
+## Previous 0.2.4 fixture verification
 
 ## 0.2.4 theme surfaces and theater margins
 
@@ -9,7 +21,7 @@
 - Verified fullscreen restores the player's black background and pauses ambient; leaving theater mode restores the original normal-player background while surrounding surfaces remain transparent.
 - The GPL theme is an ignored local test input and is excluded from public source and extension packages.
 
-Actual Firefox playback with 0.2.4 and Enhancer enabled remains unconfirmed. Store submissions use the normal 0.2.2 version; 0.2.4 is a development package until that check completes.
+Actual Firefox testing subsequently confirmed residual opaque surfaces in 0.2.4. Store submissions use the normal 0.2.2 version; 0.2.4 is a development package until that check completes.
 
 ## 0.2.3 theme compatibility verification
 
