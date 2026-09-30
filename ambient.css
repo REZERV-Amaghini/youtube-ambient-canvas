@@ -1,0 +1,92 @@
+#yac-background {
+  position: fixed !important;
+  inset: -180px !important;
+  width: calc(100vw + 360px) !important;
+  height: calc(100vh + 360px) !important;
+  pointer-events: none !important;
+  z-index: -1 !important;
+  display: none !important;
+  object-fit: cover;
+}
+
+html.yac-active { background: #080b12 !important; }
+html.yac-active #yac-background { display: block !important; }
+html.yac-active body { background: transparent !important; }
+/* The canvas lives INSIDE the app's stacking context, above its background.
+   Preserve YouTube's own position and sizing. */
+html.yac-active ytd-app {
+  isolation: isolate;
+  background: #080b12 !important;
+  --yt-spec-base-background: transparent;
+}
+
+html.yac-active ytd-app > #content,
+html.yac-active #page-manager,
+html.yac-active ytd-watch-flexy,
+html.yac-active ytd-watch-flexy #columns,
+html.yac-active ytd-watch-flexy #primary,
+html.yac-active ytd-watch-flexy #primary-inner,
+html.yac-active ytd-watch-flexy #secondary,
+html.yac-active ytd-watch-flexy #secondary-inner,
+html.yac-active ytd-watch-flexy #below,
+html.yac-active ytd-watch-flexy #panels,
+html.yac-active ytd-watch-flexy #full-bleed-container,
+html.yac-active ytd-watch-flexy #related,
+html.yac-active ytd-watch-flexy #comments,
+html.yac-active ytd-watch-flexy #description,
+html.yac-active ytd-watch-flexy #description-inner,
+html.yac-active ytd-watch-flexy ytd-comments,
+html.yac-active ytd-watch-flexy ytd-watch-metadata,
+html.yac-active ytd-watch-flexy ytd-playlist-panel-renderer,
+html.yac-active ytd-watch-flexy ytd-playlist-panel-renderer #container,
+html.yac-active ytd-watch-flexy ytd-playlist-panel-renderer #header,
+html.yac-active ytd-watch-flexy ytd-playlist-panel-renderer #items,
+html.yac-active ytd-watch-flexy ytd-item-section-renderer,
+html.yac-active ytd-watch-flexy ytd-rich-grid-renderer,
+html.yac-active ytd-watch-flexy yt-chip-cloud-renderer,
+html.yac-active ytd-masthead,
+html.yac-active ytd-masthead #background {
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+html.yac-active #cinematics { display: none !important; }
+/* Both current and legacy search layouts should reveal the page ambient. */
+html.yac-active ytd-masthead yt-searchbox .ytSearchboxComponentInputBox,
+html.yac-active ytd-masthead yt-searchbox .ytSearchboxComponentSearchButton,
+html.yac-active ytd-masthead yt-searchbox input,
+html.yac-active ytd-masthead ytd-searchbox #container,
+html.yac-active ytd-masthead ytd-searchbox #search-input,
+html.yac-active ytd-masthead ytd-searchbox input,
+html.yac-active ytd-masthead ytd-searchbox #search-icon-legacy {
+  background-color: transparent !important;
+}
+#movie_player #yac-settings-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 48px;
+  width: 48px;
+  height: 100%;
+  padding: 0;
+  color: #fff;
+  opacity: .9;
+}
+#movie_player #yac-settings-button[hidden] { display: none !important; }
+#movie_player #yac-settings-button.yac-enabled { color: #fff; }
+#movie_player #yac-settings-button:hover { opacity: 1; }
+#movie_player #yac-settings-button:focus-visible { outline: 2px solid #fff; outline-offset: -3px; }
+#yac-settings-button .yac-tooltip { position:absolute; bottom:calc(100% + 10px); left:50%; transform:translateX(-50%); display:none; padding:7px 9px; border-radius:4px; background:#161616ee; color:white; font:12px/1.2 system-ui,sans-serif; white-space:nowrap; pointer-events:none; }
+#yac-settings-button:hover .yac-tooltip, #yac-settings-button:focus-visible .yac-tooltip { display:block; }
+#yac-bar-layer { display:none; position:absolute; inset:0; overflow:clip; z-index:0; pointer-events:none; }
+#yac-bar-background { position:absolute; left:-180px; top:-180px; width:calc(100% + 360px); height:calc(100% + 360px); pointer-events:none; }
+#movie_player.yac-fill-bars { background:#080b12 !important; }
+#movie_player.yac-fill-bars #yac-bar-layer { display:block; }
+#movie_player.yac-fill-bars .html5-video-container { z-index:1; background:transparent !important; }
+html.yac-active ytd-watch-flexy #secondary,
+html.yac-active ytd-watch-flexy #below,
+html.yac-active ytd-masthead {
+  text-shadow: 0 1px 4px #000c;
+}

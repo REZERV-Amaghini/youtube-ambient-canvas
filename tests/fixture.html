@@ -1,0 +1,43 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Ambient verification</title>
+<style>
+html,body{margin:0;color:white;background:#0f0f0f;font:14px system-ui}ytd-app{display:block;background:#222;min-height:220vh}ytd-masthead{display:block;position:sticky;top:0;z-index:100;height:56px;background:#222;padding-left:24px;line-height:56px}
+#columns{display:flex;gap:24px;padding:24px;max-width:1200px;margin:auto;background:#222}#primary{flex:1;min-width:0}#secondary{width:250px;background:#222}
+#movie_player{position:relative;aspect-ratio:16/9;background:#000;overflow:hidden}.html5-video-container{position:absolute;inset:0}video{width:100%;height:100%;object-fit:contain}
+.ytp-chrome-bottom{position:absolute;z-index:60;bottom:0;left:12px;right:12px;height:48px;background:#0007}.ytp-right-controls{display:flex;justify-content:flex-end;height:40px}.ytp-right-controls-left,.ytp-right-controls-right{display:flex;height:40px}
+.ytp-button{border:0;color:white;background:transparent;width:48px;height:40px;cursor:pointer}#below,#description{background:#222;padding:16px}button{border-radius:8px;background:#303030;color:white;padding:8px;border:0}.thumb{height:110px;background:linear-gradient(45deg,#904eff,#ff823d);margin-bottom:12px;border-radius:10px}
+</style><link rel="stylesheet" href="/ambient.css"></head>
+<body><ytd-app><ytd-masthead><div id="background">YouTube-style verification fixture</div></ytd-masthead>
+<div id="content"><div id="page-manager"><ytd-watch-flexy><div id="columns"><div id="primary"><div id="primary-inner">
+<div id="movie_player"><div class="html5-video-container"><video class="html5-main-video" autoplay muted playsinline></video></div><div class="ytp-chrome-bottom"><div class="ytp-right-controls"><div class="ytp-right-controls-left"><button class="ytp-settings-button ytp-button" aria-label="設定" aria-expanded="false">⚙</button></div><div class="ytp-right-controls-right"><button class="ytp-size-button ytp-button" aria-label="シアターモード">▭</button><button class="ytp-fullscreen-button ytp-button" aria-label="全画面">⛶</button></div></div></div></div>
+<div id="below"><h2>動画タイトルとボタンを保持</h2><button>共有</button><button>保存</button><div id="description">説明欄の背景</div><ytd-comments id="comments">コメント欄の背景</ytd-comments></div>
+</div></div><div id="secondary"><div class="thumb"></div>関連動画の文字<div class="thumb"></div></div></div></ytd-watch-flexy></div></div></ytd-app>
+<script>
+const browser={storage:{local:{get:async()=>({ambient:JSON.parse(localStorage.getItem('ambient')||'null')}),set:async({ambient})=>localStorage.setItem('ambient',JSON.stringify(ambient))}}};
+const sample=document.createElement('canvas');sample.width=640;sample.height=360;
+const g=sample.getContext('2d');let tick=0;
+if(new URLSearchParams(location.search).has('store')){
+  document.querySelector('#background').textContent='YouTube Ambient Canvas · demonstration';
+  document.querySelector('h2').textContent='Ambient colors · original demo video';
+}
+function frame(){g.fillStyle='#121b32';g.fillRect(0,0,640,360);g.fillStyle='#ad68ff';g.fillRect(100+Math.sin(tick++/20)*40,80,320,200);g.fillStyle='#ff3b62';g.fillRect(0,0,640,10);g.fillStyle='#35ff9f';g.fillRect(630,0,10,360);g.fillStyle='#396aff';g.fillRect(0,350,640,10);g.fillStyle='#ffcf4c';g.fillRect(0,0,10,360);if(new URLSearchParams(location.search).has('bars')){g.fillStyle='black';g.fillRect(0,0,640,40);g.fillRect(0,320,640,40);g.fillStyle='#ad68ff';g.fillRect(0,40,640,8);g.fillRect(0,312,640,8);}}
+const diagnosticFrame=frame;
+if(new URLSearchParams(location.search).has('store')){
+  frame=()=>{
+    const gradient=g.createLinearGradient(0,0,640,360);
+    gradient.addColorStop(0,'#438cc4');gradient.addColorStop(.5,'#9e7dea');gradient.addColorStop(1,'#e798a7');
+    g.fillStyle=gradient;g.fillRect(0,0,640,360);
+    const center=g.createRadialGradient(330,180,15,330,180,300);center.addColorStop(0,'#081426ee');center.addColorStop(1,'#08142600');
+    g.fillStyle=center;g.fillRect(0,0,640,360);
+    g.strokeStyle='#ffffffaa';g.lineWidth=2;g.beginPath();g.ellipse(320,180,80,80,0,0,Math.PI*2);g.stroke();
+    g.beginPath();g.ellipse(320,180,27,27,0,0,Math.PI*2);g.stroke();
+    g.font='12px system-ui';g.fillStyle='#ffffffaa';g.textAlign='center';g.fillText('ORIGINAL DEMO GRAPHICS',320,310);
+    tick++;
+  };
+}
+frame();setInterval(frame,1000/60);
+document.querySelector('video').srcObject=sample.captureStream(60);
+document.querySelector('.ytp-settings-button').onclick=e=>{const b=e.currentTarget;b.setAttribute('aria-expanded',String(b.getAttribute('aria-expanded')!=='true'));};
+document.querySelector('.ytp-size-button').onclick=()=>{const c=document.querySelector('#columns');c.style.maxWidth=c.style.maxWidth?'':'1500px';window.dispatchEvent(new Event('resize'));};
+document.querySelector('.ytp-fullscreen-button').onclick=()=>{if(document.fullscreenElement)document.exitFullscreen();else document.querySelector('#movie_player').requestFullscreen();};
+</script><script src="/renderer.js"></script><script src="/ambient.js"></script></body></html>
