@@ -15,6 +15,12 @@ html,body{margin:0;color:white;background:#0f0f0f;font:14px system-ui}ytd-app{di
 <script>
 const browser={storage:{local:{get:async()=>({ambient:JSON.parse(localStorage.getItem('ambient')||'null')}),set:async({ambient})=>localStorage.setItem('ambient',JSON.stringify(ambient))}}};
 const sample=document.createElement('canvas');sample.width=640;sample.height=360;
+if(new URLSearchParams(location.search).has('chat')){
+  const chat=document.createElement('ytd-live-chat-frame');
+  const frame=document.createElement('iframe');frame.id='chatframe';frame.src='/live_chat';
+  frame.title='Live chat fixture';frame.style.cssText='width:100%;height:240px;border:1px solid #ffffff30';
+  chat.append(frame);document.querySelector('#secondary').prepend(chat);
+}
 const g=sample.getContext('2d');let tick=0;
 if(new URLSearchParams(location.search).has('store')){
   document.querySelector('#background').textContent='YouTube Ambient Canvas · demonstration';

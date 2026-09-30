@@ -1,7 +1,7 @@
 'use strict';
 const http=require('http'),fs=require('fs'),path=require('path');
 const root=path.resolve(__dirname,'..');
-const routes={'/watch':'tests/fixture.html','/ambient.css':'ambient.css','/ambient.js':'ambient.js','/renderer.js':'renderer.js','/firefox-check':'tests/firefox-check.html','/check-renderer.js':'tests/check-renderer.js'};
+const routes={'/watch':'tests/fixture.html','/live_chat':'tests/chat-fixture.html','/ambient.css':'ambient.css','/ambient.js':'ambient.js','/renderer.js':'renderer.js','/firefox-check':'tests/firefox-check.html','/check-renderer.js':'tests/check-renderer.js'};
 const types={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8'};
 const server=http.createServer((req,res)=>{
   if(req.method==='POST'&&req.url==='/test-result'){

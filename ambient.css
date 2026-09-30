@@ -52,6 +52,14 @@ html.yac-active ytd-masthead #background {
 }
 
 html.yac-active #cinematics { display: none !important; }
+html.yac-active ytd-watch-flexy ytd-live-chat-frame,
+html.yac-active ytd-watch-flexy ytd-live-chat-frame #chatframe {
+  background: transparent !important;
+}
+#movie_player.yac-settings-open .ytp-chrome-bottom {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
 /* Both current and legacy search layouts should reveal the page ambient. */
 html.yac-active ytd-masthead yt-searchbox .ytSearchboxComponentInputBox,
 html.yac-active ytd-masthead yt-searchbox .ytSearchboxComponentSearchButton,

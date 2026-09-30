@@ -1,6 +1,6 @@
 # Privacy policy
 
-YouTube Ambient Canvas 0.2.0 — 2026-09-30
+YouTube Ambient Canvas 0.2.1 — 2026-09-30
 
 This extension does not collect or transmit personal data. It has no analytics,
 advertising, telemetry, accounts, remote code, or external network requests.
@@ -12,7 +12,7 @@ anywhere. It does not read watch history, searches, account details, comments,
 or audio.
 
 Only display preferences (enabled state, mode, black-bar options, strength,
-blur, saturation, edge inset, and background frame rate) are saved in local extension storage. They are
+blur, saturation, edge inset, background frame rate, and interface language) are saved in local extension storage. They are
 not synced or shared. Removing the extension removes its extension storage.
 
 The `storage` permission saves preferences. The content script runs only on
@@ -20,6 +20,9 @@ The `storage` permission saves preferences. The content script runs only on
 No permissions for other websites are requested. YouTube and your browser have
 their own privacy policies, independent of this extension. Questions can be
 filed through the public repository's issue tracker once it is published.
+
+The extension styles the embedded YouTube live-chat background while ambient
+is enabled. It does not read or transmit chat messages and does not send chats.
 
 ## 日本語
 

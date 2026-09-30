@@ -1,4 +1,4 @@
-# Store listing — 0.2.0
+# Store listing — 0.2.1
 
 Name: YouTube Ambient Canvas
 
@@ -20,8 +20,11 @@ readable, reaching 45% of your configured strength once the video is hidden.
 
 Open the ambient icon beside the player's settings button to adjust strength,
 blur, saturation, edge inset and background frame rate (24–60 FPS, default 30).
-Higher frame rates increase rendering load. A dark monochrome panel overlays the related
-video sidebar and stays open while you make adjustments.
+Higher frame rates increase rendering load. A translucent monochrome panel opens
+inside the player, above the bottom-right controls, and stays open while you make
+adjustments. Japanese and English interface languages are available and saved.
+Embedded live-chat backgrounds, welcome cards and the input area are transparent
+while ambient is enabled. Colored Super Chat cards are preserved.
 
 Symmetrical black-bar detection samples the picture inside the bars. An optional
 switch replaces detected bars with ambient color without zooming the picture.
@@ -44,8 +47,10 @@ YouTubeの動画の色をページ全体の背景に広げる拡張機能です�
 歯車の隣の丸いアイコンから濃さ・ぼかし・彩度・サンプリング位置を調整
 できます。背景のFPSは24〜60で調整でき、初期値は30FPSです。高いFPSほど
 描画負荷も増えます。設定は保存されます。
-暗いモノクロの設定パネルは関連動画リストに重なり、×、同じ
-アイコン、背景オフまで開いたままです。
+黒の半透明の設定パネルは動画内の右下、操作ボタン列の上に開き、×、同じ
+アイコン、背景オフまで開いたままです。日本語／英語の切り替えも保存されます。
+埋め込みライブチャットの背景、案内カード、入力欄にも背景を反映します。
+スーパーチャット等の色付きカードは保持します。背景オフで元に戻ります。
 
 対称な黒帯を検出して内側から色を拾い、黒帯を背景に置き換えることも
 できます。映像本体は拡大しません。対象はデスクトップYouTubeの動画ページ。
@@ -76,3 +81,6 @@ visibility, then fully out of view, then return. Verify automatic dimming and
 restoration of the configured strength. Adjust background FPS between 24 and 60,
 reload and verify the saved value. Switch the background off and verify that
 the page and any clipped black bars are restored.
+Switch between Japanese and English and reload to verify the saved language.
+On a page with live chat, verify transparent chat/welcome/input backgrounds,
+then turn ambient off and verify that the original chat backgrounds return.

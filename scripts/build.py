@@ -13,7 +13,7 @@ EXTENSION_FILES = ["renderer.js", "ambient.js", "ambient.css", "LICENSE"] + [
 SOURCE_FILES = ["manifest.json", "README.md", "PRIVACY.md", "CONTRIBUTING.md",
                 "LICENSE", ".gitignore", "package.json", "scripts/build.py",
                 "scripts/create_assets.py", "tests/fixture.html",
-                "tests/server.cjs", "tests/check-renderer.js", "tests/firefox-check.html"]
+                "tests/server.cjs", "tests/check-renderer.js", "tests/firefox-check.html", "tests/chat-fixture.html"]
 
 
 def archive(name, entries):

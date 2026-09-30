@@ -10,8 +10,8 @@ Chrome Web Store版：公開後、この欄にストアの直接リンクを追�
 Firefox AMO版：公開後、この欄にストアの直接リンクを追加します。
 
 審査前の開発版は[GitHub Releases](https://github.com/REZERV-Amaghini/youtube-ambient-canvas/releases)からChrome用・Firefox用ZIPを取得できます。
-([Chrome用ZIP](https://github.com/REZERV-Amaghini/youtube-ambient-canvas/releases/download/v0.2.0/youtube-ambient-canvas-chrome-0.2.0.zip) /
-[Firefox用ZIP](https://github.com/REZERV-Amaghini/youtube-ambient-canvas/releases/download/v0.2.0/youtube-ambient-canvas-firefox-0.2.0.zip))
+([Chrome用ZIP](https://github.com/REZERV-Amaghini/youtube-ambient-canvas/releases/download/v0.2.1/youtube-ambient-canvas-chrome-0.2.1.zip) /
+[Firefox用ZIP](https://github.com/REZERV-Amaghini/youtube-ambient-canvas/releases/download/v0.2.1/youtube-ambient-canvas-firefox-0.2.1.zip))
 Chromeは展開して「パッケージ化されていない拡張機能」として読み込みます。
 Firefoxの永続インストールにはAMOの署名が必要です。
 
@@ -24,10 +24,14 @@ Firefoxの永続インストールにはAMOの署名が必要です。
   文字を読みやすくし、上へ戻すと元の濃さへ復帰。スライダー値は保持します。
 - 放射状／動画全体の切り替え、ぼかし・濃さ・彩度・縁の内側の調整。
 - 背景のFPSは24〜60で調整でき、初期値は30FPS。設定はローカル保存。
-- 検索欄にも背景を反映。設定パネルは不透明なダーク背景。
+- 検索欄にも背景を反映。設定パネルはぼかしをかけた半透明のダーク背景。
 - 対称な黒帯の自動除外と、黒帯を背景に置き換えるスイッチ。
-- 歯車の隣の丸いアイコンから設定。暗いモノクロのパネルが関連動画リストに
-  重なり、×、同じアイコン、または背景オフまで開いたままです。
+- 歯車の隣の丸いアイコンから設定。暗いモノクロのパネルが動画プレーヤー内の
+  右下、操作ボタン列の上に開きます。×、同じアイコン、または背景オフまで
+  開いたままです。小さいプレーヤーではパネル内をスクロールできます。
+- 日本語／英語の切り替えと保存。設定名・説明・アイコンの案内も切り替わります。
+- 埋め込みライブチャットの背景にも反映。案内カード・入力欄も透過し、
+  背景オフで元に戻ります。スーパーチャット等の色付きカードは保持します。
 - 設定はローカル保存のみ。追跡・外部通信・実行時依存はありません。
 
 ## 開発版のインストール
@@ -50,7 +54,7 @@ Add-onから`dist/firefox/manifest.json`を指定。一時アドオンは再起�
 
 実装は読みやすいJavaScriptとCSSです。ビルドにnpm依存のインストールは不要。
 `npm run check`で構文検査、`npm run demo`で自作のテスト映像を表示できます。
-表示されたlocalhost URLへアクセスし、`?bars`で黒帯を追加してください。
+表示されたlocalhost URLへアクセスし、`?bars`で黒帯、`?chat`でチャットを追加してください。
 DevToolsで`tests/check-renderer.js`を実行すると描画とスクロール計算を検査
 できます。`/firefox-check`は同じ検査を画面に表示します。
 
@@ -68,7 +72,7 @@ SHA-256一覧を`dist/`に生成します。明示したファイルだけを梱
 色の採取は160×90、背景更新は24〜60FPSで調整できます。実際の更新頻度は
 画面のリフレッシュレートと動画・端末の性能にも制限されます。ぼかしと画面合成の負荷は
 ブラウザ・GPU・画面サイズに依存します。動画、文字、ボタン、サムネイルは
-前面に保持します。ライブチャットは変更しません。
+前面に保持します。チャットの本文は読み取り・送信しません。
 
 [プライバシー](PRIVACY.md)・[公開手順](docs/PUBLISHING.md)・
 [ストア説明](docs/LISTING.md)・[対応候補](docs/TARGETS.md)・
@@ -81,5 +85,7 @@ SHA-256一覧を`dist/`に生成します。明示したファイルだけを梱
 A local ambient background for YouTube watch pages, with radial edge projection,
 smooth scroll blending, black-bar detection and replacement, and customizable
 blur, opacity, saturation and background frame rate (24–60 FPS, default 30).
-The background automatically dims as the video
-scrolls away. No tracking or remote code. MIT licensed.
+The background automatically dims as the video scrolls away. Translucent settings
+open inside the player, with Japanese/English language selection. Embedded chat
+backgrounds are transparent while ambient is enabled. No tracking or remote code.
+MIT licensed.
