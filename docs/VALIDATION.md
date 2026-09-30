@@ -1,4 +1,15 @@
-# 検証結果 — 0.2.2 / 2026-10-01
+# 検証結果 — 0.2.3 / 2026-10-01
+
+## 0.2.3 theme compatibility verification
+
+- Reproduced the header-only ambient problem using self-authored, high-specificity theme backgrounds and inline important styles.
+- Confirmed transparent watch-page surfaces while ambient is active; the video, share button and thumbnail styling remain intact.
+- Confirmed original inline background color, image and shadow are restored when ambient is switched off.
+- Changed the theme color during active rendering, then confirmed the updated color is restored on disable.
+- Confirmed fullscreen suspends the overrides and leaving fullscreen restores the ambient page background.
+- JavaScript syntax and distribution archives are checked for this revision. Renderer code and permissions are unchanged.
+
+These checks used the local Chromium fixture at `?theme`. Actual Firefox playback with Enhancer enabled still requires confirmation with 0.2.3. Earlier rendering measurements below belong to their stated revisions.
 
 ## 0.2.2の変更と確認
 

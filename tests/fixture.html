@@ -15,6 +15,19 @@ html,body{margin:0;color:white;background:#0f0f0f;font:14px system-ui}ytd-app{di
 <script>
 const browser={storage:{local:{get:async()=>({ambient:JSON.parse(localStorage.getItem('ambient')||'null')}),set:async({ambient})=>localStorage.setItem('ambient',JSON.stringify(ambient))}}};
 const sample=document.createElement('canvas');sample.width=640;sample.height=360;
+if(new URLSearchParams(location.search).has('theme')){
+  // Model a theme extension's more specific page backgrounds without its code.
+  const theme=document.createElement('style');
+  theme.textContent='#content #page-manager ytd-watch-flexy,#content #page-manager #columns,#content #page-manager #primary,#content #page-manager #below,#content #page-manager #secondary{background-color:#212121!important}';
+  document.head.append(theme);
+  document.querySelector('#secondary').style.setProperty('background-color','#282233','important');
+  document.querySelector('#secondary').style.setProperty('background-image','linear-gradient(#282233,#121212)','important');
+  document.querySelector('#secondary').style.setProperty('box-shadow','0 0 4px #000','important');
+  const updateTheme=document.createElement('button');
+  updateTheme.textContent='テーマの背景を変更';
+  updateTheme.onclick=()=>document.querySelector('#secondary').style.setProperty('background-color','#304050','important');
+  document.querySelector('#background').append(updateTheme);
+}
 if(new URLSearchParams(location.search).has('chat')){
   const chat=document.createElement('ytd-live-chat-frame');
   const frame=document.createElement('iframe');frame.id='chatframe';frame.src='/live_chat';

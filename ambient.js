@@ -44,6 +44,46 @@
   let frameRequest = 0, lastDrawFrame = 0, disposed = false;
   let chatDocument = null, chatFrame = null;
   const chatStyleId = 'yac-chat-style';
+  // Theme extensions can give page surfaces more specific !important backgrounds.
+  // Override only the surrounding surfaces while active, then restore their styles.
+  const pageSurfaces = [
+    'body', 'ytd-app', 'ytd-app > #content', '#page-manager', 'ytd-page-manager',
+    'ytd-watch-flexy', 'ytd-watch-grid', 'ytd-masthead', 'ytd-masthead #background',
+    ':is(ytd-watch-flexy,ytd-watch-grid) :is(#columns,#primary,#primary-inner,#secondary,#secondary-inner,#below,#panels,#full-bleed-container,#related,#comments,#description,#description-inner,ytd-comments,ytd-watch-metadata,ytd-playlist-panel-renderer,ytd-item-section-renderer,ytd-rich-grid-renderer,yt-chip-cloud-renderer)',
+    ':is(ytd-watch-flexy,ytd-watch-grid) ytd-playlist-panel-renderer :is(#container,#header,#items)'
+  ].join(',');
+  const savedSurfaces = new Map();
+  function restoreSurface(element, properties) {
+    for (const [name, original] of properties) {
+      // A theme may change while ambient is active; keep changes we did not make.
+      if (element.style.getPropertyValue(name) !== original.applied || element.style.getPropertyPriority(name) !== 'important') continue;
+      if (original.value) element.style.setProperty(name, original.value, original.priority);
+      else element.style.removeProperty(name);
+    }
+    savedSurfaces.delete(element);
+  }
+  function syncPageSurfaces(active) {
+    const surfaces = active ? new Set(document.querySelectorAll(pageSurfaces)) : new Set();
+    for (const [element, properties] of savedSurfaces) {
+      if (!surfaces.has(element)) restoreSurface(element, properties);
+    }
+    for (const element of surfaces) {
+      const overrides = { 'background-color': 'transparent', 'background-image': 'none', 'box-shadow': 'none' };
+      if (element.localName === 'ytd-app') {
+        overrides['background-color'] = '#080b12';
+        overrides.isolation = 'isolate';
+      }
+      const properties = savedSurfaces.get(element) || new Map();
+      savedSurfaces.set(element, properties);
+      for (const [name, value] of Object.entries(overrides)) {
+        const current = element.style.getPropertyValue(name), priority = element.style.getPropertyPriority(name);
+        const previous = properties.get(name);
+        if (previous && current === previous.applied && priority === 'important') continue;
+        element.style.setProperty(name, value, 'important');
+        properties.set(name, { value: current, priority, applied: element.style.getPropertyValue(name) });
+      }
+    }
+  }
   const chatCss = [
     'html.yac-chat-active{--yt-live-chat-background-color:transparent;--yt-live-chat-action-panel-background-color:transparent}',
     'html.yac-chat-active,html.yac-chat-active body,html.yac-chat-active yt-live-chat-app,html.yac-chat-active yt-live-chat-renderer,html.yac-chat-active yt-live-chat-header-renderer,html.yac-chat-active yt-live-chat-item-list-renderer,html.yac-chat-active yt-live-chat-ticker-renderer,html.yac-chat-active yt-live-chat-renderer #chat,html.yac-chat-active yt-live-chat-renderer #contents,html.yac-chat-active yt-live-chat-renderer #items,html.yac-chat-active yt-live-chat-renderer #item-scroller,html.yac-chat-active yt-live-chat-renderer #panel-pages{background-color:transparent!important;background-image:none!important}',
@@ -275,8 +315,10 @@
     chatDocument.documentElement.classList.toggle('yac-chat-active', document.documentElement.classList.contains('yac-active'));
   }
   function setAmbientActive(active) {
+    const changed = document.documentElement.classList.contains('yac-active') !== active;
     document.documentElement.classList.toggle('yac-active', active);
     chatDocument?.documentElement?.classList.toggle('yac-chat-active', active);
+    if (changed) syncPageSurfaces(active);
   }
   function discover() {
     const app = document.querySelector('ytd-app');
@@ -301,6 +343,7 @@
     if (button.hidden || !toolbar || !player) setOpen(false);
     positionPanel();
     syncChat();
+    syncPageSurfaces(document.documentElement.classList.contains('yac-active'));
   }
   function restoreBars() {
     if (originalClip) {
@@ -402,6 +445,7 @@
     player?.classList.remove('yac-settings-open');
     restoreBars();
     document.documentElement.classList.remove('yac-active');
+    syncPageSurfaces(false);
     button.remove(); panel.remove(); canvas.remove(); barLayer.remove();
   }, { once: true });
   apply(); discover(); draw();

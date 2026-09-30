@@ -10,8 +10,8 @@ Chrome Web Store版：公開後、この欄にストアの直接リンクを追�
 Firefox AMO版：公開後、この欄にストアの直接リンクを追加します。
 
 審査前の開発版は[GitHub Releases](https://github.com/REZERV-Amaghini/youtube-ambient-canvas/releases)からChrome用・Firefox用ZIPを取得できます。
-([Chrome用ZIP](https://github.com/REZERV-Amaghini/youtube-ambient-canvas/releases/download/v0.2.2/youtube-ambient-canvas-chrome-0.2.2.zip) /
-[Firefox用ZIP](https://github.com/REZERV-Amaghini/youtube-ambient-canvas/releases/download/v0.2.2/youtube-ambient-canvas-firefox-0.2.2.zip))
+([Chrome用ZIP](https://github.com/REZERV-Amaghini/youtube-ambient-canvas/releases/download/v0.2.3/youtube-ambient-canvas-chrome-0.2.3.zip) /
+[Firefox用ZIP](https://github.com/REZERV-Amaghini/youtube-ambient-canvas/releases/download/v0.2.3/youtube-ambient-canvas-firefox-0.2.3.zip))
 Chromeは展開して「パッケージ化されていない拡張機能」として読み込みます。
 Firefoxの永続インストールにはAMOの署名が必要です。
 
