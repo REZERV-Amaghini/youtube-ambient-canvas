@@ -1,4 +1,61 @@
-# 検証結果 — 0.2.20 development / 2026-10-02
+# 検証結果 — 0.2.21 development / 2026-10-02
+
+## 0.2.21 warning interaction and persistence
+
+- Settings remain immediately applied to the current page when a storage write
+  fails. The store reports per-key unsaved errors, retains other failed keys
+  across unrelated successful writes, and clears a key after a successful retry.
+  Older write completions cannot replace the error state of a newer write for
+  the same key. This guards UI/error ordering, not backend write ordering.
+  Retrying the same value still notifies the UI, without repainting the ambient
+  background solely for an error-state change.
+- Settings and warning panels expose a localized alert with Retry. Strength
+  reduction waits for persistence before dismissing the warning; failure keeps
+  the warning open and the explicitly chosen 15% value applied. A remaining
+  Never-show save error also keeps it open. Escape/Close remain available during
+  saving, and completion from an older warning cannot dismiss a newer warning.
+  Successful retry restores keyboard focus before hiding a focused Retry button.
+- Click/double-click events now stop at the warning dialog, matching its existing
+  keyboard isolation. This prevents warning actions from bubbling to a fullscreen
+  player. No video pause, automatic ambient disable or automatic strength change
+  was added. The shared control/reading CSS and rendering pipeline are unchanged.
+- Actual local in-app browser checks used `/warning-check`, its real isolated
+  Worker/WebGL2 path and real controller/native ShadowRoot dialog. The visible
+  captureStream video stayed constant; only an armed monitor call received
+  numerical bright/dark samples and synthetic clocks. The real monitor triggered
+  after 33 injected samples / 3200 virtual milliseconds. These are integration
+  checks, not real-video detection accuracy, timing or photosensitivity proof.
+- The browser confirmed native `:modal` placement with an opaque RGB(28,28,28)
+  face and 48% black backdrop, initial action focus, background page inertness,
+  keyboard navigation, Escape/Close focus restoration, and a real fullscreen
+  host inside the player. In normal mode, video time and background presentation
+  continued; fullscreen retained the existing page-background suspension while
+  video playback continued. Strength stayed at 65% until explicitly reduced. Fullscreen click/double-click/
+  keydown/keyup bubble counters stayed zero on the adversarial fixture player.
+  Native Tab may briefly leave document focus for browser chrome at the final
+  action; the next Tab returned to the dialog, without reaching page controls.
+- Controlled storage failures verified visible alerts, maintained 15% strength,
+  retry/save/dismissal, Never-show retry retaining the open dialog with Close
+  focused, and regular settings retry restoring the corresponding input focus.
+  Never-show and 15% survived reload through the fixture's own sessionStorage
+  namespace. Detailed settings restored the warning, which then appeared with
+  ambient OFF; the settings panel remained available while OFF.
+- A controlled 800ms delayed write completed after the next source's warning
+  had already appeared. Recorded monotonic timestamps establish that order;
+  the newer dialog remained open after the older completion. This verifies the
+  presentation guard in a real browser, without measuring storage performance.
+- Browser proof and metadata are in `artifacts/warning-0.2.21/`, ignored and
+  excluded from every package. The development fixture is included only in the
+  source archive; it uses no external media or network. `npm run check` and all
+  ten numerical/controller suites passed, including new synchronous/asynchronous
+  storage failure, multiple-key recovery, stale completion and disposal cases.
+  Installed Chrome/Firefox storage, actual YouTube player behavior, real-video
+  warning sampling and native chat-icon initialization remain unverified under
+  the existing saved browser access restriction.
+- Chrome/Firefox 0.2.21 packages match current runtime sources, expected minimal
+  permissions/resources and SHA-256. Firefox lint (cached web-ext 9.4.0) reports
+  zero errors/notices and the existing Android-min-version consent-key warning;
+  this extension targets desktop Firefox.
 
 ## 0.2.20 small-control backdrop tone
 

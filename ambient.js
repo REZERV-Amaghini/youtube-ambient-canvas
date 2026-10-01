@@ -19,6 +19,7 @@
       flashBody: '光の点滅は、光に敏感な方の体調に影響することがあります。必要に応じて、アンビエントの濃さを下げてください。',
       flashNote: '検出は完全ではありません。3秒未満の点滅や、濃さ15%でも安全を保証するものではありません。',
       flashNever: '二度と表示しない', flashReduce: '濃さを下げる（15%）', flashClose: '閉じる',
+      saveFailure: 'このページには反映しましたが、「{setting}」を保存できませんでした。再試行してください。', saveRetry: '再試行',
       radialDescription: '映像の縁から色を広げ、スクロールすると背景全体へ切り替わります。',
       avoidBarsDescription: '黒帯を避けて、映像の色を拾います。', fillBarsDescription: '動画の表示サイズを保ち、黒帯の領域にも背景を表示します。',
       insetDescription: '値を上げると、映像の内側から色を拾います。', fpsDescription: '24〜60 FPS。高いほど滑らかになりますが、負荷も増えます。',
@@ -36,6 +37,7 @@
       flashBody: 'Flashing light can affect people who are sensitive to it. Consider reducing the ambient strength.',
       flashNote: 'Detection is incomplete. Flashes shorter than 3 seconds and 15% strength are not guaranteed to be safe.',
       flashNever: "Don't show again", flashReduce: 'Reduce strength to 15%', flashClose: 'Close',
+      saveFailure: 'Applied on this page, but could not save “{setting}”. Please retry.', saveRetry: 'Retry',
       radialDescription: 'Extends the video edges, then blends into a full-frame background as you scroll.',
       avoidBarsDescription: 'Samples video colors instead of black bars.', fillBarsDescription: 'Shows ambient in the black-bar area without resizing the picture.',
       insetDescription: 'Higher values sample further inside the picture.', fpsDescription: '24–60 FPS. Higher values look smoother and use more resources.',
@@ -67,6 +69,9 @@
   let chatDocument = null, chatFrame = null;
   const flashMonitor = new YacFlashMonitor();
   let settingsLoaded = false, flashWarningOpen = false, warnedVideoKey = '', warningFocus = null;
+  let saveError = null, warningPresentation = 0, reductionPresentation = null;
+  let reducingWarning = false, retryingWarning = false, retryingPanel = false;
+  const warningSaves = new Set();
   let lastSampleVideo = null, lastSampleTime = -1;
   const chatStyleId = 'yac-chat-style';
   // Theme extensions can give page surfaces more specific !important backgrounds.
@@ -283,6 +288,7 @@
     'input[type=checkbox]::before{content:"";position:absolute;left:3px;top:3px;width:14px;height:14px;border-radius:50%;background:#ddd;transition:transform .12s}',
     'input[type=checkbox]:checked{background:#f5f5f5}input[type=checkbox]:checked::before{transform:translateX(14px);background:#171719}',
     'output{flex-shrink:0;color:#eee;font-variant-numeric:tabular-nums}p{margin:4px 8px 8px;padding-top:8px;border-top:1px solid #ffffff14;font-size:12px;color:#bdbdbd}',
+    '.save-error{margin:8px;padding:12px;border:1px solid #ffffff38;border-radius:8px;font-size:12px;color:#eee}.save-error[hidden]{display:none}.save-error button{display:block;width:auto;height:auto;min-height:36px;margin-top:8px;padding:6px 12px;border:1px solid #ffffff38;font:inherit}.save-error button[aria-disabled=true]{opacity:.6;cursor:wait}',
     ':focus-visible{outline:2px solid white;outline-offset:1px}@media(prefers-reduced-motion:reduce){input[type=checkbox]::before{transition:none}}'
   ].join('\n');
   root.append(style);
@@ -372,7 +378,16 @@
     (key === 'inset' || key === 'fps' ? advancedBody : appearance).append(label);
   }
   const status = document.createElement('p');
-  body.append(appearance, advanced, status, languageLabel);
+  function createSaveNotice() {
+    const container = document.createElement('div');container.className = 'save-error';container.hidden = true;
+    container.setAttribute('role', 'alert');
+    const message = document.createElement('span');
+    const retry = document.createElement('button');retry.type = 'button';
+    container.append(message, retry);
+    return { container, message, retry };
+  }
+  const panelSaveNotice = createSaveNotice();
+  body.append(appearance, advanced, panelSaveNotice.container, status, languageLabel);
   let statusKey = 'waiting';
   function setStatus(key) {
     statusKey = key;
@@ -434,7 +449,8 @@
     ':host{all:initial}*{box-sizing:border-box}dialog{position:fixed;inset:0;margin:auto;width:480px;max-width:calc(100vw - 32px);max-height:calc(100vh - 32px);overflow:auto;padding:24px;background:#1c1c1c;color:#f1f1f1;border:1px solid #ffffff24;border-radius:16px;box-shadow:0 12px 48px #0008;font:14px/1.6 "YouTube Noto",Roboto,Arial,Helvetica,sans-serif;color-scheme:dark}',
     'dialog::backdrop{background:rgba(0,0,0,.48)}h2{margin:0 0 12px;font-size:18px;line-height:1.5;font-weight:500}p{margin:0 0 12px}.note{font-size:12px;color:#bdbdbd}',
     'label{display:flex;align-items:center;gap:10px;padding:16px 0;border-top:1px solid #ffffff1a;cursor:pointer}input{margin:0;width:18px;height:18px;accent-color:white;flex-shrink:0}.actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}',
-    'button{min-height:40px;padding:8px 16px;border:1px solid #ffffff24;border-radius:8px;background:#ffffff0f;color:#eee;font:inherit;cursor:pointer}button:hover{background:#ffffff24}.primary{background:#f1f1f1;color:#0f0f0f;border-color:transparent}.primary:hover{background:white}:focus-visible{outline:2px solid white;outline-offset:3px}'
+    'button{min-height:40px;padding:8px 16px;border:1px solid #ffffff24;border-radius:8px;background:#ffffff0f;color:#eee;font:inherit;cursor:pointer}button:hover{background:#ffffff24}.primary{background:#f1f1f1;color:#0f0f0f;border-color:transparent}.primary:hover{background:white}:focus-visible{outline:2px solid white;outline-offset:3px}',
+    '.save-error{margin:0 0 16px;padding:12px;border:1px solid #ffffff38;border-radius:8px;font-size:12px}.save-error[hidden]{display:none}.save-error button{display:block;margin-top:8px}button[aria-disabled=true],button[aria-busy=true]{opacity:.6;cursor:wait}'
   ].join('\n');
   const warningDialog = document.createElement('dialog');
   warningDialog.setAttribute('role', 'alertdialog');
@@ -450,19 +466,39 @@
   const warningClose = document.createElement('button');warningClose.type = 'button';
   const warningReduce = document.createElement('button');warningReduce.type = 'button';warningReduce.className = 'primary';warningReduce.autofocus = true;
   warningActions.append(warningClose, warningReduce);
-  warningDialog.append(warningTitle, warningBody, warningNote, neverLabel, warningActions);
+  const warningSaveNotice = createSaveNotice();
+  warningDialog.append(warningTitle, warningBody, warningNote, neverLabel, warningSaveNotice.container, warningActions);
   warningRoot.append(warningStyle, warningDialog);
   document.documentElement.append(warningHost);
+  function renderSaveErrors() {
+    const text = translations[settings.language];
+    const message = saveError ? text.saveFailure.replace('{setting}', text[saveError.key] || text.title) : '';
+    for (const notice of [panelSaveNotice, warningSaveNotice]) {
+      const retryFocused = (notice === panelSaveNotice ? root : warningRoot).activeElement === notice.retry;
+      if (saveError) notice.key = saveError.key;
+      notice.container.hidden = !saveError;
+      if (notice.message.textContent !== message) notice.message.textContent = message;
+      notice.retry.textContent = text.saveRetry;
+      if (!saveError && retryFocused) {
+        if (notice === warningSaveNotice && flashWarningOpen) warningClose.focus({ preventScroll: true });
+        else if (notice === panelSaveNotice && open) fields[notice.key]?.focus({ preventScroll: true });
+      }
+    }
+  }
   function localizeWarning() {
     const text = translations[settings.language];
     warningDialog.lang = settings.language;
     warningTitle.textContent = text.flashTitle;warningBody.textContent = text.flashBody;warningNote.textContent = text.flashNote;
     neverText.textContent = text.flashNever;warningClose.textContent = text.flashClose;warningReduce.textContent = text.flashReduce;
     neverCheckbox.checked = !settings.flashWarning;
+    renderSaveErrors();
   }
   function closeFlashWarning(returnFocus = true) {
     if (!flashWarningOpen) return;
-    flashWarningOpen = false;warningDialog.close();flashMonitor.reset();
+    flashWarningOpen = false;warningPresentation++;reductionPresentation = null;
+    reducingWarning = retryingWarning = false;
+    warningReduce.removeAttribute('aria-busy');warningSaveNotice.retry.removeAttribute('aria-disabled');
+    warningDialog.close();flashMonitor.reset();
     if (returnFocus) (warningFocus?.isConnected ? warningFocus : button).focus({ preventScroll: true });
     warningFocus = null;
     if (warningHost.parentElement !== document.documentElement) document.documentElement.append(warningHost);
@@ -477,22 +513,66 @@
   function showFlashWarning(key) {
     if (!settings.flashWarning || flashWarningOpen || warnedVideoKey === key) return;
     warnedVideoKey = key;
+    warningPresentation++;
     warningFocus = document.activeElement;
     while (warningFocus?.shadowRoot?.activeElement) warningFocus = warningFocus.shadowRoot.activeElement;
     localizeWarning();positionWarning();warningDialog.showModal();flashWarningOpen = true;warningReduce.focus();
     // Notification only: do not pause video, disable ambient, or change strength.
   }
   listen(neverCheckbox, 'change', () => {
-    settingsStore.set('flashWarning', !neverCheckbox.checked, true).catch(console.warn);
+    saveWarningSetting('flashWarning', !neverCheckbox.checked).catch(console.warn);
   });
-  listen(warningReduce, 'click', () => {
-    settingsStore.set('strength', 15, true).catch(console.warn);
-    closeFlashWarning();draw();
+  function saveWarningSetting(key, value) {
+    const task = settingsStore.set(key, value, true);
+    warningSaves.add(task);
+    task.then(() => warningSaves.delete(task), () => warningSaves.delete(task));
+    return task;
+  }
+  async function finishWarningReduction(presentation) {
+    // Never-show may still be saving. Keep its failure visible instead of
+    // dismissing the dialog just because the strength write succeeded.
+    while (warningSaves.size && presentation === warningPresentation) {
+      await Promise.allSettled([...warningSaves]);
+    }
+    if (flashWarningOpen && presentation === warningPresentation && reductionPresentation === presentation && !saveError) closeFlashWarning();
+  }
+  listen(warningReduce, 'click', async () => {
+    if (reducingWarning) return;
+    const presentation = warningPresentation;reductionPresentation = presentation;reducingWarning = true;
+    warningReduce.setAttribute('aria-busy', 'true');
+    try {
+      await saveWarningSetting('strength', 15);
+      await finishWarningReduction(presentation);
+    } catch (error) { console.warn(error); }
+    finally {
+      if (presentation === warningPresentation) { reducingWarning = false;warningReduce.removeAttribute('aria-busy'); }
+    }
+  });
+  listen(warningSaveNotice.retry, 'click', async () => {
+    if (!saveError || retryingWarning) return;
+    const key = saveError.key, presentation = warningPresentation;retryingWarning = true;
+    warningSaveNotice.retry.setAttribute('aria-disabled', 'true');
+    try {
+      await saveWarningSetting(key, settings[key]);
+      await finishWarningReduction(presentation);
+    } catch (error) { console.warn(error); }
+    finally {
+      if (presentation === warningPresentation) { retryingWarning = false;warningSaveNotice.retry.removeAttribute('aria-disabled'); }
+    }
+  });
+  listen(panelSaveNotice.retry, 'click', async () => {
+    if (!saveError || retryingPanel) return;
+    const key = saveError.key;retryingPanel = true;panelSaveNotice.retry.setAttribute('aria-disabled', 'true');
+    try { await settingsStore.set(key, settings[key], true); }
+    catch (error) { console.warn(error); }
+    finally { retryingPanel = false;panelSaveNotice.retry.removeAttribute('aria-disabled'); }
   });
   listen(warningClose, 'click', () => closeFlashWarning());
   listen(warningDialog, 'cancel', event => { event.preventDefault();closeFlashWarning(); });
   listen(warningDialog, 'keydown', event => event.stopPropagation());
   listen(warningDialog, 'keyup', event => event.stopPropagation());
+  listen(warningDialog, 'click', event => event.stopPropagation());
+  listen(warningDialog, 'dblclick', event => { event.preventDefault();event.stopPropagation(); });
   function updateAppearance() {
     const attenuation = 1 - .55 * blend;
     const opacity = (settings.strength / 100 * attenuation).toFixed(4);
@@ -887,12 +967,15 @@
   apply(); discover(); draw();
   frameRequest = requestAnimationFrame(animate);
   const settingsStore = new YacSettingsStore(extension.storage, settings, {
-    onChange(snapshot, { loaded, error }) {
+    onChange(snapshot, { loaded, error, saveError: nextSaveError }) {
       if (disposed) return;
+      const changed = loaded !== settingsLoaded || Object.keys(snapshot).some(key => snapshot[key] !== settings[key]);
       if (snapshot.flashWarning !== settings.flashWarning) { flashMonitor.reset();warnedVideoKey = ''; }
       settingsLoaded = loaded;Object.assign(settings, snapshot);
-      if (error) console.warn(error);
-      apply();draw();
+      saveError = nextSaveError;
+      if (error && !nextSaveError) console.warn(error);
+      if (changed) { apply();draw(); }
+      else renderSaveErrors();
     }
   });
 })();

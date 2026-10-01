@@ -10,6 +10,7 @@
       this.storage = storage; this.defaults = { ...defaults }; this.values = { ...defaults };
       this.onChange = onChange; this.loaded = false; this.disposed = false;
       this.legacy = {}; this.overrides = new Map(); this.edits = new Map(); this.events = [];
+      this.saveErrors = new Map(); this.writeVersions = new Map(); this.persistenceRevision = 0;
       this.listener = (changes, area) => {
         if (area !== 'local' || this.disposed) return;
         if (!this.loaded) this.events.push(changes);
@@ -60,17 +61,33 @@
       this.events = []; this.edits.clear(); this.loaded = true; this.emit(error);
     }
     emit(error) {
-      const signature = JSON.stringify([this.loaded, this.values]);
+      const signature = JSON.stringify([this.loaded, this.values, this.persistenceRevision]);
       if (!error && signature === this.emittedSignature) return;
       this.emittedSignature = signature;
-      this.onChange({ ...this.values }, { loaded: this.loaded, error });
+      const failed = this.saveErrors.entries().next().value;
+      this.onChange({ ...this.values }, { loaded: this.loaded, error,
+        saveError: failed ? { key: failed[0], error: failed[1] } : null, saveErrorCount: this.saveErrors.size });
     }
     set(key, value, persist = false) {
       const normalized = this.normalize(key, value);
       if (this.disposed || normalized === undefined) return Promise.resolve();
       if (!this.loaded) this.edits.set(key, normalized);
       this.overrides.set(key, normalized); this.values[key] = normalized; this.emit();
-      return persist ? this.storage.local.set({ [prefix + key]: normalized }) : Promise.resolve();
+      if (!persist) return Promise.resolve();
+      const version = (this.writeVersions.get(key) || 0) + 1;
+      this.writeVersions.set(key, version);
+      // Keep the explicitly chosen value on this page, including a reduction to
+      // 15%. Report durability failures separately, without silently undoing it.
+      return Promise.resolve().then(() => this.storage.local.set({ [prefix + key]: normalized })).then(() => {
+        if (!this.disposed && this.writeVersions.get(key) === version && this.saveErrors.delete(key)) {
+          this.persistenceRevision++; this.emit();
+        }
+      }, error => {
+        if (!this.disposed && this.writeVersions.get(key) === version) {
+          this.saveErrors.set(key, error); this.persistenceRevision++; this.emit(error);
+        }
+        throw error;
+      });
     }
     dispose() {
       this.disposed = true; this.events = []; this.edits.clear();
