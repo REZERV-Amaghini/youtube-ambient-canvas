@@ -1,4 +1,19 @@
-# 検証結果 — 0.2.5 development / 2026-10-01
+# 検証結果 — 0.2.6 development / 2026-10-01
+
+## 0.2.6 control-surface regression correction
+
+- User feedback confirmed fully transparent 0.2.5 buttons lose their visible faces. The control-specific inline overrides, synthetic chip outline and forced light text are removed.
+- Compared 0.2.2 from its Git tag with 0.2.6 on the same native-control fixture: button/chip backgrounds, text colors, corner radii, padding, borders and absence of inline face overrides match. Backdrop blur is added behind the existing fills.
+- With the complete Enhancer DeepDark stylesheet, verified button/chip faces retain 14% white opacity and 12px backdrop blur. Information/ticket layout surfaces remain transparent.
+- Verified clicking still focuses the action button and native hover feedback remains active (opacity 0.16).
+- CSS has a separate document_start manifest entry; video runtime remains at document_idle. The layout guard is retained; YouTube/Enhancer JavaScript functions are not replaced.
+- Verified the redesigned settings in Chromium with Japanese/English labels, three immediate appearance sliders, native expandable advanced settings, local preference persistence, every switch and slider, 24-60 FPS endpoints, native arrow/Home/End keys, readout units, scrollable small-player content and Escape focus restoration.
+- Verified mutual exclusion with native settings in the fixture and requested OFF-close/focus behavior. Black-bar replacement remains available with automatic detection off.
+- Verified encoded black-bar replacement, same-origin chat transparency and restoration on OFF. Surrounding information/ticket/transcript layouts remain transparent while button faces retain their fills. All existing renderer checks pass, including radial edge samples, letterbox/pillarbox detection, dark-frame handling, manual inset and scroll blending.
+- Live IAB inspection confirmed Enhancer 3.0.19 Material/Pink is installed and identified an overlap between native and old ambient settings. YouTube's underlying popup CSS uses rgba(28,28,28,.9). The revised extension must be reloaded before claiming live verification of the new settings. Browser policy blocks chrome://extensions, so the reload is handed to the user.
+- Actual Firefox appearance with 0.2.6 remains unconfirmed. Normal 0.2.2 publication continues.
+
+## Previous 0.2.5 verification
 
 ## 0.2.5 screenshot-guided surfaces
 

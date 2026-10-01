@@ -7,8 +7,9 @@ html,body{margin:0;color:white;background:#0f0f0f;font:14px system-ui}ytd-app{di
 .ytp-chrome-bottom{position:absolute;z-index:60;bottom:0;left:12px;right:12px;height:48px;background:#0007}.ytp-right-controls{display:flex;justify-content:flex-end;height:40px}.ytp-right-controls-left,.ytp-right-controls-right{display:flex;height:40px}
 .ytp-button{border:0;color:white;background:transparent;width:48px;height:40px;cursor:pointer}#below,#description{background:#222;padding:16px}button{border-radius:8px;background:#303030;color:white;padding:8px;border:0}.thumb{height:110px;background:linear-gradient(45deg,#904eff,#ff823d);margin-bottom:12px;border-radius:10px}
 .ytSpecButtonShapeNextFilled{background:#f1f1f1;color:#0f0f0f}
+.ytSpecButtonShapeNextHost{position:relative;border-radius:999px}.ytSpecButtonShapeNextTonal{background:rgba(255,255,255,.1)}.ytChipShapeButtonReset{padding:0;background:transparent}.ytChipShapeActive,.ytChipShapeInactive{padding:8px 12px;margin-right:6px;border-radius:8px}.ytChipShapeActive{background:#f1f1f1;color:#0f0f0f}.ytChipShapeInactive{background:rgba(255,255,255,.1);color:white}
 #full-bleed-container{display:none}ytd-watch-flexy[theater] #full-bleed-container{display:block;height:44vh;background:#000}ytd-watch-flexy[theater] #movie_player{width:100%;height:100%;aspect-ratio:auto}ytd-watch-flexy[theater] .html5-video-container{background:#000}
-</style><link rel="stylesheet" href="/ambient.css"></head>
+</style><link id="ambient-style" rel="stylesheet" href="/ambient.css"><script>if(new URLSearchParams(location.search).has('baseline'))document.querySelector('#ambient-style').href='/baseline-ambient.css';</script></head>
 <body><ytd-app><ytd-masthead><div id="background">YouTube-style verification fixture</div></ytd-masthead>
 <div id="content"><div id="page-manager"><ytd-watch-flexy><div id="columns"><div id="primary"><div id="primary-inner">
 <div id="movie_player"><div class="html5-video-container"><video class="html5-main-video" autoplay muted playsinline></video></div><div class="ytp-chrome-bottom"><div class="ytp-right-controls"><div class="ytp-right-controls-left"><button class="ytp-settings-button ytp-button" aria-label="設定" aria-expanded="false">⚙</button></div><div class="ytp-right-controls-right"><button class="ytp-size-button ytp-button" aria-label="シアターモード">▭</button><button class="ytp-fullscreen-button ytp-button" aria-label="全画面">⛶</button></div></div></div></div>
@@ -17,15 +18,17 @@ html,body{margin:0;color:white;background:#0f0f0f;font:14px system-ui}ytd-app{di
 <script>
 const browser={storage:{local:{get:async()=>({ambient:JSON.parse(localStorage.getItem('ambient')||'null')}),set:async({ambient})=>localStorage.setItem('ambient',JSON.stringify(ambient))}}};
 const sample=document.createElement('canvas');sample.width=640;sample.height=360;
-if(new URLSearchParams(location.search).has('theme')){
+if(new URLSearchParams(location.search).has('theme')||new URLSearchParams(location.search).has('controls')){
   if(new URLSearchParams(location.search).get('theme')==='deepdark'){
     const fullTheme=document.createElement('link');
     fullTheme.rel='stylesheet';fullTheme.href='/test-theme.css';document.head.append(fullTheme);
   }
   // Model a theme extension's more specific page backgrounds without its code.
   const theme=document.createElement('style');
-  theme.textContent='#content #page-manager ytd-watch-flexy,#content #page-manager #columns,#content #page-manager #primary,#content #page-manager #below,#content #page-manager #secondary{background-color:#212121!important}';
-  theme.textContent+='#content #page-manager .box,#content #page-manager ytd-watch-next-secondary-results-renderer{background-color:#212121!important}ytd-engagement-panel-section-list-renderer #content,ytd-engagement-panel-title-header-renderer #header,ytd-transcript-search-panel-renderer{background-color:#272727!important}';
+  if(new URLSearchParams(location.search).has('theme')){
+    theme.textContent='#content #page-manager ytd-watch-flexy,#content #page-manager #columns,#content #page-manager #primary,#content #page-manager #below,#content #page-manager #secondary{background-color:#212121!important}';
+    theme.textContent+='#content #page-manager .box,#content #page-manager ytd-watch-next-secondary-results-renderer{background-color:#212121!important}ytd-engagement-panel-section-list-renderer #content,ytd-engagement-panel-title-header-renderer #header,ytd-transcript-search-panel-renderer{background-color:#272727!important}';
+  }
   document.head.append(theme);
   const metadataBox=document.createElement('div');
   metadataBox.className='box style-scope ytd-watch-flexy';
@@ -57,9 +60,11 @@ if(new URLSearchParams(location.search).has('theme')){
   panel.style.display='block';
   panel.innerHTML='<ytd-engagement-panel-title-header-renderer style="display:block"><div id="header">Transcript panel <button>Close panel</button></div></ytd-engagement-panel-title-header-renderer><div id="content"><ytd-transcript-search-panel-renderer style="display:block;padding:12px">Transcript text stays visible</ytd-transcript-search-panel-renderer></div>';
   secondary.prepend(panel);
-  document.querySelector('#secondary').style.setProperty('background-color','#282233','important');
-  document.querySelector('#secondary').style.setProperty('background-image','linear-gradient(#282233,#121212)','important');
-  document.querySelector('#secondary').style.setProperty('box-shadow','0 0 4px #000','important');
+  if(new URLSearchParams(location.search).has('theme')){
+    document.querySelector('#secondary').style.setProperty('background-color','#282233','important');
+    document.querySelector('#secondary').style.setProperty('background-image','linear-gradient(#282233,#121212)','important');
+    document.querySelector('#secondary').style.setProperty('box-shadow','0 0 4px #000','important');
+  }
   const updateTheme=document.createElement('button');
   updateTheme.textContent='テーマの背景を変更';
   updateTheme.onclick=()=>document.querySelector('#secondary').style.setProperty('background-color','#304050','important');
@@ -100,4 +105,4 @@ const fullBleedPlayer=document.createElement('div');fullBleedPlayer.id='player-f
 watch.prepend(theaterContainer);
 document.querySelector('.ytp-size-button').onclick=()=>{const theater=!watch.hasAttribute('theater');watch.toggleAttribute('theater',theater);if(theater)fullBleedPlayer.append(moviePlayer);else originalPlayerParent.prepend(moviePlayer);window.dispatchEvent(new Event('resize'));};
 document.querySelector('.ytp-fullscreen-button').onclick=()=>{if(document.fullscreenElement)document.exitFullscreen();else document.querySelector('#movie_player').requestFullscreen();};
-</script><script src="/renderer.js"></script><script src="/ambient.js"></script></body></html>
+</script><script src="/renderer.js"></script><script>const ambientScript=document.createElement('script');ambientScript.src=new URLSearchParams(location.search).has('baseline')?'/baseline-ambient.js':'/ambient.js';document.body.append(ambientScript);</script></body></html>

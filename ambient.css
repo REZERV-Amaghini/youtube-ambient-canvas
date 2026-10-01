@@ -19,6 +19,23 @@ html.yac-active ytd-app {
   background: #080b12 !important;
   --yt-spec-base-background: transparent;
 }
+/* DeepDark consumes these values when drawing its own surfaces. Native YouTube
+   controls keep their original fills, corner radii, colors and interaction states. */
+html.yac-active :is(ytd-watch-flexy,ytd-watch-grid,ytd-masthead) {
+  --main-background: transparent !important;
+  --second-background: rgba(28, 28, 28, .9) !important;
+  --hover-background: rgba(255, 255, 255, .14) !important;
+}
+html.yac-active :is(ytd-masthead,ytd-watch-flexy,ytd-watch-grid) :is(.ytSpecButtonShapeNextTonal,.ytSpecButtonShapeNextOutline,.ytSpecButtonShapeNextFilled,.yt-spec-button-shape-next--tonal,.yt-spec-button-shape-next--outline,.yt-spec-button-shape-next--filled),
+html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-chip-cloud-renderer :is(.ytChipShapeActive,.ytChipShapeInactive,.YtChipShapeActive,.YtChipShapeInactive,#chip-container) {
+  -webkit-backdrop-filter: blur(12px) !important;
+  backdrop-filter: blur(12px) !important;
+}
+html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-chip-cloud-renderer :is(#left-arrow-button,#right-arrow-button) button {
+  background-color: rgba(18, 20, 25, .34) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  backdrop-filter: blur(12px) !important;
+}
 
 html.yac-active ytd-app > #content,
 html.yac-active #page-manager,
@@ -52,18 +69,6 @@ html.yac-active ytd-masthead #background {
 }
 
 html.yac-active #cinematics { display: none !important; }
-/* Keep the selected filter visible after removing its opaque theme fill. */
-html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-chip-cloud-renderer :is(.ytChipShapeActive,.YtChipShapeActive),
-html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-chip-cloud-chip-renderer[selected] #chip-container {
-  outline: 1px solid currentColor;
-  outline-offset: -1px;
-  color: #f1f1f1 !important;
-}
-/* Filled controls originally use dark text on a light, now-transparent fill. */
-html.yac-active ytd-masthead :is(.ytSpecButtonShapeNextMono.ytSpecButtonShapeNextFilled,.yt-spec-button-shape-next--mono.yt-spec-button-shape-next--filled),
-html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) :is(#below,#secondary) :is(.ytSpecButtonShapeNextMono.ytSpecButtonShapeNextFilled,.yt-spec-button-shape-next--mono.yt-spec-button-shape-next--filled) {
-  color: #f1f1f1 !important;
-}
 html.yac-active ytd-watch-flexy ytd-live-chat-frame,
 html.yac-active ytd-watch-flexy ytd-live-chat-frame #chatframe {
   background: transparent !important;

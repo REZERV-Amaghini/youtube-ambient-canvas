@@ -11,17 +11,25 @@
     ja: {
       title: 'アンビエント設定', close: 'アンビエント設定を閉じる', language: '言語 / Language',
       enabled: 'アンビエント背景', radial: '放射状モード', avoidBars: '黒帯を自動で除外', fillBars: '黒帯を背景に置き換える',
-      strength: '濃さ', blur: 'ぼかし', saturation: '彩度', inset: '縁の内側', fps: '背景のFPS',
+      strength: '濃さ', blur: 'ぼかし', saturation: '彩度', inset: '採色範囲（内側）', fps: '背景のFPS',
+      appearance: '見た目', advanced: '詳細設定',
+      radialDescription: '映像の縁から色を広げ、スクロールすると背景全体へ切り替わります。',
+      avoidBarsDescription: '黒帯を避けて、映像の色を拾います。', fillBarsDescription: '動画の表示サイズを保ち、黒帯の領域にも背景を表示します。',
+      insetDescription: '値を上げると、映像の内側から色を拾います。', fpsDescription: '24〜60 FPS。高いほど滑らかになりますが、負荷も増えます。',
       off: 'アンビエント背景はオフです。', fullscreen: '全画面ではページ背景を停止します。', waiting: '動画を待っています。',
-      noBars: '黒帯を自動検出できません。「縁の内側」で調整できます。', cropped: '黒帯の内側から色を拾っています。',
+      noBars: '黒帯を自動検出できません。「採色範囲（内側）」で調整できます。', cropped: '黒帯の内側から色を拾っています。',
       radialHint: '動画が隠れると背景全体へゆっくり切り替わります。', fullFrameHint: '動画全体の色を背景に広げます。', failed: 'この動画では背景を描画できません。'
     },
     en: {
       title: 'Ambient settings', close: 'Close ambient settings', language: '言語 / Language',
       enabled: 'Ambient background', radial: 'Radial mode', avoidBars: 'Detect and exclude black bars', fillBars: 'Replace black bars with ambient',
-      strength: 'Strength', blur: 'Blur', saturation: 'Saturation', inset: 'Edge inset', fps: 'Background FPS',
+      strength: 'Strength', blur: 'Blur', saturation: 'Saturation', inset: 'Sample inset', fps: 'Background FPS',
+      appearance: 'Appearance', advanced: 'Advanced settings',
+      radialDescription: 'Extends the video edges, then blends into a full-frame background as you scroll.',
+      avoidBarsDescription: 'Samples video colors instead of black bars.', fillBarsDescription: 'Shows ambient in the black-bar area without resizing the picture.',
+      insetDescription: 'Higher values sample further inside the picture.', fpsDescription: '24–60 FPS. Higher values look smoother and use more resources.',
       off: 'Ambient background is off.', fullscreen: 'The page background pauses in fullscreen.', waiting: 'Waiting for a video.',
-      noBars: 'Black-bar detection is unavailable. Adjust Edge inset manually.', cropped: 'Sampling colors inside the black bars.',
+      noBars: 'Black-bar detection is unavailable. Adjust Sample inset manually.', cropped: 'Sampling colors inside the black bars.',
       radialHint: 'Blends into a full-frame background as the video scrolls out of view.', fullFrameHint: 'Spreads the full video frame across the background.', failed: 'Unable to render a background for this video.'
     }
   };
@@ -53,10 +61,6 @@
     ':is(ytd-watch-flexy,ytd-watch-grid) :is(.box.ytd-watch-flexy,.box.ytd-watch-grid,ytd-watch-next-secondary-results-renderer)',
     ':is(ytd-watch-flexy,ytd-watch-grid) :is(#below,#secondary,#panels) :is(div.ytd-watch-flexy,div.ytd-watch-grid,ytd-video-primary-info-renderer,ytd-video-secondary-info-renderer,ytd-ticket-shelf-renderer)',
     ':is(ytd-watch-flexy,ytd-watch-grid) :is(ytd-watch-metadata,ytd-video-primary-info-renderer,ytd-video-secondary-info-renderer) ytd-menu-renderer',
-    'ytd-masthead :is(button.ytSpecButtonShapeNextHost,button.yt-spec-button-shape-next)',
-    ':is(ytd-watch-flexy,ytd-watch-grid) :is(#below,#secondary) :is(button.ytSpecButtonShapeNextHost,button.yt-spec-button-shape-next)',
-    ':is(ytd-watch-flexy,ytd-watch-grid) .efyt-control-bar',
-    ':is(ytd-watch-flexy,ytd-watch-grid) yt-chip-cloud-renderer :is(yt-chip-cloud-chip-renderer,#chip-container,.ytChipShapeButtonReset,.ytChipShapeActive,.ytChipShapeInactive,.YtChipShapeActive,.YtChipShapeInactive)',
     ':is(ytd-watch-flexy,ytd-watch-grid) :is(ytd-engagement-panel-section-list-renderer,ytd-engagement-panel-title-header-renderer,ytd-transcript-renderer,ytd-transcript-search-panel-renderer,ytd-transcript-search-box-renderer,ytd-transcript-segment-list-renderer,ytd-transcript-body-renderer,.input-container.ytd-transcript-search-box-renderer)',
     ':is(ytd-watch-flexy,ytd-watch-grid) ytd-engagement-panel-section-list-renderer :is(#content,#header,#subheader,#panel-content)',
     ':is(ytd-watch-flexy,ytd-watch-grid)[theater] :is(#player,#player-full-bleed-container,#player-container,#player-container-outer,#player-container-inner,#ytd-player,.player-container-background)',
@@ -140,25 +144,27 @@
   panel.hidden = true;
   panel.setAttribute('role', 'dialog');
   panel.setAttribute('aria-label', 'アンビエント設定');
-  panel.style.setProperty('background-color', 'rgba(19, 19, 21, .86)', 'important');
+  panel.style.setProperty('background-color', 'rgba(28, 28, 28, .9)', 'important');
   // Direct DOM construction also works on pages requiring TrustedHTML.
   const root = panel.attachShadow({ mode: 'open' });
   const style = document.createElement('style');
   style.textContent = [
-    ':host{position:absolute;right:12px;bottom:60px;z-index:2200;box-sizing:border-box;width:300px;max-width:calc(100% - 24px);overflow:auto;overscroll-behavior:contain;color:#fafafa;font:13px/1.5 system-ui,sans-serif;text-align:left;background:rgba(19,19,21,.86)!important;backdrop-filter:blur(16px);border:1px solid #ffffff24!important;border-radius:12px!important;box-shadow:0 8px 32px #0008!important}',
-    ':host([hidden]){display:none!important}*{box-sizing:border-box}.body{padding:14px 16px;background:transparent;border-radius:11px}',
-    'header{display:flex;align-items:center;justify-content:space-between}h2{margin:0;font-size:14px;font-weight:600}',
-    'button{width:28px;height:28px;padding:0;color:#fff;background:transparent;border:0;border-radius:6px;font-size:22px;cursor:pointer}button:hover{background:#ffffff20}',
-    'select{max-width:140px;padding:5px 9px;border:1px solid #ffffff30;border-radius:6px;background:#26262b;color:white;font:inherit;cursor:pointer}',
-    'label{display:block;margin-top:14px}.toggle{display:flex;align-items:center;justify-content:space-between;gap:8px}',
-    'input{accent-color:white}input[type=range]{appearance:none;display:block;width:100%;height:4px;margin:16px 0 12px;border-radius:3px;cursor:pointer;background:linear-gradient(to right,#f5f5f5 0%,#f5f5f5 var(--progress),#3c3c42 var(--progress),#3c3c42 100%)}',
-    'input[type=range]::-webkit-slider-runnable-track{height:4px;background:transparent;border-radius:3px}input[type=range]::-webkit-slider-thumb{appearance:none;width:14px;height:14px;margin-top:-5px;border:1px solid #ddd;border-radius:50%;background:white;box-shadow:0 1px 5px #0008}',
-    'input[type=range]::-moz-range-track{height:4px;background:#3c3c42;border-radius:3px}input[type=range]::-moz-range-progress{height:4px;background:white;border-radius:3px}input[type=range]::-moz-range-thumb{width:12px;height:12px;border:1px solid #ddd;border-radius:50%;background:white;box-shadow:0 1px 5px #0008}',
+    ':host{position:absolute;right:12px;bottom:60px;z-index:2200;display:flex;flex-direction:column;box-sizing:border-box;width:320px;max-width:calc(100% - 24px);overflow:hidden;color:#eee;font:14px/1.4 "YouTube Noto",Roboto,Arial,Helvetica,sans-serif;text-align:left;text-shadow:none;background:rgba(28,28,28,.9)!important;border:0!important;border-radius:12px!important;box-shadow:0 4px 20px #0003!important;color-scheme:dark}',
+    ':host([hidden]){display:none!important}*{box-sizing:border-box}.body{padding:0 8px 8px;min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin}',
+    'header{display:flex;flex-shrink:0;align-items:center;justify-content:space-between;gap:8px;min-height:48px;padding:8px 12px;border-bottom:1px solid #ffffff14}h2{margin:0;font-size:14px;font-weight:500}',
+    'button{width:32px;height:32px;padding:0;color:#eee;background:transparent;border:0;border-radius:8px;font-size:22px;cursor:pointer}button:hover{background:#ffffff1a}',
+    'select{max-width:136px;padding:6px 8px;border:1px solid #ffffff24;border-radius:6px;background:#ffffff0f;color:#eee;font:inherit;cursor:pointer}option{background:#1c1c1c}',
+    'label{display:block;margin:0;padding:8px}.toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;cursor:pointer;border-radius:8px}.toggle:hover,summary:hover{background:#ffffff1a}',
+    '.copy{min-width:0}.hint{display:block;margin:4px 0 0;color:#bdbdbd;font-size:12px;line-height:1.4}.section-title{margin:8px 8px 0;color:#bdbdbd;font-size:12px;font-weight:500}.slider-label{padding:8px}.slider-heading{display:flex;align-items:center;justify-content:space-between;gap:8px}',
+    'details{margin-top:4px;border-top:1px solid #ffffff14}summary{display:flex;align-items:center;justify-content:space-between;min-height:44px;padding:8px;border-radius:8px;cursor:pointer;list-style:none}summary::-webkit-details-marker{display:none}summary::after{content:"›";font-size:22px;transform:rotate(90deg)}details[open]>summary::after{transform:rotate(-90deg)}.advanced-body{padding-bottom:4px}.language{margin-top:4px;border-top:1px solid #ffffff14;cursor:default}',
+    'input{accent-color:white}input[type=range]{appearance:none;display:block;width:100%;height:24px;margin:4px 0 0;padding:0;cursor:pointer;background:transparent}',
+    'input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:3px;background:linear-gradient(to right,#fff 0%,#fff var(--progress),#ffffff38 var(--progress),#ffffff38 100%)}input[type=range]::-webkit-slider-thumb{appearance:none;width:14px;height:14px;margin-top:-5px;border:0;border-radius:50%;background:white}',
+    'input[type=range]::-moz-range-track{height:4px;background:#ffffff38;border-radius:3px}input[type=range]::-moz-range-progress{height:4px;background:white;border-radius:3px}input[type=range]::-moz-range-thumb{width:14px;height:14px;border:0;border-radius:50%;background:white}',
     'input[type=checkbox]{appearance:none;position:relative;margin:0;flex:0 0 34px;width:34px;height:20px;border-radius:12px;background:#444449;cursor:pointer}',
     'input[type=checkbox]::before{content:"";position:absolute;left:3px;top:3px;width:14px;height:14px;border-radius:50%;background:#ddd;transition:transform .12s}',
     'input[type=checkbox]:checked{background:#f5f5f5}input[type=checkbox]:checked::before{transform:translateX(14px);background:#171719}',
-    'output{float:right;color:#eee;font-variant-numeric:tabular-nums}p{margin:14px 0 0;padding-top:12px;border-top:1px solid #ffffff14;font-size:11px;color:#aaaab2}',
-    ':focus-visible{outline:2px solid white;outline-offset:4px}'
+    'output{flex-shrink:0;color:#eee;font-variant-numeric:tabular-nums}p{margin:4px 8px 8px;padding-top:8px;border-top:1px solid #ffffff14;font-size:12px;color:#bdbdbd}',
+    ':focus-visible{outline:2px solid white;outline-offset:1px}@media(prefers-reduced-motion:reduce){input[type=checkbox]::before{transition:none}}'
   ].join('\n');
   root.append(style);
   const body = document.createElement('div');
@@ -172,10 +178,21 @@
   close.textContent = '×';
   close.setAttribute('aria-label', 'アンビエント設定を閉じる');
   header.append(heading, close);
-  body.append(header);
-  const fields = {}, outputs = {}, fieldLabels = {};
+  root.append(header, body);
+  const fields = {}, outputs = {}, fieldLabels = {}, descriptions = {};
+  const appearance = document.createElement('section');
+  const appearanceHeading = document.createElement('h3');
+  appearanceHeading.className = 'section-title';
+  appearanceHeading.id = 'yac-appearance-title';
+  appearance.setAttribute('aria-labelledby', appearanceHeading.id);
+  appearance.append(appearanceHeading);
+  const advanced = document.createElement('details');
+  const advancedHeading = document.createElement('summary');
+  const advancedBody = document.createElement('div');
+  advancedBody.className = 'advanced-body';
+  advanced.append(advancedHeading, advancedBody);
   const languageLabel = document.createElement('label');
-  languageLabel.className = 'toggle';
+  languageLabel.className = 'toggle language';
   fieldLabels.language = document.createTextNode(translations.ja.language);
   fields.language = document.createElement('select');
   fields.language.id = 'yac-language';
@@ -186,21 +203,32 @@
     fields.language.append(option);
   }
   languageLabel.append(fieldLabels.language, fields.language);
-  body.append(languageLabel);
   for (const [key, title] of [['enabled', 'アンビエント背景'], ['radial', '放射状モード'], ['avoidBars', '黒帯を自動で除外'], ['fillBars', '黒帯を背景に置き換える']]) {
     const label = document.createElement('label');
     label.className = 'toggle';
     fields[key] = document.createElement('input');
     fields[key].type = 'checkbox';
     fields[key].setAttribute('role', 'switch');
+    const copy = document.createElement('span');
+    copy.className = 'copy';
     fieldLabels[key] = document.createTextNode(title);
-    label.append(fieldLabels[key], fields[key]);
-    body.append(label);
+    copy.append(fieldLabels[key]);
+    if (key !== 'enabled') {
+      const hint = document.createElement('span');
+      hint.id = 'yac-' + key + '-hint';
+      hint.className = 'hint';
+      descriptions[key + 'Description'] = hint;
+      fields[key].setAttribute('aria-describedby', hint.id);
+      copy.append(hint);
+    }
+    label.append(copy, fields[key]);
+    (key === 'enabled' ? body : advancedBody).append(label);
   }
   for (const [key, title, min, max] of [
     ['strength', '濃さ', 15, 100], ['blur', 'ぼかし', 0, 160], ['saturation', '彩度', 0, 250], ['inset', '縁の内側', 0, 40], ['fps', '背景のFPS', 24, 60]
   ]) {
     const label = document.createElement('label');
+    label.className = 'slider-label';
     label.htmlFor = 'yac-' + key;
     fields[key] = document.createElement('input');
     fields[key].id = 'yac-' + key;
@@ -210,11 +238,22 @@
     fields[key].setAttribute('aria-label', title);
     outputs[key] = document.createElement('output');
     fieldLabels[key] = document.createTextNode(title);
-    label.append(fieldLabels[key], outputs[key], fields[key]);
-    body.append(label);
+    const row = document.createElement('span');
+    row.className = 'slider-heading';
+    row.append(fieldLabels[key], outputs[key]);
+    label.append(row, fields[key]);
+    if (key === 'inset' || key === 'fps') {
+      const hint = document.createElement('span');
+      hint.id = 'yac-' + key + '-hint';
+      hint.className = 'hint';
+      descriptions[key + 'Description'] = hint;
+      fields[key].setAttribute('aria-describedby', hint.id);
+      label.append(hint);
+    }
+    (key === 'inset' || key === 'fps' ? advancedBody : appearance).append(label);
   }
   const status = document.createElement('p');
-  body.append(status);
+  body.append(appearance, advanced, status, languageLabel);
   let statusKey = 'waiting';
   function setStatus(key) {
     statusKey = key;
@@ -229,6 +268,10 @@
     panel.lang = settings.language;
     close.setAttribute('aria-label', text.close);
     fields.language.value = settings.language;
+    appearanceHeading.textContent = text.appearance;
+    advancedHeading.textContent = text.advanced;
+    advancedHeading.setAttribute('aria-label', text.advanced);
+    for (const [key, element] of Object.entries(descriptions)) element.textContent = text[key];
     for (const [key, label] of Object.entries(fieldLabels)) {
       label.textContent = text[key];
       fields[key].setAttribute('aria-label', text[key]);
@@ -236,13 +279,17 @@
     setStatus(statusKey);
   }
   function setOpen(value, returnFocus = false) {
-    open = Boolean(value && player && location.pathname === '/watch');
+    const nextOpen = Boolean(value && player && location.pathname === '/watch');
+    const nativeGear = player?.querySelector('.ytp-settings-button');
+    const nativeMenu = player?.querySelector('.ytp-settings-menu');
+    if (nextOpen && (nativeGear?.getAttribute('aria-expanded') === 'true' ||
+        nativeMenu && getComputedStyle(nativeMenu).display !== 'none')) nativeGear?.click();
+    open = nextOpen;
     panel.hidden = !open;
     button.setAttribute('aria-expanded', String(open));
     player?.classList.toggle('yac-settings-open', open);
     positionPanel();
     if (open) {
-      player.querySelector('.ytp-settings-button[aria-expanded="true"]')?.click();
       fields.enabled.focus({ preventScroll: true });
     } else if (returnFocus && button.isConnected) button.focus();
   }
@@ -250,12 +297,16 @@
   listen(button, 'keydown', event => {
     event.stopPropagation();
   });
+  listen(button, 'keyup', event => event.stopPropagation());
   listen(close, 'click', () => setOpen(false, true));
   listen(panel, 'click', event => event.stopPropagation());
   listen(panel, 'dblclick', event => { event.preventDefault(); event.stopPropagation(); });
   listen(panel, 'keydown', event => {
     event.stopPropagation();
+    if (event.key === 'Escape') { event.preventDefault(); setOpen(false, true); }
   });
+  listen(panel, 'keyup', event => event.stopPropagation());
+  const nativeSettingsButtons = new WeakSet();
   function updateAppearance() {
     const attenuation = 1 - .55 * blend;
     canvas.style.opacity = (settings.strength / 100 * attenuation).toFixed(4);
@@ -274,7 +325,9 @@
     for (const key of ['strength', 'blur', 'saturation', 'inset', 'fps']) {
       fields[key].value = settings[key];
       fields[key].style.setProperty('--progress', (settings[key] - Number(fields[key].min)) / (Number(fields[key].max) - Number(fields[key].min)) * 100 + '%');
-      outputs[key].textContent = settings[key] + (key === 'blur' ? 'px' : key === 'fps' ? ' FPS' : '%');
+      const valueText = settings[key] + (key === 'blur' ? ' px' : key === 'fps' ? ' FPS' : '%');
+      outputs[key].textContent = valueText;
+      fields[key].setAttribute('aria-valuetext', valueText);
     }
     lastTime = -1;
     lastDrawFrame = 0;
@@ -283,7 +336,7 @@
     listen(fields[key], 'input', () => {
       settings[key] = key === 'language' ? fields[key].value :
         ['enabled', 'radial', 'avoidBars', 'fillBars'].includes(key) ? fields[key].checked : Number(fields[key].value);
-      if (key === 'enabled' && !settings.enabled) setOpen(false);
+      if (key === 'enabled' && !settings.enabled) setOpen(false, true);
       apply();
       draw();
     });
@@ -350,6 +403,10 @@
     if (video !== nextVideo) restoreBars();
     video = nextVideo;
     const gear = player?.querySelector('.ytp-right-controls .ytp-settings-button');
+    if (gear && !nativeSettingsButtons.has(gear)) {
+      nativeSettingsButtons.add(gear);
+      listen(gear, 'click', () => { if (open) setOpen(false); }, true);
+    }
     const toolbar = gear?.parentElement || player?.querySelector('.ytp-right-controls');
     if (toolbar && button.parentElement !== toolbar) toolbar.insertBefore(button, gear || toolbar.firstChild);
     if (player && panel.parentElement !== player) player.append(panel);

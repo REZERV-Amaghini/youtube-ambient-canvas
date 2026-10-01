@@ -1,4 +1,4 @@
-# Theme compatibility - 0.2.5 development revision
+# Theme compatibility - 0.2.6 development revision
 
 Some YouTube theme extensions apply high-specificity `!important` backgrounds.
 With Enhancer for YouTube's dark theme, these rules can cover the ambient canvas
@@ -6,13 +6,15 @@ on the watch page while leaving the header visible. Version 0.2.3 covered outer
 surfaces but missed unnamed layout boxes, the related-results wrapper and
 transcript-panel surfaces. Version 0.2.4 still missed anonymous information
 wrappers, event tickets, button/chip fills and the full-bleed player wrapper.
-These additional surfaces are included in 0.2.5.
+These additional surfaces were included in 0.2.5, but making the button faces
+fully transparent removed their visible boundaries. Version 0.2.6 restores
+their fills and uses theme color inputs plus backdrop blur.
 
 Ambient Canvas overrides background color, background image and box shadow only
 on selected surrounding page surfaces while ambient is active. The app container
 also keeps its isolated canvas stacking context. Video pixels, picture geometry,
-player controls and thumbnails are preserved; selected page-button faces are
-transparent while their touch-feedback children remain intact. Original inline
+player controls and thumbnails are preserved. Button/chip faces and the Enhancer
+toolbar are excluded from this guard. Original inline
 values and priorities are saved
 and restored when ambient is disabled, paused for fullscreen or disposed. Changes
 made by another theme while ambient is active are retained for restoration.
@@ -50,9 +52,45 @@ player wrapper that Enhancer themes also color. It preserves
 picture geometry, pixels and player controls. Returning to normal mode,
 fullscreen or ambient off restores the previous player backgrounds.
 
-## Button and filter surfaces
+## Early CSS and control surfaces
 
-The watch-page action buttons, masthead button faces, Enhancer toolbar and
-related-video filter chips also reveal ambient. Icons, text, native touch/hover
-feedback and focus behavior remain intact. The selected filter retains a thin
-outline so selection does not depend on an opaque fill.
+The stylesheet has a separate `document_start` manifest entry. Runtime video
+sampling and controls still use `document_idle` in the default isolated world.
+The patch changes DeepDark's `--main-background`, `--second-background` and
+`--hover-background` inputs within the watch page and masthead. This lets the
+theme's own rules draw transparent layout surfaces and translucent control
+faces, without repeatedly replacing button styles after they are created.
+The existing layout-only inline guard remains for other opaque backgrounds.
+
+Native YouTube button fills, text colors, radii, padding and interaction states
+are preserved as in 0.2.2. A 12px backdrop blur softens the area behind their
+existing faces. DeepDark control fills have 14% white opacity; active-filter
+color remains controlled by the theme. The 0.2.5 synthetic selection outline
+and forced light text are removed. The Enhancer toolbar keeps its original fill.
+No YouTube or Enhancer JavaScript functions are replaced.
+
+## Settings layout
+
+The settings dialog uses YouTube's native popup base color, `rgba(28,28,28,.9)`,
+neutral text, a 12px radius and 14px player-menu typography. DeepDark's secondary
+background input uses the same color so native popup menus remain readable.
+Strength, blur and saturation are immediately available; radial mode, black-bar
+options, sample inset and 24-60 FPS are grouped under Advanced settings.
+Language selection stays at the bottom. Advanced expansion is retained during
+adjustments, and a scrollable body keeps the close button available in small players.
+
+Range inputs have a 24px pointer area, native keyboard controls and value text
+with units. Escape returns focus to the settings button. Turning ambient off
+still closes the dialog as requested, and restores focus. Opening the native
+YouTube settings closes the ambient dialog; opening ambient closes native settings.
+Black-bar replacement remains independent of automatic black-bar detection.
+
+Design references: [YouTube's settings entry point](https://support.google.com/youtube/answer/12827017?co=GENIE.Platform%3DDesktop&hl=en)
+and [W3C slider keyboard and value semantics](https://www.w3.org/WAI/ARIA/apg/patterns/slider/).
+The native popup color was verified directly in the loaded YouTube stylesheet.
+The user-requested Astra review informed grouping, pointer areas and keyboard behavior.
+
+To compare native controls with the tagged 0.2.2 version, locally extract its
+`ambient.js` and `ambient.css` to `.tool-cache/ambient-v022.js` and
+`.tool-cache/ambient-v022.css`. Open `?controls&baseline` and `?controls` using
+the same fixture. Baseline files are ignored and excluded from distributions.
