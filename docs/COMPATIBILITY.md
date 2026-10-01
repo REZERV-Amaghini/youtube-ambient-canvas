@@ -1,4 +1,4 @@
-# Theme compatibility - 0.2.11 development revision
+# Theme compatibility - 0.2.19 development revision
 
 Some YouTube theme extensions apply high-specificity `!important` backgrounds.
 With Enhancer for YouTube's dark theme, these rules can cover the ambient canvas
@@ -25,13 +25,14 @@ preferences with `storage`.
 
 ## Reproduce the conflict
 
-Development 0.2.11 leaves the currently playing playlist row's native selected
-background unchanged. Other playlist rows and the header use one 46% surface
+Development 0.2.19 leaves the currently playing playlist row's native selected
+background unchanged. Other playlist rows and the header use one 64% surface
 with 12px blur; the outer list remains transparent so theme backgrounds do not
 stack. The header is excluded from the inline transparency guard. Hover/focus
-and native thumbnails/text remain present. Fixtures: `?playlist&controls`,
+use a 70% reading surface, and native thumbnails/text remain present. Fixtures: `?playlist&controls`,
 `?playlist&light`, or `?playlist&theme=deepdark`. Current browser verification
-of these new playlist rules is pending.
+of these rules passed in the local in-app fixture in 0.2.19; installed
+Chrome/Firefox and actual YouTube verification remains pending.
 
 Run `npm run demo`, then open the printed localhost URL with `?theme` appended.
 The fixture adds stronger stylesheet rules and inline important backgrounds.
@@ -79,11 +80,12 @@ No YouTube or Enhancer JavaScript functions are replaced.
 
 ## Replay cards and embedded chat menus
 
-The metadata carousel, including the replay prompt, has a 46% neutral surface
-with 12px backdrop blur. Development 0.2.18 gives the chat iframe itself the
-shared selected-control face (44% dark opacity, 12px blur), independent of the
-host's display mode. Its header uses the normal-control face; menus and top-fans
-use the selected face. Shared RGB/opacity/blur variables are copied at discovery,
+The metadata carousel, including the replay prompt, has a 64% reading surface
+with 12px backdrop blur. Development 0.2.19 paints the chat document's root with
+one 64% face; the parent iframe supplies blur only. The chat's own native dark
+attribute chooses the shared dark RGB or a light white face, preserving native
+primary text colors. The header uses 22% of that color; menus and top-fans use
+the reading face. Shared RGB/opacity/blur variables are copied at discovery,
 load and activation because CSS variables do not cross iframe documents.
 Structural content backgrounds are cleared, while native buttons, member/paid
 cards, engagement cards and colored badges retain their styling.

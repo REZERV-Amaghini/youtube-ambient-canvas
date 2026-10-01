@@ -198,17 +198,24 @@
     attributeFilter: ['style', 'class', 'id', 'theater']
   });
   const chatCss = [
-    'html.yac-chat-active{--yt-live-chat-background-color:transparent;--yt-live-chat-action-panel-background-color:transparent}',
-    'html.yac-chat-active,html.yac-chat-active body,html.yac-chat-active yt-live-chat-app,html.yac-chat-active yt-live-chat-renderer,html.yac-chat-active yt-live-chat-item-list-renderer,html.yac-chat-active yt-live-chat-ticker-renderer,html.yac-chat-active yt-live-chat-renderer #chat,html.yac-chat-active yt-live-chat-renderer #contents,html.yac-chat-active yt-live-chat-renderer #items,html.yac-chat-active yt-live-chat-renderer #item-scroller,html.yac-chat-active yt-live-chat-renderer #panel-pages{background-color:transparent!important;background-image:none!important}',
+    `html.yac-chat-active{
+      --yt-live-chat-background-color:transparent;--yt-live-chat-action-panel-background-color:transparent;
+      --yac-reading-rgb:255,255,255;
+      --yac-chat-surface:rgba(var(--yac-reading-rgb),var(--yac-reading-opacity));
+      --yac-chat-header-surface:rgba(var(--yac-reading-rgb),var(--yac-control-opacity));
+      background-color:var(--yac-chat-surface)!important;background-image:none!important;
+    }
+    html.yac-chat-active[dark]{--yac-reading-rgb:var(--yac-control-rgb)}`,
+    'html.yac-chat-active body,html.yac-chat-active yt-live-chat-app,html.yac-chat-active yt-live-chat-renderer,html.yac-chat-active yt-live-chat-item-list-renderer,html.yac-chat-active yt-live-chat-ticker-renderer,html.yac-chat-active yt-live-chat-renderer #chat,html.yac-chat-active yt-live-chat-renderer #contents,html.yac-chat-active yt-live-chat-renderer #items,html.yac-chat-active yt-live-chat-renderer #item-scroller,html.yac-chat-active yt-live-chat-renderer #panel-pages{background-color:transparent!important;background-image:none!important}',
     'html.yac-chat-active yt-live-chat-message-input-renderer,html.yac-chat-active yt-live-chat-message-input-renderer #input-container{background:transparent!important;box-shadow:none!important}',
     'html.yac-chat-active yt-live-chat-text-message-renderer{text-shadow:0 1px 3px #fff9}',
     'html.yac-chat-active[dark] yt-live-chat-text-message-renderer{text-shadow:0 1px 3px #000b}',
     `html.yac-chat-active yt-live-chat-header-renderer{
-      background-color:var(--yac-control-surface)!important;background-image:none!important;
+      background-color:var(--yac-chat-header-surface)!important;background-image:none!important;
       -webkit-backdrop-filter:blur(var(--yac-control-blur))!important;backdrop-filter:blur(var(--yac-control-blur))!important;
     }
     html.yac-chat-active :is(ytd-menu-popup-renderer,ytd-engagement-panel-section-list-renderer){
-      background-color:var(--yac-control-selected-surface)!important;background-image:none!important;
+      background-color:var(--yac-chat-surface)!important;background-image:none!important;
       -webkit-backdrop-filter:blur(var(--yac-control-blur))!important;backdrop-filter:blur(var(--yac-control-blur))!important;
     }
     html.yac-chat-active ytd-menu-popup-renderer :is(tp-yt-paper-listbox,paper-listbox),
@@ -588,6 +595,7 @@
       --yac-control-opacity:${alpha('--yac-control-opacity', .22)};
       --yac-control-hover-opacity:${alpha('--yac-control-hover-opacity', .34)};
       --yac-control-selected-opacity:${alpha('--yac-control-selected-opacity', .44)};
+      --yac-reading-opacity:${alpha('--yac-reading-opacity', .64)};
       --yac-control-blur:${safeBlur};
       --yac-control-surface:rgba(var(--yac-control-rgb),var(--yac-control-opacity));
       --yac-control-hover-surface:rgba(var(--yac-control-rgb),var(--yac-control-hover-opacity));

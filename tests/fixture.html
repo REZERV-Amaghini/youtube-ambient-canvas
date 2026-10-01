@@ -240,24 +240,24 @@ if(new URLSearchParams(location.search).has('theme')||new URLSearchParams(locati
   document.querySelector('#background').append(updateTheme);
 }
 if(new URLSearchParams(location.search).has('playlist')){
-  const light=new URLSearchParams(location.search).has('light');
-  document.documentElement.toggleAttribute('dark',!light);
   const playlistStyle=document.createElement('style');
   playlistStyle.textContent=`
-    #fixture-playlist{display:block;border:1px solid #ffffff30;border-radius:12px;overflow:hidden;margin-bottom:16px;color:${light?'#0f0f0f':'white'}}
-    #fixture-playlist :is(#container,.header,.playlist-items){display:block;background:${light?'#fff':'#282828'}}
+    #fixture-playlist{--fixture-playlist-face:#fff;--fixture-playing-face:#00000014;display:block;border:1px solid #ffffff30;border-radius:12px;overflow:hidden;margin-bottom:16px;color:#0f0f0f}
+    html[dark] #fixture-playlist{--fixture-playlist-face:#282828;--fixture-playing-face:#ffffff24;color:#eee}
+    #fixture-playlist :is(#container,.header,.playlist-items){display:block;background:var(--fixture-playlist-face)}
     #fixture-playlist .header{padding:16px;display:flex;align-items:center;gap:12px}
     #fixture-playlist .header h3{margin:0;flex:1;font-size:16px}
-    #fixture-playlist ytd-playlist-panel-video-renderer{display:block;background:${light?'#fff':'#282828'}}
-    #fixture-playlist ytd-playlist-panel-video-renderer[selected]{background:${light?'#00000014':'#ffffff24'}}
-    #fixture-playlist ytd-playlist-panel-video-renderer:hover{background:${light?'#00000014':'#ffffff24'}}
+    #fixture-playlist ytd-playlist-panel-video-renderer{display:block;background:var(--fixture-playlist-face)}
+    #fixture-playlist ytd-playlist-panel-video-renderer[selected]{background:var(--fixture-playing-face)}
+    #fixture-playlist ytd-playlist-panel-video-renderer:hover{background:var(--fixture-playing-face)}
     #fixture-playlist a{display:flex;gap:8px;padding:12px;align-items:center;color:inherit;text-decoration:none}
-    #fixture-playlist a:focus-visible{outline:2px solid ${light?'#065fd4':'#8ab4f8'};outline-offset:-3px}
+    #fixture-playlist a:focus-visible{outline:2px solid #065fd4;outline-offset:-3px}
+    html[dark] #fixture-playlist a:focus-visible{outline-color:#8ab4f8}
     #fixture-playlist .fixture-playlist-thumb{width:72px;height:40px;flex-shrink:0;border-radius:6px;background:linear-gradient(135deg,#59bdcd,#8f64db,#dc889b)}
     #fixture-playlist .fixture-playlist-copy{min-width:0;line-height:1.4}
     #fixture-playlist .fixture-playlist-copy small{display:block;color:#ff4081}
     #fixture-playlist #index{width:10px;flex-shrink:0}
-    #fixture-playlist .header button{color:inherit;background:${light?'#00000014':'#ffffff24'}}
+    #fixture-playlist .header button{color:inherit;background:var(--fixture-playing-face)}
   `;
   document.head.append(playlistStyle);
   const playlist=document.createElement('ytd-playlist-panel-renderer');playlist.id='fixture-playlist';
@@ -279,7 +279,7 @@ if(new URLSearchParams(location.search).has('chat')){
   replay.textContent='Chat replay · View comments from the original stream';
   document.querySelector('#primary-inner').append(replay);
   const chat=document.createElement('ytd-live-chat-frame');
-  const frame=document.createElement('iframe');frame.id='chatframe';frame.src='/live_chat';
+  const frame=document.createElement('iframe');frame.id='chatframe';frame.src='/live_chat'+(fixtureParameters.has('light')?'?light':'');
   frame.title='Live chat fixture';frame.style.cssText='width:100%;height:240px;border:1px solid #ffffff30';
   chat.append(frame);document.querySelector('#secondary').prepend(chat);
 }
@@ -328,4 +328,80 @@ if(new URLSearchParams(location.search).has('warning-demo')){
   };
 }
 const ambientScript=document.createElement('script');ambientScript.src=new URLSearchParams(location.search).has('baseline')?'/baseline-ambient.js':'/ambient.js';document.body.append(ambientScript);
+if(fixtureParameters.has('chat')||fixtureParameters.has('playlist')){
+  const diagnosticStyle=document.createElement('style');diagnosticStyle.textContent=`
+    html[data-fixture-backdrop] ytd-app::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;background:#fff}
+    html[data-fixture-backdrop="black"] ytd-app::before{background:#000}
+    html[data-fixture-backdrop] #yac-background{visibility:hidden!important}
+    #fixture-reading-controls{padding:12px;margin-top:12px;border-radius:8px;color:#eee;background:#222;line-height:1.5}
+    #fixture-reading-controls button{margin:3px;color:#eee;background:#404040}
+    #fixture-reading-result{display:block;white-space:pre-wrap}
+  `;document.head.append(diagnosticStyle);
+  const controls=document.createElement('section');controls.id='fixture-reading-controls';
+  controls.innerHTML='<strong>Reading contrast verification</strong><div><button id="fixture-light-theme">Light theme</button><button id="fixture-dark-theme">Dark theme</button><button id="fixture-white-backdrop">Static white backdrop</button><button id="fixture-black-backdrop">Static black backdrop</button><button id="fixture-ambient-backdrop">Ambient backdrop</button></div><button id="fixture-check-reading">Check dark/light + ON/OFF reading contrast</button><output id="fixture-reading-result">Ready. Checks use computed CSS paint over static black and white; no flashing test imagery.</output>';
+  document.querySelector('#below').append(controls);
+  const chatWindow=()=>document.querySelector('#chatframe')?.contentWindow;
+  const setTheme=dark=>{document.documentElement.toggleAttribute('dark',dark);chatWindow()?.fixtureSetChatTheme?.(dark);};
+  controls.querySelector('#fixture-light-theme').onclick=()=>setTheme(false);
+  controls.querySelector('#fixture-dark-theme').onclick=()=>setTheme(true);
+  controls.querySelector('#fixture-white-backdrop').onclick=()=>document.documentElement.setAttribute('data-fixture-backdrop','white');
+  controls.querySelector('#fixture-black-backdrop').onclick=()=>document.documentElement.setAttribute('data-fixture-backdrop','black');
+  controls.querySelector('#fixture-ambient-backdrop').onclick=()=>document.documentElement.removeAttribute('data-fixture-backdrop');
+  const checkButton=controls.querySelector('#fixture-check-reading'),report=controls.querySelector('#fixture-reading-result');
+  checkButton.onclick=async()=>{
+    const failures=[],ratios=[],frame=document.querySelector('#chatframe'),originalDocument=frame?.contentDocument;
+    const dark=document.documentElement.hasAttribute('dark'),chatDark=originalDocument?.documentElement.hasAttribute('dark');
+    const toggle=document.querySelector('#yac-controls')?.shadowRoot?.querySelector('input[role="switch"]');
+    if(!toggle||frame&&!chatWindow()?.fixtureCheckChatReadability){report.textContent='FAIL: controller/chat fixture is not ready; rerun after load';report.dataset.status='fail';return;}
+    const initialEnabled=toggle.checked,originalFocus=document.activeElement;
+    const waitPaint=()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+    const setEnabled=async value=>{if(toggle.checked!==value){toggle.checked=value;toggle.dispatchEvent(new Event('input',{bubbles:true}));}await waitPaint();};
+    const check=(condition,message)=>{if(!condition)failures.push(message);};
+    const rgba=value=>{const values=value.match(/[\d.]+/g)?.map(Number);if(!values||values.length<3)throw new Error('Unsupported computed color: '+value);return [values[0],values[1],values[2],values[3]??1];};
+    const over=(face,background)=>face.slice(0,3).map((channel,index)=>channel*face[3]+background[index]*(1-face[3]));
+    const luminance=rgb=>rgb.map(channel=>{const value=channel/255;return value<=.04045?value/12.92:((value+.055)/1.055)**2.4;}).reduce((sum,value,index)=>sum+value*[.2126,.7152,.0722][index],0);
+    const contrast=(element,backdrop)=>{
+      const ancestors=[];for(let node=element;node&&node.localName!=='ytd-app';node=node.parentElement)ancestors.unshift(node);
+      let background=[backdrop,backdrop,backdrop];for(const ancestor of ancestors)background=over(rgba(getComputedStyle(ancestor).backgroundColor),background);
+      const a=luminance(over(rgba(getComputedStyle(element).color),background)),b=luminance(background);return (Math.max(a,b)+.05)/(Math.min(a,b)+.05);
+    };
+    const expectedSurface=(host,name)=>{const probe=document.createElement('span');probe.style.backgroundColor=`var(${name})`;host.append(probe);const paint=getComputedStyle(probe).backgroundColor;probe.remove();return paint;};
+    const checkContrast=(element,name)=>{for(const backdrop of [0,255]){const ratio=contrast(element,backdrop);ratios.push({name,backdrop,ratio:Number(ratio.toFixed(3))});check(ratio>=4.5,`${name} over ${backdrop?'white':'black'}: ${ratio.toFixed(2)} < 4.5`);}};
+    const playlist=document.querySelector('#fixture-playlist'),originalRows=[...(playlist?.querySelectorAll('ytd-playlist-panel-video-renderer')||[])],selectedRow=playlist?.querySelector('[selected]');
+    checkButton.disabled=true;
+    try{
+      await setEnabled(true);
+      for(const themeDark of [true,false]){
+        setTheme(themeDark);const theme=themeDark?'dark':'light';
+        if(frame){const chat=chatWindow().fixtureCheckChatReadability();failures.push(...chat.failures.map(message=>`${theme} chat: ${message}`));ratios.push(...chat.ratios.map(item=>({...item,name:`${theme} chat ${item.name}`})));check(frame.contentDocument===originalDocument,`${theme}: theme switch retains the same iframe document`);}
+        if(playlist){
+          const header=playlist.querySelector('.header'),row=playlist.querySelector('ytd-playlist-panel-video-renderer:not([selected])'),copy=row.querySelector('.fixture-playlist-copy');
+          check(getComputedStyle(header).backgroundColor===expectedSurface(playlist,'--yac-reading-surface'),`${theme}: playlist header uses the shared reading face`);
+          check(getComputedStyle(row).backgroundColor===expectedSurface(playlist,'--yac-reading-surface'),`${theme}: nonplaying row uses the shared reading face`);
+          checkContrast(header.querySelector('h3'),`${theme} playlist header`);checkContrast(copy,`${theme} playlist row`);
+          row.querySelector('a').focus({preventScroll:true});
+          check(getComputedStyle(row).backgroundColor===expectedSurface(playlist,'--yac-reading-hover-surface'),`${theme}: focused row uses the shared hover face`);checkContrast(copy,`${theme} playlist focus`);
+          row.querySelector('a').blur();
+          check(getComputedStyle(selectedRow).backgroundColor===expectedSurface(playlist,'--fixture-playing-face'),`${theme}: selected row retains native paint`);
+          check(playlist.querySelector('[selected]')===selectedRow&&originalRows.every(item=>item.isConnected),`${theme}: playing state and original row DOM are preserved`);
+        }
+      }
+      await setEnabled(false);
+      for(const themeDark of [true,false]){
+        setTheme(themeDark);const theme=themeDark?'dark':'light';
+        if(frame){const chat=chatWindow().fixtureCheckChatReadability();failures.push(...chat.failures.map(message=>`${theme} OFF chat: ${message}`));check(!chat.active,`${theme}: OFF removes the chat-active class`);}
+        if(playlist){
+          const native=expectedSurface(playlist,'--fixture-playlist-face');
+          check(getComputedStyle(playlist.querySelector('.header')).backgroundColor===native&&getComputedStyle(playlist.querySelector('ytd-playlist-panel-video-renderer:not([selected])')).backgroundColor===native,`${theme}: OFF restores native playlist paint`);
+          check(getComputedStyle(selectedRow).backgroundColor===expectedSurface(playlist,'--fixture-playing-face'),`${theme}: OFF retains the playing face`);
+        }
+      }
+    }catch(error){failures.push(error.message);}finally{
+      setTheme(dark);if(frame)chatWindow()?.fixtureSetChatTheme?.(chatDark);
+      await setEnabled(initialEnabled);checkButton.disabled=false;originalFocus?.focus?.({preventScroll:true});
+    }
+    report.textContent=failures.length?'FAIL: '+failures.join('\n'):`PASS: same-document dark/light themes, ON/OFF restoration, native SVG/semantic/playing states; minimum primary contrast ${Math.min(...ratios.map(item=>item.ratio)).toFixed(2)} (required 4.5)`;
+    report.dataset.status=failures.length?'fail':'pass';report.dataset.results=JSON.stringify({failures,ratios});
+  };
+}
 </script></body></html>

@@ -1,4 +1,28 @@
-# 検証結果 — 0.2.18 development / 2026-10-01
+# 検証結果 — 0.2.19 development / 2026-10-02
+
+## 0.2.19 theme-sensitive reading surfaces
+
+- The chat document's root paints one reading face. The parent iframe supplies
+  backdrop blur only. Its own native `dark` attribute chooses shared dark RGB
+  or white; CSS responds to a theme change without extra DOM observers or forced
+  primary text colors. Paid/member/engagement cards retain their native paints.
+- Reading opacity is centrally controlled by `--yac-reading-opacity` (64%).
+  Playlist non-playing rows and headers use this face, with 70% on hover/focus.
+  Hover no longer replaces the reading face with a weak white overlay. The
+  selected playing row and native interaction geometry remain unchanged.
+- All ten numerical/controller suites and syntax checks passed. The local in-app
+  browser matrix passed 32 computed primary-text contrast cases across native
+  light/dark chat, header, replay/options menus, top fans and playlist normal/
+  focus states over white/black backdrops. The lowest ratio was 4.762:1; this is
+  a fixture measurement for primary text, not a claim about every accent/badge
+  or native YouTube styling. Manual screenshots confirm painted text in both
+  themes. The matrix also verifies OFF restoration, original SVG/card colors,
+  native playing state and switching themes in the same iframe document.
+- The existing scroll blur rule remains `max(25px, configuredBlur / 2)`. The
+  local browser showed 90px at blend 0 and 45px at blend 1 after scrolling.
+- Proof is saved locally in `artifacts/reading-0.2.19/` (excluded from packages).
+  Native YouTube access remains blocked by the saved browser permission setting;
+  installed Chrome/Firefox behavior and the native chat-icon cause are unverified.
 
 ## 0.2.18 GPU projection, chat shade and scroll blur
 

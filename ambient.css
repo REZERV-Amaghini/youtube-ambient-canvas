@@ -17,6 +17,13 @@ html.yac-active {
   --yac-control-hover-opacity: .34;
   --yac-control-selected-opacity: .44;
   --yac-control-blur: 12px;
+  /* Text-heavy surfaces need a stronger face than short action buttons.
+     64% retains primary text contrast over both white and black frames. */
+  --yac-reading-rgb: 255, 255, 255;
+  --yac-reading-opacity: .64;
+  --yac-reading-hover-opacity: .70;
+  --yac-reading-surface: rgba(var(--yac-reading-rgb), var(--yac-reading-opacity));
+  --yac-reading-hover-surface: rgba(var(--yac-reading-rgb), var(--yac-reading-hover-opacity));
   --yac-control-surface: rgba(var(--yac-control-rgb), var(--yac-control-opacity));
   --yac-control-hover-surface: rgba(var(--yac-control-rgb), var(--yac-control-hover-opacity));
   --yac-control-selected-surface: rgba(var(--yac-control-rgb), var(--yac-control-selected-opacity));
@@ -32,6 +39,7 @@ html.yac-active {
 html.yac-active[dark],
 html.yac-active:has(link#efyt-dark-theme) {
   --yac-page-base: #080b12;
+  --yac-reading-rgb: var(--yac-control-rgb);
   --yac-secondary-surface: rgba(28, 28, 28, .9);
   --yac-hover-surface: rgba(255, 255, 255, .14);
   --yac-control-text: var(--main-text, var(--yt-spec-text-primary, #f1f1f1));
@@ -95,13 +103,13 @@ html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-chip-cloud-renderer :is(#
 html.yac-active {
   --yac-menu-surface: rgba(255, 255, 255, .86);
   --yac-guide-surface: rgba(255, 255, 255, .78);
-  --yac-card-surface: rgba(255, 255, 255, .46);
+  --yac-card-surface: var(--yac-reading-surface);
 }
 html.yac-active[dark],
 html.yac-active:has(link#efyt-dark-theme) {
   --yac-menu-surface: rgba(28, 28, 28, .86);
   --yac-guide-surface: rgba(18, 18, 18, .78);
-  --yac-card-surface: rgba(28, 28, 28, .46);
+  --yac-card-surface: var(--yac-reading-surface);
 }
 html.yac-active ytd-popup-container :is(ytd-menu-popup-renderer,ytd-multi-page-menu-renderer,yt-sheet-view-model.ytSheetViewModelContextual) {
   --main-background: transparent !important;
@@ -194,14 +202,14 @@ html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) ytd-playlist-panel-video-ren
   backdrop-filter: blur(12px) !important;
 }
 html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) ytd-playlist-panel-video-renderer:not([selected]):is(:hover,:focus-within) {
-  background-color: var(--hover-background, rgba(255, 255, 255, .14)) !important;
+  background-color: var(--yac-reading-hover-surface) !important;
 }
 
 html.yac-active #cinematics { display: none !important; }
-/* The chat iframe keeps transparent wrappers over one shared dark face. Use the
-   selected-control shade for sustained reading over bright ambient frames. */
+/* The chat document paints its own theme-sensitive reading face. The parent
+   iframe only blurs what lies behind it; no second dark layer or forced text. */
 html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) ytd-live-chat-frame #chatframe {
-  background-color: var(--yac-control-selected-surface) !important;
+  background-color: transparent !important;
   background-image: none !important;
   -webkit-backdrop-filter: blur(var(--yac-control-blur)) !important;
   backdrop-filter: blur(var(--yac-control-blur)) !important;

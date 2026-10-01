@@ -1,19 +1,24 @@
 <!doctype html><html dark><head><meta charset="utf-8"><title>Chat background fixture</title>
+<script>document.documentElement.toggleAttribute('dark',!new URLSearchParams(location.search).has('light'));</script>
 <style>
-html,body{margin:0;color:#eee;background:#0f0f0f;font:13px system-ui}
-yt-live-chat-app,yt-live-chat-renderer,yt-live-chat-header-renderer,yt-live-chat-item-list-renderer{display:block;background:#0f0f0f}
+html,body{margin:0;color:#0f0f0f;background:#fff;font:13px system-ui}
+html{--fixture-chat-base:#fff;--fixture-chat-popup:#fff;--fixture-chat-input:#fff;--fixture-chat-button:#00000014}
+html[dark]{--fixture-chat-base:#0f0f0f;--fixture-chat-popup:#282828;--fixture-chat-input:#222;--fixture-chat-button:#ffffff14}
+html[dark],html[dark] body{color:#eee;background:#0f0f0f}
+yt-live-chat-app,yt-live-chat-renderer,yt-live-chat-header-renderer,yt-live-chat-item-list-renderer{display:block;background:var(--fixture-chat-base)}
 yt-live-chat-header-renderer{display:flex;gap:4px;align-items:center;padding:8px;border-bottom:1px solid #ffffff30}
-button{color:inherit;font:inherit;cursor:pointer;background:#ffffff14;border:0;border-radius:20px;padding:8px}
+button{color:inherit;font:inherit;cursor:pointer;background:var(--fixture-chat-button);border:0;border-radius:20px;padding:8px}
 #label{display:flex;align-items:center;margin-right:auto}#label-icon{width:24px;height:24px;display:block}
 .ytSpecButtonShapeNextIcon{width:24px;height:24px}.yt-icon-shape{display:block;width:100%;height:100%}.yt-icon-shape svg{width:100%;height:100%;fill:currentColor}
 yt-live-chat-text-message-renderer,yt-live-chat-message-input-renderer,yt-live-chat-paid-message-renderer{display:block;padding:12px}
-yt-live-chat-paid-message-renderer{background:#663399}yt-live-chat-message-input-renderer{background:#222}
-yt-live-chat-membership-item-renderer{display:block;background:#0ba75e;padding:12px}
-ytd-menu-popup-renderer{position:absolute;z-index:10;right:8px;top:52px;background:#282828;border-radius:12px;padding:8px;box-shadow:0 8px 32px #0005}
-tp-yt-paper-listbox{display:block;background:#282828}tp-yt-paper-listbox button{display:block;width:100%;text-align:left;border-radius:8px;background:transparent}
+yt-live-chat-paid-message-renderer{background:#663399;color:#fff}yt-live-chat-message-input-renderer{background:var(--fixture-chat-input)}
+yt-live-chat-membership-item-renderer{display:block;background:#0ba75e;color:#fff;padding:12px}
+yt-live-chat-viewer-engagement-message-renderer #card{color:#fff}
+ytd-menu-popup-renderer{position:absolute;z-index:10;right:8px;top:52px;background:var(--fixture-chat-popup);border-radius:12px;padding:8px;box-shadow:0 8px 32px #0005}
+tp-yt-paper-listbox{display:block;background:var(--fixture-chat-popup)}tp-yt-paper-listbox button{display:block;width:100%;text-align:left;border-radius:8px;background:transparent}
 tp-yt-paper-listbox button:hover{background:#ffffff20}
-ytd-engagement-panel-section-list-renderer{display:block;position:absolute;inset:0;background:#282828;z-index:5}
-ytd-engagement-panel-section-list-renderer #header,ytd-engagement-panel-section-list-renderer #content{background:#282828;padding:12px}
+ytd-engagement-panel-section-list-renderer{display:block;position:absolute;inset:0;background:var(--fixture-chat-popup);z-index:5}
+ytd-engagement-panel-section-list-renderer #header,ytd-engagement-panel-section-list-renderer #content{background:var(--fixture-chat-popup);padding:12px}
 [hidden]{display:none!important}
 </style></head><body>
 <yt-live-chat-app><yt-live-chat-renderer>
@@ -45,12 +50,30 @@ replayMenu.querySelectorAll('button').forEach(button=>button.onclick=()=>{
 // No screenshots of account data or externally supplied messages are involved.
 const originalIcons=[...document.querySelectorAll('yt-live-chat-header-renderer svg')];
 const runChecks=document.createElement('button');runChecks.id='fixture-check-chat-shades';runChecks.textContent='Check chat shades';
+const themeButton=document.createElement('button');themeButton.id='fixture-toggle-chat-theme';themeButton.textContent='Toggle chat light/dark';
 const result=document.createElement('output');result.id='fixture-chat-result';result.style.display='block';document.body.append(runChecks,result);
-runChecks.onclick=()=>{
-  const failures=[],active=document.documentElement.classList.contains('yac-chat-active');
+window.fixtureSetChatTheme=dark=>document.documentElement.toggleAttribute('dark',dark);
+themeButton.onclick=()=>window.fixtureSetChatTheme(!document.documentElement.hasAttribute('dark'));
+runChecks.before(themeButton);
+window.fixtureCheckChatReadability=()=>{
+  const failures=[],ratios=[],active=document.documentElement.classList.contains('yac-chat-active'),dark=document.documentElement.hasAttribute('dark');
   const check=(value,message)=>{if(!value)failures.push(message);};
   const paint=element=>getComputedStyle(element).backgroundColor;
   const transparent=value=>value==='rgba(0, 0, 0, 0)'||value==='transparent';
+  const rgba=value=>{
+    const channels=value.match(/[\d.]+/g)?.map(Number);
+    if(!channels||channels.length<3)throw new Error('Unsupported computed color: '+value);
+    return [channels[0],channels[1],channels[2],channels[3]??1];
+  };
+  const over=(face,backdrop)=>face.slice(0,3).map((channel,index)=>channel*face[3]+backdrop[index]*(1-face[3]));
+  const luminance=rgb=>rgb.map(channel=>{const value=channel/255;return value<=.04045?value/12.92:((value+.055)/1.055)**2.4;}).reduce((sum,value,index)=>sum+value*[.2126,.7152,.0722][index],0);
+  const contrast=(element,backdrop)=>{
+    const ancestors=[];for(let node=element;node;node=node.parentElement)ancestors.unshift(node);
+    let background=[backdrop,backdrop,backdrop];
+    for(const ancestor of ancestors)background=over(rgba(paint(ancestor)),background);
+    const foreground=over(rgba(getComputedStyle(element).color),background),a=luminance(foreground),b=luminance(background);
+    return (Math.max(a,b)+.05)/(Math.min(a,b)+.05);
+  };
   const expectedSurface=name=>{
     const probe=document.createElement('span');probe.style.backgroundColor=`var(${name})`;document.body.append(probe);
     const value=paint(probe);probe.remove();return value;
@@ -61,20 +84,31 @@ runChecks.onclick=()=>{
   check(paint(document.querySelector('yt-live-chat-viewer-engagement-message-renderer #card'))==='rgb(62, 62, 62)','engagement card is not blanket-cleared');
   const header=document.querySelector('yt-live-chat-header-renderer');
   if(active){
+    check(paint(document.documentElement)===expectedSurface('--yac-chat-surface'),'html paints the shared reading face');
     check(transparent(paint(document.body))&&transparent(paint(document.querySelector('yt-live-chat-renderer'))),'chat wrappers avoid stacking opaque layers');
-    check(!transparent(expectedSurface('--yac-control-surface'))&&paint(header)===expectedSurface('--yac-control-surface'),'header uses shared control shade');
-    check(paint(menu)===expectedSurface('--yac-control-selected-surface')&&paint(replayMenu)===paint(menu),'both dropdowns use shared readable shade');
+    check(!transparent(expectedSurface('--yac-chat-header-surface'))&&paint(header)===expectedSurface('--yac-chat-header-surface'),'header uses theme-sensitive shared shade');
+    check(paint(menu)===expectedSurface('--yac-chat-surface')&&paint(replayMenu)===paint(menu),'both dropdowns use shared reading shade');
     check(paint(fans)===paint(menu),'top fans panel uses shared readable shade');
     check(getComputedStyle(menu).backdropFilter===getComputedStyle(header).backdropFilter,'menus and header share blur');
+    const message=document.querySelector('yt-live-chat-text-message-renderer');
+    check(getComputedStyle(message).color===(dark?'rgb(238, 238, 238)':'rgb(15, 15, 15)'),'native primary chat text follows theme');
+    for(const [name,element] of [['messages',message],['header',document.querySelector('#label')],['replay menu',replayMenu.querySelector('button')],['options menu',menu.querySelector('button')],['top fans',fans.querySelector('p')]]){
+      for(const backdrop of [0,255]){
+        const ratio=contrast(element,backdrop);ratios.push({name,backdrop,ratio:Number(ratio.toFixed(3))});
+        check(ratio>=4.5,`${name} primary text over ${backdrop?'white':'black'}: ${ratio.toFixed(2)} < 4.5`);
+      }
+    }
     if(frameElement){
       const outer=frameElement,parentStyle=parent.getComputedStyle(outer);
-      check(!transparent(parentStyle.backgroundColor),'outer chat has a reading shade over bright ambient');
+      check(transparent(parentStyle.backgroundColor)&&transparent(parent.getComputedStyle(outer.parentElement).backgroundColor),'parent iframe has no second reading face');
       check(parentStyle.backdropFilter===getComputedStyle(menu).backdropFilter,'outer shade shares blur');
     }
   }else{
-    check(paint(header)==='rgb(15, 15, 15)'&&paint(menu)==='rgb(40, 40, 40)','OFF restores native chat surfaces');
+    check(paint(header)===(dark?'rgb(15, 15, 15)':'rgb(255, 255, 255)')&&paint(menu)===(dark?'rgb(40, 40, 40)':'rgb(255, 255, 255)'),'OFF restores native theme surfaces');
   }
-  result.textContent=failures.length?'FAIL: '+failures.join('; '):`PASS: ${active?'shared chat shades':'native OFF surfaces'}, original icons and semantic card colors`;
+  result.textContent=failures.length?'FAIL: '+failures.join('; '):`PASS: ${dark?'dark':'light'} ${active?'shared reading face':'native OFF surfaces'}, original icons and semantic colors${ratios.length?'; minimum primary contrast '+Math.min(...ratios.map(item=>item.ratio)).toFixed(2):''}`;
   result.dataset.status=failures.length?'fail':'pass';
+  return {failures,ratios,active,dark};
 };
+runChecks.onclick=window.fixtureCheckChatReadability;
 </script></body></html>
