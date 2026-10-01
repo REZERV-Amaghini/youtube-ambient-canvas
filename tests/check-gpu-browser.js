@@ -71,65 +71,116 @@
     figure.append(caption, value); previews.append(figure);
   }
 
-  async function checkWorker(source) {
-    let worker, input, returned, timer;
+  async function checkWorker() {
+    let worker, input, returned, timer, stopped = false;
+    const jobCount = 36;
+    const report = { pass: false, requestedJobs: jobCount, completedJobs: 0, pixelChecks: 0,
+      sampleOnlyJobs: 0, withoutReadbackJobs: 0, bitmapChecks: 0, cropChecks: 0,
+      detachedInputs: 0, readyBackend: null, frameBackends: [],
+      maxMeanChannelError: 0, maxLargePixelFraction: 0, maxChannelError: 0, alphaErrors: 0 };
     try {
-      input = await createImageBitmap(source);
       worker = new Worker('/ambient-worker.js');
       const reference = new YacRenderer(canvas());
-      const options = { avoidBars: false, fillBars: false, inset: 13, blend: .35, readPixels: true };
-      const expected = reference.draw(source, rectangle, viewport, true,
-        { ...options, sourceKey: '3:fixture-worker', mediaTime: 1 });
-      let sent = false, frameReplies = 0, readyBackend, detached = false;
+      let ready = false, pending = null;
       return await new Promise((resolve, reject) => {
-        timer = setTimeout(() => reject(new Error('Worker smoke test exceeded 2000 ms')), 2000);
-        worker.onerror = event => reject(new Error(event.message || 'Worker startup failed'));
+        const fail = error => { if (!stopped) { stopped = true; reject(error); } };
+        timer = setTimeout(() => fail(new Error('Sequential Worker checks exceeded 10000 ms')), 10000);
+        worker.onerror = event => fail(new Error(event.message || 'Worker startup failed'));
+        worker.onmessageerror = () => fail(new Error('Worker result could not be decoded'));
+        async function sendNext() {
+          if (stopped) return;
+          const index = report.completedJobs;
+          const group = Math.floor(index / 12);
+          // Keep every source detached from the DOM: these changing static
+          // patterns validate ownership, never produce visible flashing.
+          const source = makeSource({ offset: index, bars: [null, 'letterbox', 'pillarbox'][group] });
+          const captured = await createImageBitmap(source);
+          if (stopped) { captured.close(); return; }
+          input = captured;
+          const options = { avoidBars: true, fillBars: true, inset: 13, blend: .35,
+            sampleOnly: index % 3 === 1, readPixels: index % 3 === 0 };
+          const sourceKey = 'fixture-worker-' + group, mediaTime = index / 30;
+          const referenceOptions = { ...options, sourceKey: '3:' + sourceKey, mediaTime };
+          const expected = options.sampleOnly ? reference.inspect(input, rectangle, viewport, referenceOptions) :
+            reference.draw(input, rectangle, viewport, true, referenceOptions);
+          pending = { requestId: index + 1, options, expected };
+          worker.postMessage({ type: 'render', requestId: pending.requestId, generation: 2, barGeneration: 3,
+            frame: input, rectangle, viewport, radial: true, options, sourceKey, mediaTime }, [input]);
+          if (input.width !== 0 || input.height !== 0) throw new Error('Transferred input was not detached');
+          report.detachedInputs++;
+          input = null;
+        }
         worker.onmessage = event => {
           const reply = event.data;
+          if (stopped) { reply.bitmap?.close(); return; }
+          returned = reply.bitmap || null;
           try {
             if (reply.type === 'ready') {
-              if (sent) throw new Error('Duplicate worker readiness');
-              readyBackend = reply.backend; sent = true;
-              worker.postMessage({ type: 'render', requestId: 7, generation: 2, barGeneration: 3,
-                frame: input, rectangle, viewport, radial: true, options,
-                sourceKey: 'fixture-worker', mediaTime: 1 }, [input]);
-              detached = input.width === 0 && input.height === 0;
-              input = null;
-              return;
+              if (ready) throw new Error('Duplicate worker readiness');
+              if (!['webgl2', '2d'].includes(reply.backend)) throw new Error('Unknown worker backend');
+              ready = true; report.readyBackend = reply.backend;
+              sendNext().catch(fail); return;
             }
             if (reply.type === 'failed') throw new Error(reply.reason || 'Worker render failed');
-            if (reply.type !== 'frame') throw new Error('Unexpected worker reply');
-            returned = reply.bitmap; frameReplies++;
-            const expectedFrame = snapshot(reference.canvas), actualFrame = snapshot(returned);
-            const metrics = difference(expectedFrame.pixels, actualFrame.pixels);
-            const sample = reference.readPixels();
-            const pixelsMatch = reply.pixels instanceof Uint8ClampedArray && reply.pixels.length === sample.length &&
-              reply.pixels.every((value, at) => value === sample[at]);
-            const cropMatches = JSON.stringify(reply.samplingCrop) === JSON.stringify(expected.samplingCrop) &&
-              JSON.stringify(reply.videoCrop) === JSON.stringify(expected.videoCrop);
-            const pass = sent && detached && frameReplies === 1 && reply.requestId === 7 && reply.generation === 2 &&
-              reply.sampleOnly === false && ['webgl2', '2d'].includes(readyBackend) &&
-              ['webgl2', '2d'].includes(reply.backend) && cropMatches && pixelsMatch &&
-              metrics.meanChannelError <= 1 && metrics.largePixelFraction <= .004 && metrics.alphaErrors === 0;
-            returned.close(); returned = null;
-            resolve({ pass, readyBackend, frameBackend: reply.backend, completedJobs: frameReplies,
-              transferredInputDetached: detached, pixelsMatch, cropMatches, ...metrics });
-          } catch (error) { reject(error); }
+            if (reply.type !== 'frame' || !pending) throw new Error('Unexpected worker reply');
+            const { requestId, options, expected } = pending;
+            if (reply.requestId !== requestId || reply.generation !== 2 || reply.sampleOnly !== options.sampleOnly ||
+                !['webgl2', '2d'].includes(reply.backend)) throw new Error('Worker response identity/mode mismatch');
+            if (!report.frameBackends.includes(reply.backend)) report.frameBackends.push(reply.backend);
+            if (JSON.stringify(reply.samplingCrop) !== JSON.stringify(expected.samplingCrop) ||
+                JSON.stringify(reply.videoCrop) !== JSON.stringify(expected.videoCrop) ||
+                reply.readable !== expected.readable || reply.cropped !== expected.cropped) throw new Error('Worker crop/analysis mismatch');
+            report.cropChecks++;
+            if (options.sampleOnly || options.readPixels) {
+              const sample = reference.readPixels();
+              if (!(reply.pixels instanceof Uint8ClampedArray) || reply.pixels.length !== 57600 ||
+                  sample.length !== 57600 || !reply.pixels.every((value, at) => value === sample[at])) {
+                throw new Error('Worker sample pixels differ or became detached');
+              }
+              report.pixelChecks++;
+            } else {
+              if (reply.pixels !== null) throw new Error('Worker returned unrequested sample pixels');
+              report.withoutReadbackJobs++;
+            }
+            if (options.sampleOnly) {
+              if (reply.bitmap !== null) throw new Error('Sampling-only job returned a bitmap');
+              report.sampleOnlyJobs++;
+            } else {
+              if (!returned || returned.width !== reference.canvas.width || returned.height !== reference.canvas.height) {
+                throw new Error('Worker bitmap missing or wrong dimensions');
+              }
+              const metrics = difference(snapshot(reference.canvas).pixels, snapshot(returned).pixels);
+              report.maxMeanChannelError = Math.max(report.maxMeanChannelError, metrics.meanChannelError);
+              report.maxLargePixelFraction = Math.max(report.maxLargePixelFraction, metrics.largePixelFraction);
+              report.maxChannelError = Math.max(report.maxChannelError, metrics.maxChannelError);
+              report.alphaErrors += metrics.alphaErrors;
+              if (metrics.meanChannelError > 1 || metrics.largePixelFraction > .004 || metrics.alphaErrors) {
+                throw new Error('Worker projected bitmap differs from the reference');
+              }
+              report.bitmapChecks++;
+            }
+            returned?.close(); returned = null; pending = null;
+            report.completedJobs++;
+            if (report.completedJobs === jobCount) {
+              report.pass = true; report.transferredInputDetached = report.detachedInputs === jobCount;
+              stopped = true; resolve(report);
+            } else sendNext().catch(fail);
+          } catch (error) { fail(error); }
+          finally { returned?.close(); returned = null; }
         };
       });
     } catch (error) {
-      return { pass: false, error: error instanceof Error ? error.message : String(error) };
+      return { ...report, pass: false, error: error instanceof Error ? error.message : String(error) };
     } finally {
-      clearTimeout(timer); input?.close(); returned?.close(); worker?.terminate();
+      stopped = true; clearTimeout(timer); input?.close(); returned?.close(); worker?.terminate();
     }
   }
-
   async function run() {
     button.disabled = true; previews.replaceChildren();
     status.dataset.state = 'running'; status.textContent = 'Running';
     output.textContent = 'Comparing actual GPU output with the Canvas 2D reference…';
     const result = { pass: false, backend: null, cases: [], checks: [], benchmark: null, worker: null,
-      scope: 'Static test frames: inspection + projection. Video capture, worker transfer, CSS blur and YouTube are excluded.' };
+      scope: 'Static offscreen frames: inspection, projection and sequential packaged-Worker transfer. Real video decoding, CSS blur and YouTube are excluded.' };
     let gpu;
     try {
       if (typeof YacGpuRenderer !== 'function') throw new Error('YacGpuRenderer did not load');
@@ -192,7 +243,7 @@
       const displayed = compare('preview-gradient', source);
       preview('Canvas 2D reference', displayed.reference.canvas);
       preview('GPU renderer output', displayed.rendered.canvas);
-      result.worker = await checkWorker(source);
+      result.worker = await checkWorker();
       result.checks.push({ name: 'packaged-worker-render', pass: result.worker.pass });
 
       if (result.backend === 'webgl2') result.checks.push({ name: 'gpu-projection-stayed-active',

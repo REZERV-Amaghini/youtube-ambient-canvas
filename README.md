@@ -16,7 +16,7 @@ Chromeは展開して「パッケージ化されていない拡張機能」と�
 Firefoxの永続インストールにはAMOの署名が必要です。
 
 GitHub Releasesの配布パッケージは0.2.2です。開発ソースとローカルのChrome／Firefox用
-ビルドは0.2.21で、Enhancer for YouTubeなどとの互換修正を検証中です。
+ビルドは0.2.22で、Enhancer for YouTubeなどとの互換修正を検証中です。
 両ストアには0.2.17を提出済みです。現在の審査結果・公開状態は再確認していません。
 
 ## 機能
@@ -50,6 +50,9 @@ GitHub Releasesの配布パッケージは0.2.2です。開発ソースとロー
 - 開発版0.2.18では、背景の投影をWorker内のWebGL2シェーダーで描画します。
   GPU未対応・初期化失敗・コンテキスト消失時は同じWorker内の2D描画へ戻ります。
   黒帯検出・警告の採色と、YouTubeの透過スタイルは従来の処理を維持します。
+- 開発版0.2.22では、警告用の画素をWorkerから返す際の余分なコピーを省きます。
+  背景・監視が不要な間や映像の読込待ちは、表示更新ごとに同じUI処理を繰り返しません。
+  採色解像度とぼかしの設定は保持します。実際のコメント読込速度は未計測です。
 - 歯車の隣の丸いアイコンから設定。暗いモノクロのパネルが動画プレーヤー内の
   右下、操作ボタン列の上に開きます。×または同じアイコンで閉じます。
   開発版では背景をオフにしても設定は開いたままです。小さいプレーヤーではパネル内をスクロールできます。
@@ -145,5 +148,5 @@ dark modal appears after about three seconds of detected rapid flashing while
 playback and ambient continue. You can reduce strength to 15% or disable further
 warnings; Advanced settings can re-enable them. Detection and reduced opacity
 do not guarantee safety. GitHub release packages remain on 0.2.2; current development
-sources and local builds are 0.2.20. Version 0.2.17 was submitted to both stores;
+sources and local builds are 0.2.22. Version 0.2.17 was submitted to both stores;
 their current review/publication state has not been rechecked.

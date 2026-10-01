@@ -35,7 +35,10 @@ self.onmessage = event => {
     };
     const result = sampleOnly ? renderer.inspect(frame, job.rectangle, job.viewport, rendererOptions) :
       renderer.draw(frame, job.rectangle, job.viewport, job.radial === true, rendererOptions);
-    const pixels = sampleOnly || options.readPixels === true ? renderer.readPixels()?.slice() || null : null;
+    // Projection/inspection is complete before handing off the sample buffer.
+    // The next inspect() clears the cached pixels and reads a fresh frame, so
+    // neither the 2D nor GPU backend needs to retain this buffer after transfer.
+    const pixels = sampleOnly || options.readPixels === true ? renderer.readPixels() || null : null;
     // Pixel readback may discover protected/tainted media after inspection.
     result.readable = result.readable && renderer.readable;
     const bitmap = sampleOnly ? null : renderer.canvas.transferToImageBitmap();

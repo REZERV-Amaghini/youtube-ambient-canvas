@@ -8,6 +8,47 @@ const tick = h => h.tick({ delta: 1000 / 120 });
 
 (async () => {
   for (const workerMode of [false, true]) {
+    const idle = harness(workerMode, { videoFrameCallbacks: true });
+    await idle.load({ enabled: false, flashWarning: false });
+    tick(idle);
+    const offActivity = idle.stats.activityReads, offResets = idle.stats.monitorResets;
+    for (let n = 0; n < 360; n++) tick(idle);
+    assert.equal(idle.stats.activityReads, offActivity, 'OFF without monitoring does not re-enter DOM activation on display ticks');
+    assert.equal(idle.stats.monitorResets, offResets, 'OFF without monitoring does not repeatedly allocate/reset warning history');
+    idle.enabled().checked = true; idle.event(idle.enabled(), 'input'); tick(idle);
+    const readyActivity = idle.stats.activityReads;
+    for (let n = 0; n < 360; n++) tick(idle);
+    assert.ok(idle.stats.activityReads - readyActivity <= 92, 'a repeated video frame enters DOM work at background FPS, not display FPS');
+    idle.video.readyState = 1;
+    const beforeWait = idle.stats.monitorResets;
+    tick(idle);
+    assert.equal(idle.stats.monitorResets, beforeWait + 1, 'readiness loss clears warning history once even without an emptied event');
+    assert.equal(idle.video.style.getPropertyValue('clip-path'), '', 'readiness loss restores the owned video crop');
+    const waitingActivity = idle.stats.activityReads, waitingResets = idle.stats.monitorResets;
+    for (let n = 0; n < 120; n++) tick(idle);
+    assert.equal(idle.stats.activityReads, waitingActivity, 'waiting does not repeatedly enter DOM work');
+    assert.equal(idle.stats.monitorResets, waitingResets, 'waiting does not repeatedly reset warning history');
+    idle.video.remove(); idle.discover(); tick(idle);
+    assert.equal(idle.document.documentElement.classList.contains('yac-active'), false, 'video removal during an existing wait still deactivates native styling');
+    idle.player.append(idle.video); idle.discover(); tick(idle);
+    idle.video.readyState = 4; idle.presentVideoFrame(); tick(idle);
+    assert.ok(idle.video.style.getPropertyValue('clip-path'), 'new available frame restores cropping after readiness returns');
+    idle.video.remove(); idle.discover(); tick(idle);
+    assert.equal(idle.document.documentElement.classList.contains('yac-active'), false, 'video removal deactivates native UI styling');
+    const missingActivity = idle.stats.activityReads;
+    for (let n = 0; n < 120; n++) tick(idle);
+    assert.equal(idle.stats.activityReads, missingActivity, 'missing video does not repeatedly enter DOM work');
+    idle.player.append(idle.video); idle.discover(); tick(idle);
+    assert.equal(idle.document.documentElement.classList.contains('yac-active'), true, 'video replacement reactivates native UI styling');
+    idle.document.hidden = true; idle.event(idle.document, 'visibilitychange'); tick(idle);
+    const hiddenActivity = idle.stats.activityReads, hiddenResets = idle.stats.monitorResets;
+    for (let n = 0; n < 120; n++) tick(idle);
+    assert.equal(idle.stats.activityReads, hiddenActivity, 'hidden tab does not repeatedly enter DOM work');
+    assert.equal(idle.stats.monitorResets, hiddenResets, 'hidden tab does not repeatedly reset warning history');
+    idle.document.hidden = false; idle.event(idle.document, 'visibilitychange'); tick(idle);
+    assert.ok(idle.video.style.getPropertyValue('clip-path'), 'visibility restoration resumes current-frame drawing');
+    stop(idle);
+
     for (const fps of [24, 30, 60]) {
       const h = harness(workerMode, { videoFrameCallbacks: true });
       await h.load({ fps });

@@ -1,4 +1,4 @@
-# Theme compatibility - 0.2.21 development revision
+# Theme compatibility - 0.2.22 development revision
 
 Some YouTube theme extensions apply high-specificity `!important` backgrounds.
 With Enhancer for YouTube's dark theme, these rules can cover the ambient canvas
@@ -51,7 +51,7 @@ preserved in the local test copy. The theme is not redistributed with Ambient
 Canvas. Actual Firefox playback with the updated extension remains to be
 confirmed. GitHub release packages stay on 0.2.2 while compatibility is tested.
 Version 0.2.17 was submitted to both stores; their current publication state
-has not been rechecked. Development 0.2.20 is not submitted.
+has not been rechecked. Development 0.2.18–0.2.22 is not submitted.
 
 ## Theater margins
 

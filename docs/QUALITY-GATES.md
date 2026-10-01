@@ -1,17 +1,21 @@
-# Development quality status — 0.2.21 / 2026-10-02
+# Development quality status — 0.2.22 / 2026-10-02
 
-Versions 0.2.18–0.2.21 have recorded numerical/controller test results and local
+Versions 0.2.18–0.2.22 have recorded numerical/controller test results and local
 in-app browser fixture verification. Version 0.2.19 passes the 32-case primary-text
 reading-contrast matrix for light/dark chat and playlist surfaces. Version 0.2.20
 passes all 126 active primary-text checks in its control fixture; two color-background
 arrow samples remain inconclusive, so its complete pixel matrix is not a PASS.
 Version 0.2.21 also verifies the native warning dialog and persistence-failure
 UX in a local browser fixture with constant video and numerical monitor input.
+Version 0.2.22 verifies idle-transition cleanup and cadence in the deterministic
+controller, real sample-buffer detachment in numerical tests, and 36 sequential
+packaged-Worker jobs in the local WebGL2 browser fixture. This does not measure
+native comment-load performance.
 None is verified as an installed
 extension on the current Chrome, Firefox or in-app YouTube page.
 
 Version 0.2.17 was submitted to Chrome Web Store and AMO and was awaiting review
-at the last recorded check on 2026-10-01. Versions 0.2.18–0.2.21 have not been
+at the last recorded check on 2026-10-01. Versions 0.2.18–0.2.22 have not been
 submitted. Current public visibility and review outcomes have not been checked
 again. The historical AMO submission screen showed the old 0.2.2 version disabled
 by Mozilla; this is not evidence that the new version was approved or published.
@@ -32,7 +36,7 @@ by Mozilla; this is not evidence that the new version was approved or published.
 |Seek, layout transitions and disposal preserve state/resources|Zero geometry waits, seeking guard, clip ownership, suspended timeouts, stale frame disposal and subscription teardown tests|Native iframe recreation, page navigation, hidden-tab suspension and long sessions|
 
 `npm run check` and `npm test` cover syntax and ten numerical/controller suites.
-The recorded 0.2.21 numerical/controller results passed. No numerical test displays flashing imagery or
+The recorded 0.2.22 numerical/controller results passed. No numerical test displays flashing imagery or
 accesses YouTube. DOM tests use test doubles; they do not establish rendered
 appearance or browser decoding. The separate local browser checks establish
 fixture behavior only, not native YouTube initialization or installed-extension
@@ -44,6 +48,10 @@ remain recorded as failed measurements, not corrected by a CSS color formula.
 Warning browser evidence is in `artifacts/warning-0.2.21/browser-results.json`;
 the constant-video fixture injects only numerical monitor data and synthetic
 clocks. It does not establish actual-video detection accuracy or timing.
+The latest continuous-transfer evidence is in
+`artifacts/performance-0.2.22/gpu-result.json`; the local scroll fixture retains
+the 90px → 45px → 90px blur transition. Browser artifacts are ignored and excluded
+from packages.
 
 The normal browser tool rejected YouTube access after the user's explicit grant,
 citing a saved access setting. Localhost fixture access succeeded for the

@@ -1,4 +1,42 @@
-# 検証結果 — 0.2.21 development / 2026-10-02
+# 検証結果 — 0.2.22 development / 2026-10-02
+
+## 0.2.22 idle scheduling and sample ownership
+
+- The animation scheduler leaves DOM activation/status and warning-history
+  resets alone while background and monitoring are both inactive, playback is
+  unavailable, or no new frame/geometry deadline requires work. Transitioning
+  into an unavailable state still clears the owned crop and monitor history
+  once. Video removal discovered during an existing wait also deactivates UI
+  styling; replacement, visibility and readiness restoration resume rendering.
+- New deterministic main/Worker tests first reproduced 360 activation reads
+  during three seconds of disabled-background/disabled-warning display ticks.
+  After the change, the same idle ticks add zero activation reads or monitor
+  resets. Repeated-frame work is bounded by background FPS. Existing new-frame
+  warning cadence, paused bar convergence, forced repaint and Worker backpressure
+  tests pass. These are operation counts, not YouTube latency measurements.
+- Worker projection/inspection now transfers its owned sample buffer directly,
+  avoiding one additional 57,600-byte copy per returned warning sample. The
+  next inspection refreshes the sample before reuse. Tests use structuredClone
+  with transfer to genuinely detach the sender buffer, then validate 132
+  successive mixed jobs on 2D and simulated WebGL paths and identical monitor
+  timing against copied samples. The analysis resolutions remain 320×180 for
+  black-band detection and 160×90 for color/warning samples.
+- The actual local browser uses the unchanged packaged Worker/WebGL2 pipeline
+  for 36 sequential static jobs: 24 pixel comparisons, 12 sample-only jobs,
+  12 jobs without pixel readback, 24 bitmap comparisons and 36 crop/input-detach
+  checks pass. Normal/barred frames are varied offscreen. Existing projection
+  cases and real context-loss fallback also pass. No visible flashing is used.
+  Evidence: `artifacts/performance-0.2.22/gpu-result.json` and `gpu-check.jpg`.
+- The local scroll fixture confirms blur(90px) → blur(45px) at full-frame blend,
+  then restores blur(90px). Existing 0/40/90/160 controller cases preserve the
+  half-setting rule with a 25px minimum and do not rewrite the saved setting.
+  This makes background shapes finer through the blur radius, not a resolution
+  change. Scroll evidence is in `artifacts/performance-0.2.22/scroll-blur.json`.
+- Syntax and all ten numerical/controller suites pass. Installed Chrome/Firefox,
+  actual YouTube comment-load latency, native chat-icon initialization and
+  real-video capture/compositing costs remain unverified. The existing saved
+  YouTube access restriction was not bypassed. This development build is not
+  submitted to either store.
 
 ## 0.2.21 warning interaction and persistence
 

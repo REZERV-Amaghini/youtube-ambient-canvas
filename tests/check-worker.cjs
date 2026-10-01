@@ -405,7 +405,7 @@ const result = (client, extra = {}) => ({
   assert.equal(workerResult.value.backend, '2d');
   assert.equal(workerResult.value.videoCrop.height, 70);
   assert.equal(workerResult.value.pixels.length, 160 * 90 * 4);
-  assert.equal(workerResult.transfers.length, 2, 'Bitmap and copied sample buffer are transferred');
+  assert.equal(workerResult.transfers.length, 2, 'Bitmap and owned sample buffer are transferred');
   assert.equal(workerResult.value.sampleOnly, false);
   assert.equal(workerResult.value.samplingCrop.height, 70);
   const noReadbackFrame = new Bitmap(320, 180, capturedPixels);
@@ -466,6 +466,76 @@ const result = (client, extra = {}) => ({
   workerContext.self.onmessage({ data: { type: 'render', requestId: 101, generation: 0, barGeneration: 0,
     frame: malformedMode, rectangle, viewport, sourceKey: 'same-video', options: { sampleOnly: 'true' } } });
   assert.equal(malformedMode.closed, 1); assert.equal(workerReplies.at(-1).value.type, 'failed');
+
+  // Unlike the transport mocks above, this exercises real ArrayBuffer ownership
+  // transfer. ImageBitmap/WebGL remain test doubles; no browser or GPU is used.
+  const FlashMonitor = require('../flash-monitor.js');
+  for (const backend of ['2d', 'webgl2']) {
+    let uploads = 0, detached = 0;
+    const gl = {
+      createProgram: () => ({}), createShader: () => ({}), createTexture: () => ({}),
+      getProgramParameter: () => true, getUniformLocation: (_, name) => name,
+      getError: () => 0, NO_ERROR: 0, isContextLost: () => false,
+      texSubImage2D: (...args) => {
+        assert.equal(args.at(-1).data.length, 160 * 90 * 4, 'GPU upload precedes sample detachment'); uploads++;
+      }
+    };
+    for (const name of ['shaderSource', 'compileShader', 'attachShader', 'linkProgram', 'deleteShader',
+      'activeTexture', 'bindTexture', 'texParameteri', 'texStorage2D', 'useProgram', 'uniform1i',
+      'uniform1f', 'uniform2f', 'uniform4f', 'viewport', 'drawArrays', 'flush', 'deleteTexture', 'deleteProgram']) gl[name] = () => {};
+    class TransferCanvas extends Canvas {
+      getContext(kind) { return kind === 'webgl2' ? backend === 'webgl2' ? gl : null : super.getContext(kind); }
+      addEventListener() {} removeEventListener() {}
+    }
+    const replies = [];
+    const transferContext = vm.createContext({
+      OffscreenCanvas: TransferCanvas, Uint8ClampedArray,
+      importScripts: (...names) => names.forEach(name => run(transferContext, name)),
+      self: { postMessage(value, transfers = []) {
+        if (!value.pixels) { replies.push(value); return; }
+        const pixels = value.pixels;
+        assert.equal(pixels, vm.runInContext('renderer.readPixels()', transferContext), 'Transfer uses original analysis pixels, without a second full-frame buffer');
+        assert.ok(transfers.includes(pixels.buffer));
+        const received = structuredClone(pixels, { transfer: [pixels.buffer] });
+        assert.equal(pixels.byteLength, 0, 'Sender buffer is genuinely detached'); detached++;
+        replies.push({ ...value, pixels: received });
+      } }
+    });
+    run(transferContext, 'ambient-worker.js');
+    assert.equal(replies[0].backend, backend);
+    const monitor = new FlashMonitor(), referenceMonitor = new FlashMonitor();
+    let warningCount = 0;
+    // Switching between rendering and inspection also covers the CPU projection
+    // cache after its previous sample buffer has been detached.
+    for (let i = 0; i < 132; i++) {
+      const input = new Uint8ClampedArray(320 * 180 * 4);
+      const expected = new Uint8ClampedArray(160 * 90 * 4);
+      const bright = Math.floor(i * 8 / 30) % 2 ? 240 : 55;
+      for (let y = 0; y < 180; y++) for (let x = 0; x < 320; x++) {
+        const color = y < 20 || y >= 160 ? 0 : bright;
+        const p = (y * 320 + x) * 4;
+        input[p] = input[p + 1] = input[p + 2] = color; input[p + 3] = 255;
+        if (!(x % 2) && !(y % 2)) expected.set(input.subarray(p, p + 4), ((y / 2) * 160 + x / 2) * 4);
+      }
+      const sampleOnly = i % 3 === 1, wantsPixels = i % 3 !== 2;
+      const frame = new Bitmap(320, 180, input);
+      transferContext.self.onmessage({ data: { type: 'render', requestId: i + 1, generation: 0,
+        barGeneration: 0, frame, rectangle, viewport, radial: true, sourceKey: 'ownership-video',
+        mediaTime: i / 30, options: { sampleOnly, readPixels: wantsPixels } } });
+      const value = replies.at(-1);
+      assert.equal(value.type, 'frame', value.reason); assert.equal(value.backend, backend); assert.equal(frame.closed, 1);
+      if (!wantsPixels) { assert.equal(value.pixels, null, 'Unrequested pixels stay untransferred'); continue; }
+      assert.deepEqual(value.pixels, expected, 'Successive transferred pixels retain exact contents');
+      assert.equal(value.pixels.byteLength, 57600);
+      const args = [i * 1000 / 30, i / 30, 'ownership-video', value.samplingCrop, 1];
+      const warned = monitor.sample(value.pixels, ...args);
+      assert.equal(warned, referenceMonitor.sample(expected.slice(), ...args), 'Warning timing matches the former copied-pixel path');
+      if (warned) warningCount++;
+    }
+    assert.equal(detached, 88, 'Every requested sample is transferred exactly once');
+    assert.ok(warningCount > 0, 'Timing parity includes an actual sustained-flash warning');
+    if (backend === 'webgl2') assert.equal(uploads, 88, 'Only background jobs upload a GPU texture');
+  }
 
   const handlers = {}, workers = [], parent = {}, bridgeReplies = [];
   const token = '01'.repeat(16);

@@ -9,7 +9,7 @@ const vm = require('node:vm');
 function harness(workerMode = false, { videoFrameCallbacks = false, idleCallbacks = true, scrollBlend = () => 0 } = {}) {
   const nodes = [], raf = new Map(), intervals = new Map(), renders = [], inspections = [];
   const idle = new Map(), timeouts = new Map(), observers = [], videoFrames = new Map(), resizeObservers = [];
-  const stats = { surfaceScans: 0, rectReads: 0, computedStyleReads: 0, monitorSamples: 0 };
+  const stats = { surfaceScans: 0, rectReads: 0, computedStyleReads: 0, monitorSamples: 0, monitorResets: 0, activityReads: 0 };
   const workerResponses = [];
   let now = 0, id = 0, resolveStorage, flash = false, presentedFrames = 0, worker, renderer;
   const splitOutside = (text, delimiters) => {
@@ -118,7 +118,7 @@ function harness(workerMode = false, { videoFrameCallbacks = false, idleCallback
       this.dataset = {}; this.className = ''; this.rect = { left: 100, top: 100, width: 640, height: 360 };
       this.clientWidth = 640; this.clientHeight = 360; this.width = 400; this.height = 250; nodes.push(this);
       this.classList = {
-        contains: name => this.className.split(' ').includes(name),
+        contains: name => { if (name === 'yac-active') stats.activityReads++; return this.className.split(' ').includes(name); },
         toggle: (name, force) => {
           const list = new Set(this.className.split(' ').filter(Boolean));
           const value = force === undefined ? !list.has(name) : force;
@@ -213,7 +213,7 @@ function harness(workerMode = false, { videoFrameCallbacks = false, idleCallback
     setInterval: callback => { const n = ++id; intervals.set(n, callback); return n; }, clearInterval: n => intervals.delete(n),
     setTimeout: (callback, delay = 0) => { const n = ++id; timeouts.set(n, { callback, due: now + delay }); return n; }, clearTimeout: n => timeouts.delete(n), queueMicrotask,
     ...(idleCallbacks ? { requestIdleCallback: callback => { const n = ++id; idle.set(n, callback); return n; }, cancelIdleCallback: n => idle.delete(n) } : {}),
-    YacRenderer: Renderer, YacWorkerRenderer: WorkerRenderer, YacFlashMonitor: class { reset() {} sample() { stats.monitorSamples++; return flash; } }
+    YacRenderer: Renderer, YacWorkerRenderer: WorkerRenderer, YacFlashMonitor: class { reset() { stats.monitorResets++; } sample() { stats.monitorSamples++; return flash; } }
   });
   const folder = path.resolve(__dirname, '..');
   if (fs.existsSync(path.join(folder, 'settings-store.js'))) vm.runInContext(fs.readFileSync(path.join(folder, 'settings-store.js'), 'utf8'), context);

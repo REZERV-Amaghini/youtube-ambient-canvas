@@ -710,7 +710,8 @@
       if (player) panelResizeObserver.observe(player);
     }
     const nextVideo = player?.querySelector('video.html5-main-video') || null;
-    if (video !== nextVideo) {
+    const videoChanged = video !== nextVideo;
+    if (videoChanged) {
       stopVideoFrames();
       for (const remove of videoListeners) remove();
       videoListeners = [];
@@ -739,6 +740,9 @@
     positionPanel();
     syncChat();
     refreshPageSurfaces();
+    // Discovery can remove a video while playback is already unavailable.
+    // Apply that transition once even when the animation loop is waiting.
+    if (videoChanged) draw();
   }
   function restoreBars() {
     if (originalClip) {
@@ -931,6 +935,7 @@
   listen(document, 'fullscreenchange', () => { invalidateFrame();positionWarning();discover(); draw(); });
   listen(window, 'resize', () => { restoreBars();invalidateFrame(false);positionPanel(); draw(); });
   const discoverTimer = setInterval(discover, 1000);
+  let frameRunnable = false;
   function animate(now) {
     if (disposed) return;
     frameRequest = requestAnimationFrame(animate);
@@ -942,9 +947,26 @@
       lastDrawFrame = now - Math.max(0, elapsed - steps * interval);
       paintDue = true; geometryCheckDue = true;
     }
+    const active = settings.enabled && !document.fullscreenElement;
+    const monitoring = wantsMonitoring();
+    const runnable = settingsLoaded && location.pathname === '/watch' && !document.hidden &&
+      (active || monitoring) && canvas.isConnected && video && !video.seeking && video.readyState >= 2;
+    if (!runnable) {
+      // Preserve the existing cleanup when playback becomes unavailable, then
+      // leave DOM styling and warning history alone while it stays unavailable.
+      if (frameRunnable) draw(false);
+      frameRunnable = false;
+      return;
+    }
+    frameRunnable = true;
+    const fresh = frameVideo === video ? frameSerial !== submittedSerial :
+      video !== lastSampleVideo || video.currentTime !== lastSampleTime;
+    // A paint deadline stays latched for the next decoded frame. It should not
+    // repeatedly enter DOM work between frames or while waiting for playback.
+    if (!fresh && !(active && (forcePaint || geometryCheckDue))) return;
     // Warning sampling follows the display tick, independently of the chosen
     // background FPS. One Worker job at a time still provides backpressure.
-    if (paintDue || wantsMonitoring()) draw(false);
+    if (paintDue || monitoring) draw(false);
   }
   listen(document, 'yac-dispose', () => {
     disposed = true;
