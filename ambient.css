@@ -9,22 +9,37 @@
   object-fit: cover;
 }
 
-html.yac-active { background: #080b12 !important; }
+html.yac-active {
+  --yac-page-base: #fff;
+  --yac-secondary-surface: rgba(255, 255, 255, .9);
+  --yac-hover-surface: rgba(0, 0, 0, .08);
+  --yac-chip-arrow-surface: rgba(255, 255, 255, .66);
+  --yac-text-shadow: 0 1px 3px rgba(255, 255, 255, .6);
+  background: var(--yac-page-base) !important;
+}
+html.yac-active[dark],
+html.yac-active:has(link#efyt-dark-theme) {
+  --yac-page-base: #080b12;
+  --yac-secondary-surface: rgba(28, 28, 28, .9);
+  --yac-hover-surface: rgba(255, 255, 255, .14);
+  --yac-chip-arrow-surface: rgba(18, 20, 25, .34);
+  --yac-text-shadow: 0 1px 4px #000c;
+}
 html.yac-active #yac-background { display: block !important; }
 html.yac-active body { background: transparent !important; }
 /* The canvas lives INSIDE the app's stacking context, above its background.
    Preserve YouTube's own position and sizing. */
 html.yac-active ytd-app {
   isolation: isolate;
-  background: #080b12 !important;
+  background: var(--yac-page-base) !important;
   --yt-spec-base-background: transparent;
 }
 /* DeepDark consumes these values when drawing its own surfaces. Native YouTube
    controls keep their original fills, corner radii, colors and interaction states. */
 html.yac-active :is(ytd-watch-flexy,ytd-watch-grid,ytd-masthead) {
   --main-background: transparent !important;
-  --second-background: rgba(28, 28, 28, .9) !important;
-  --hover-background: rgba(255, 255, 255, .14) !important;
+  --second-background: var(--yac-secondary-surface) !important;
+  --hover-background: var(--yac-hover-surface) !important;
 }
 html.yac-active :is(ytd-masthead,ytd-watch-flexy,ytd-watch-grid) :is(.ytSpecButtonShapeNextTonal,.ytSpecButtonShapeNextOutline,.ytSpecButtonShapeNextFilled,.yt-spec-button-shape-next--tonal,.yt-spec-button-shape-next--outline,.yt-spec-button-shape-next--filled),
 html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-chip-cloud-renderer :is(.ytChipShapeActive,.ytChipShapeInactive,.YtChipShapeActive,.YtChipShapeInactive,#chip-container) {
@@ -32,7 +47,7 @@ html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-chip-cloud-renderer :is(.
   backdrop-filter: blur(12px) !important;
 }
 html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-chip-cloud-renderer :is(#left-arrow-button,#right-arrow-button) button {
-  background-color: rgba(18, 20, 25, .34) !important;
+  background-color: var(--yac-chip-arrow-surface) !important;
   -webkit-backdrop-filter: blur(12px) !important;
   backdrop-filter: blur(12px) !important;
 }
@@ -53,6 +68,13 @@ html.yac-active:has(link#efyt-dark-theme) {
 html.yac-active ytd-popup-container :is(ytd-menu-popup-renderer,ytd-multi-page-menu-renderer,yt-sheet-view-model.ytSheetViewModelContextual) {
   --main-background: transparent !important;
   --second-background: var(--yac-menu-surface) !important;
+}
+/* DeepDark also colors the dropdown's direct child. The sheet host is a
+   structural wrapper; only its contextual layout supplies the menu face. */
+html.yac-active ytd-popup-container yt-sheet-view-model.ytSheetViewModelContextual,
+html.yac-active ytd-popup-container .dropdown-content > yt-sheet-view-model.ytSheetViewModelContextual {
+  background-color: transparent !important;
+  background-image: none !important;
 }
 html.yac-active ytd-popup-container :is(ytd-menu-popup-renderer,ytd-multi-page-menu-renderer),
 html.yac-active ytd-popup-container yt-sheet-view-model.ytSheetViewModelContextual > yt-contextual-sheet-layout {
@@ -138,8 +160,8 @@ html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) ytd-playlist-panel-video-ren
 }
 
 html.yac-active #cinematics { display: none !important; }
-html.yac-active ytd-watch-flexy ytd-live-chat-frame,
-html.yac-active ytd-watch-flexy ytd-live-chat-frame #chatframe {
+html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) ytd-live-chat-frame,
+html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) ytd-live-chat-frame #chatframe {
   background: transparent !important;
 }
 /* Metadata carousel cards (including the replay prompt) keep a readable face. */
@@ -186,8 +208,8 @@ html.yac-active ytd-masthead ytd-searchbox #search-icon-legacy {
 #movie_player.yac-fill-bars { background:#080b12 !important; }
 #movie_player.yac-fill-bars #yac-bar-layer { display:block; }
 #movie_player.yac-fill-bars .html5-video-container { z-index:1; background:transparent !important; }
-html.yac-active ytd-watch-flexy #secondary,
-html.yac-active ytd-watch-flexy #below,
+html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) #secondary,
+html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) #below,
 html.yac-active ytd-masthead {
-  text-shadow: 0 1px 4px #000c;
+  text-shadow: var(--yac-text-shadow);
 }

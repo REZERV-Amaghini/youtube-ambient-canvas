@@ -1,4 +1,38 @@
-# 検証結果 — 0.2.11 development / 2026-10-01
+# 検証結果 — 0.2.12 development / 2026-10-01
+
+## 0.2.12 controller, display boundaries and sampling
+
+- Added a rendering-free inspection mode. Warning sampling now continues with
+  ambient OFF and in fullscreen, follows display ticks rather than background
+  FPS, and accounts for playback rate. Fullscreen modal host placement and
+  unchanged playback/ambient choices are exercised by controller tests.
+- Separate sampling and display crops preserve observed bright glyphs inside
+  bars while keeping the clean sampling ROI. A 320×180 observation cannot prove
+  protection of thin/dark text lost during reduction; actual video checks remain.
+- Cached projection indices produce exactly the previous RGBA output in the
+  numerical geometry/inset cases. This avoids repeated projection math; it is
+  not a measurement of total GPU/compositing or installed-extension cost.
+- Per-key local preferences prevent unrelated saves in another tab from
+  re-enabling warnings. Initial reads are gated, pending input is preserved,
+  storage echoes are deduplicated and subscriptions are disposed.
+- Seeking and zero geometry wait without rendering; the Worker keeps one job
+  and suspends its watchdogs while the document is hidden. External clip changes
+  are preserved when ambient restores the video.
+- Fixed the light page base, the double-painted modern contextual menu under the
+  observed DeepDark wrapper, and flexy/grid styling scope. Fixture light mode now
+  includes normal text/buttons, not just popup surfaces.
+- `npm run check` and all six `npm test` suites pass. Numerical tests show no
+  flashing imagery. Main and asynchronous Worker callbacks are tested through
+  the actual controller using a deterministic DOM; this is not browser rendering.
+- Chrome/Firefox 0.2.12 ZIPs and source archives are built and checked against
+  the exact workspace sources, explicit file lists and SHA-256 sums. Scope
+  remains YouTube-only with the storage permission and one Worker-host resource.
+  Mozilla web-ext 9.4 reports zero errors, warnings and notices.
+- The normal browser tool still rejects YouTube access with a saved access
+  setting after explicit authorization. No workaround was used. Current native
+  chat icon failure and Chrome/Firefox visual/performance gates remain open in
+  [QUALITY-GATES.md](QUALITY-GATES.md). Historical browser evidence below belongs
+  to its stated revision; public/store distribution remains 0.2.2.
 
 ## 0.2.11 Worker and black-bar integration
 

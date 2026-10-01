@@ -55,8 +55,26 @@ expectBands({ top: 11, bottom: 12, left: 25, right: 26 }, { x: 25, y: 11, width:
   const data = frame({ top: 12, left: 20, band: 12, noise: 3 });
   paint(data, 68, 84, 36, 2); paint(data, 1, 40, 4, 3); paint(data, 147, 3, 4, 3);
   assert.deepEqual(settle(detector, data), { x: 20, y: 12, width: 120, height: 66 }, 'subtitle and corner logo clutter');
+  assert.ok(detector.displayCrop.x <= 1 && detector.displayCrop.y <= 3, 'left and corner logos stay visible');
+  assert.ok(detector.displayCrop.x + detector.displayCrop.width >= 151, 'corner logo right edge stays visible');
+  assert.ok(detector.displayCrop.y + detector.displayCrop.height >= 86, 'bottom subtitle stays visible');
   paint(data, 68, 83, 36, 3);
   assert.deepEqual(settle(new Detector(), data), { x: 20, y: 12, width: 120, height: 66 }, 'three-sample subtitle clutter');
+}
+
+{
+  const detector = new Detector();
+  const clean = frame({ top: 12, left: 20 });
+  settle(detector, clean);
+  assert.deepEqual(detector.displayCrop, detector.crop, 'clean bars retain full removal');
+  const glyph = clean.slice();
+  paint(glyph, 70, 3, 4, 2);
+  const sampling = { ...detector.crop };
+  detector.sample(glyph);
+  assert.deepEqual(detector.crop, sampling, 'new glyph does not pollute sampling ROI');
+  assert.ok(detector.displayCrop.y <= 2, 'new glyph is protected on its first observation');
+  detector.sample(new Uint8ClampedArray(0));
+  assert.deepEqual(detector.displayCrop, full(), 'invalid samples cannot retain clipping');
 }
 
 // Adversarial/holdout scenes: broad dark gradients, dim textured edges,

@@ -23,20 +23,29 @@ self.onmessage = event => {
       throw new Error('Invalid ambient frame');
     }
     const options = job.options || {};
-    const result = renderer.draw(frame, job.rectangle, job.viewport, job.radial === true, {
+    if (options.sampleOnly !== undefined && typeof options.sampleOnly !== 'boolean') throw new Error('Invalid ambient sampling mode');
+    const sampleOnly = options.sampleOnly === true;
+    const rendererOptions = {
       sourceKey: job.barGeneration + ':' + job.sourceKey,
       mediaTime: Number(job.mediaTime) || 0,
       avoidBars: options.avoidBars !== false,
+      fillBars: options.fillBars === true,
       inset: Number(options.inset) || 0,
       blend: Number(options.blend) || 0
-    });
-    const pixels = options.readPixels ? renderer.readPixels()?.slice() || null : null;
-    const bitmap = canvas.transferToImageBitmap();
+    };
+    const result = sampleOnly ? renderer.inspect(frame, job.rectangle, job.viewport, rendererOptions) :
+      renderer.draw(frame, job.rectangle, job.viewport, job.radial === true, rendererOptions);
+    const pixels = sampleOnly || options.readPixels === true ? renderer.readPixels()?.slice() || null : null;
+    // Pixel readback may discover protected/tainted media after inspection.
+    result.readable = result.readable && renderer.readable;
+    const bitmap = sampleOnly ? null : canvas.transferToImageBitmap();
     output = bitmap;
+    const transfers = bitmap ? [bitmap] : [];
+    if (pixels) transfers.push(pixels.buffer);
     self.postMessage({
       type: 'frame', requestId: job.requestId, generation: job.generation,
-      bitmap, pixels, ...result, stableFrames: renderer.stableFrames
-    }, pixels ? [bitmap, pixels.buffer] : [bitmap]);
+      sampleOnly, bitmap, pixels, ...result, stableFrames: renderer.stableFrames
+    }, transfers);
     output = null;
   } catch (error) {
     output?.close();

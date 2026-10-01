@@ -13,12 +13,13 @@
       this.reversals = []; this.lastReversal = null; this.burstStart = null;
     }
     constructor() { this.reset(); }
-    sample(pixels, time, mediaTime, key, crop = { x: 0, y: 0, width: 160, height: 90 }) {
+    sample(pixels, time, mediaTime, key, crop = { x: 0, y: 0, width: 160, height: 90 }, playbackRate = 1) {
       if (!pixels || pixels.length < 160 * 90 * 4 || !Number.isFinite(time) || !Number.isFinite(mediaTime)) {
         this.reset(); return false;
       }
+      const rate = Number.isFinite(playbackRate) && playbackRate > 0 ? playbackRate : 1;
       if (key !== this.key || this.time !== null &&
-          (time <= this.time || time - this.time > 200 || mediaTime < this.mediaTime || mediaTime - this.mediaTime > .25)) this.reset();
+          (time <= this.time || time - this.time > 200 || mediaTime < this.mediaTime || mediaTime - this.mediaTime > .25 * Math.max(1, rate))) this.reset();
       if (this.mediaTime === mediaTime) return false;
       const values = new Float32Array(20 * 12 * 2);
       let i = 0;

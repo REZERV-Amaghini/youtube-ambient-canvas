@@ -4,6 +4,11 @@
   const validCrop = crop => crop && ['x', 'y', 'width', 'height'].every(key => Number.isFinite(crop[key])) &&
     crop.x >= 0 && crop.y >= 0 && crop.width > 0 && crop.height > 0 &&
     crop.x + crop.width <= 160 && crop.y + crop.height <= 90;
+  const validSize = value => Number.isFinite(value) && value > 0 && value <= 32768;
+  const validGeometry = (rectangle, viewport) => rectangle && viewport &&
+    ['left', 'top', 'width', 'height'].every(key => Number.isFinite(rectangle[key])) &&
+    validSize(rectangle.width) && validSize(rectangle.height) &&
+    validSize(viewport.width) && validSize(viewport.height);
 
   globalThis.YacWorkerRenderer = class {
     constructor(canvas, { hostUrl, onFrame = () => {}, onFailure = () => {}, acceptFrame = () => true,
@@ -12,6 +17,7 @@
       this.context = canvas.getContext('2d', { alpha: false });
       this.padding = 180;
       this.state = 'starting';
+      this.suspended = false;
       this.generation = 0;
       this.barGeneration = 0;
       this.requestId = 0;
@@ -19,10 +25,12 @@
       this.readable = true;
       this.stableFrames = 0;
       this.crop = { x: 0, y: 0, width: 160, height: 90 };
+      this.videoCrop = { ...this.crop };
       this.pixels = null;
       this.onFrame = onFrame;
       this.onFailure = onFailure;
       this.acceptFrame = acceptFrame;
+      this.startupTimeout = startupTimeout;
       this.renderTimeout = renderTimeout;
       try {
         if (!hostUrl || typeof createImageBitmap !== 'function' || typeof MessageChannel !== 'function') {
@@ -49,7 +57,7 @@
           try { this.frame.contentWindow.postMessage({ type: 'yac-worker-connect', token }, origin, [channel.port2]); }
           catch (error) { channel.port2.close(); this.fail('Ambient worker connection failed'); }
         };
-        this.startupTimer = setTimeout(() => this.fail('Ambient worker startup timed out'), startupTimeout);
+        this.armStartupTimeout();
         document.documentElement.append(this.frame);
       } catch (error) {
         // Notify asynchronously, so the caller can install its fallback after construction.
@@ -57,8 +65,37 @@
       }
     }
     readPixels() { return this.readable ? this.pixels : null; }
+    armStartupTimeout() {
+      clearTimeout(this.startupTimer); this.startupTimer = null;
+      if (this.state === 'starting' && !this.suspended) {
+        this.startupTimer = setTimeout(() => {
+          if (this.state === 'starting' && !this.suspended) this.fail('Ambient worker startup timed out');
+        }, this.startupTimeout);
+      }
+    }
+    armJobTimeout() {
+      clearTimeout(this.jobTimer); this.jobTimer = null;
+      if (this.state === 'ready' && this.pending && !this.suspended) {
+        const meta = this.pending;
+        this.jobTimer = setTimeout(() => {
+          if (this.state === 'ready' && !this.suspended && this.pending === meta) this.fail('Ambient worker frame timed out');
+        }, this.renderTimeout);
+      }
+    }
+    setSuspended(value) {
+      const suspended = Boolean(value);
+      if (this.suspended === suspended) return;
+      this.suspended = suspended;
+      // Background documents may freeze both the extension frame and Worker.
+      // Keep their single outstanding job, but do not treat suspended time as a
+      // failed startup/capture. Resuming gives that same job a fresh deadline.
+      this.armStartupTimeout(); this.armJobTimeout();
+    }
     draw(source, rectangle, viewport, radial, options = {}) {
-      if (this.state !== 'ready' || this.pending) return false;
+      if (this.state !== 'ready' || this.pending || this.suspended) return false;
+      // A temporarily hidden player has no geometry. Wait without capturing or
+      // converting a layout transition into a permanent Worker failure.
+      if (!validGeometry(rectangle, viewport)) return false;
       const meta = {
         source, rectangle: { ...rectangle }, viewport: { ...viewport }, options: { ...options },
         requestId: ++this.requestId, generation: this.generation, barGeneration: this.barGeneration,
@@ -66,7 +103,7 @@
         mediaTime: Number(source.currentTime) || 0
       };
       this.pending = meta;
-      this.jobTimer = setTimeout(() => this.fail('Ambient worker frame timed out'), this.renderTimeout);
+      this.armJobTimeout();
       let captured;
       try { captured = createImageBitmap(source, { resizeWidth: 320, resizeHeight: 180, resizeQuality: 'low' }); }
       catch (error) { this.fail('Ambient video capture is unavailable'); return false; }
@@ -80,7 +117,8 @@
             frame, rectangle: meta.rectangle, viewport: meta.viewport, radial: radial === true,
             sourceKey: meta.sourceKey, mediaTime: meta.mediaTime, options: {
               avoidBars: meta.options.avoidBars !== false, inset: Number(meta.options.inset) || 0,
-              blend: Number(meta.options.blend) || 0, readPixels: meta.options.readPixels === true
+              blend: Number(meta.options.blend) || 0, readPixels: meta.options.readPixels === true,
+              sampleOnly: meta.options.sampleOnly === true, fillBars: meta.options.fillBars === true
             }
           }, [frame]);
         } catch (error) { frame.close(); this.fail('Ambient worker capture transfer failed'); }
@@ -90,7 +128,7 @@
     receive(value) {
       if (!value || this.state === 'disposed' || this.state === 'failed') { value?.bitmap?.close?.(); return; }
       if (value.type === 'ready' && this.state === 'starting') {
-        clearTimeout(this.startupTimer); this.state = 'ready'; return;
+        clearTimeout(this.startupTimer); this.startupTimer = null; this.state = 'ready'; return;
       }
       if (value.type === 'failed') { this.fail(value.reason || 'Ambient worker failed'); return; }
       if (value.type !== 'frame') return;
@@ -102,31 +140,39 @@
         return;
       }
       const bitmap = value.bitmap;
-      if (!bitmap || bitmap.width !== 400 || bitmap.height < 80 || bitmap.height > 2048 ||
-          !validCrop(value.videoCrop) || typeof value.readable !== 'boolean' || typeof value.cropped !== 'boolean' ||
+      const sampleOnly = meta.options.sampleOnly === true;
+      const validBitmap = sampleOnly ? bitmap === null : bitmap && bitmap.width === 400 && bitmap.height >= 80 && bitmap.height <= 2048;
+      const validPixels = value.pixels instanceof Uint8ClampedArray && value.pixels.length === 160 * 90 * 4;
+      if (value.sampleOnly !== sampleOnly || !validBitmap ||
+          !validCrop(value.videoCrop) || !validCrop(value.samplingCrop) ||
+          typeof value.readable !== 'boolean' || typeof value.cropped !== 'boolean' ||
           !Number.isSafeInteger(value.stableFrames) || value.stableFrames < 0 ||
-          (value.pixels !== null && !(value.pixels instanceof Uint8ClampedArray && value.pixels.length === 160 * 90 * 4))) {
+          (value.pixels !== null && !validPixels) || (sampleOnly && value.readable && !validPixels)) {
         bitmap?.close?.(); this.fail('Invalid ambient worker result'); return;
       }
       try {
-        if (!this.acceptFrame(meta)) { this.finish(meta); return; }
-        if (this.canvas.width !== bitmap.width || this.canvas.height !== bitmap.height) {
-          this.canvas.width = bitmap.width; this.canvas.height = bitmap.height;
+        if (this.suspended || !this.acceptFrame(meta)) { this.finish(meta); return; }
+        if (!sampleOnly) {
+          if (this.canvas.width !== bitmap.width || this.canvas.height !== bitmap.height) {
+            this.canvas.width = bitmap.width; this.canvas.height = bitmap.height;
+          }
+          this.context.drawImage(bitmap, 0, 0);
         }
-        this.context.drawImage(bitmap, 0, 0);
         this.readable = value.readable;
         this.stableFrames = value.stableFrames;
-        this.crop = value.videoCrop;
+        this.crop = value.samplingCrop;
+        this.videoCrop = value.videoCrop;
         this.pixels = value.pixels;
         this.finish(meta);
-        this.onFrame({ readable: value.readable, cropped: value.cropped, videoCrop: value.videoCrop }, meta);
+        this.onFrame({ readable: value.readable, cropped: value.cropped, videoCrop: value.videoCrop,
+          samplingCrop: value.samplingCrop, sampleOnly }, meta);
       } catch (error) {
         this.fail('Ambient worker presentation failed');
-      } finally { bitmap.close(); }
+      } finally { bitmap?.close?.(); }
     }
     finish(meta) {
       if (this.pending !== meta) return;
-      clearTimeout(this.jobTimer); this.pending = null;
+      clearTimeout(this.jobTimer); this.jobTimer = null; this.pending = null;
     }
     invalidate() {
       this.generation++;
@@ -139,6 +185,7 @@
       this.barGeneration++;
       this.pixels = null; this.readable = true; this.stableFrames = 0;
       this.crop = { x: 0, y: 0, width: 160, height: 90 };
+      this.videoCrop = { ...this.crop };
     }
     fail(reason) {
       if (this.state === 'failed' || this.state === 'disposed') return;
@@ -146,6 +193,7 @@
     }
     closeTransport() {
       clearTimeout(this.startupTimer); clearTimeout(this.jobTimer);
+      this.startupTimer = null; this.jobTimer = null;
       try { this.port?.postMessage({ type: 'dispose' }); } catch (error) { /* Already detached. */ }
       this.port?.close(); this.frame?.remove(); this.pending = null; this.pixels = null;
     }

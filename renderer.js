@@ -27,6 +27,7 @@
       this.pendingCrop = '';
       this.stableFrames = 0;
       this.readable = true;
+      this.projection = null;
     }
     reset() {
       // Clear readback taint when the media element or source changes.
@@ -35,6 +36,7 @@
       this.barDetector.reset();
       this.crop = { x: 0, y: 0, width: 160, height: 90 };
       this.stableFrames = 0; this.pixels = null;
+      this.projection = null;
     }
     readPixels() {
       if (!this.readable) return null;
@@ -51,14 +53,16 @@
         const data = this.barSample.getImageData(0, 0, 320, 180).data;
         const crop = this.barDetector.sample(data, { sourceKey: this.sourceKey, mediaTime });
         this.crop = { x: crop.x / 2, y: crop.y / 2, width: crop.width / 2, height: crop.height / 2 };
+        const display = this.barDetector.displayCrop;
+        this.displayCrop = { x: display.x / 2, y: display.y / 2, width: display.width / 2, height: display.height / 2 };
         // Paused footage gets enough observations for the detector's refinement.
         this.stableFrames = this.barDetector.confidence.endsWith('full') ? 4 : Math.min(4, Math.max(0, this.barDetector.exactFrames - 4));
       } catch (error) {
-        this.readable = false; this.barDetector.reset(); this.crop = full;
+        this.readable = false; this.barDetector.reset(); this.crop = full; this.displayCrop = full;
       }
       return this.crop;
     }
-    draw(source, rectangle, viewport, radial, options = {}) {
+    inspect(source, rectangle, viewport, options = {}) {
       const explicitKey = typeof options.sourceKey === 'string';
       const sourceKey = explicitKey ? options.sourceKey : source.currentSrc || source.src || '';
       // Worker captures arrive as a new bitmap each frame. Their stable key
@@ -71,7 +75,22 @@
         this.readable = true; this.stableFrames = 0; this.pendingCrop = '';
         this.crop = { x: 0, y: 0, width: 160, height: 90 };
         this.barDetector.reset();
+        this.projection = null;
       }
+      this.sample.drawImage(source, 0, 0, 160, 90);
+      this.pixels = null;
+      const full = { x: 0, y: 0, width: 160, height: 90 };
+      const detected = options.avoidBars !== false || options.fillBars === true ?
+        this.detectBars(source, Number.isFinite(options.mediaTime) ? options.mediaTime : source.currentTime) : full;
+      const automatic = options.avoidBars === false ? full : detected;
+      const display = !this.readable || detected.width === 160 && detected.height === 90 ? full : this.displayCrop || detected;
+      this.crop = { ...automatic };
+      return { readable: this.readable, cropped: automatic.width < 160 || automatic.height < 90,
+        videoCrop: { ...display }, samplingCrop: { ...automatic } };
+    }
+    draw(source, rectangle, viewport, radial, options = {}) {
+      const result = this.inspect(source, rectangle, viewport, options);
+      const automatic = result.samplingCrop;
       const pad = this.padding;
       const sw = viewport.width + pad * 2;
       const sh = viewport.height + pad * 2;
@@ -81,10 +100,6 @@
         this.canvas.width = width;
         this.canvas.height = height;
       }
-      this.sample.drawImage(source, 0, 0, 160, 90);
-      this.pixels = null;
-      const automatic = options.avoidBars === false ? { x: 0, y: 0, width: 160, height: 90 } :
-        this.detectBars(source, Number.isFinite(options.mediaTime) ? options.mediaTime : source.currentTime);
       // A conservative display boundary can sit inside a noisy band. Sampling
       // starts one color pixel further in only along axes with confirmed bars.
       const horizontal = automatic.height < 90 ? Math.min(1, automatic.height / 8) : 0;
@@ -104,7 +119,6 @@
         width: rectangle.width * crop.width / 160,
         height: rectangle.height * crop.height / 90
       };
-      const result = { readable: this.readable, cropped: automatic.width < 160 || automatic.height < 90, videoCrop: automatic };
       const ctx = this.context;
       const blend = Math.max(0, Math.min(1, Number(options.blend) || 0));
       const blendWholeFrame = () => {
@@ -116,6 +130,7 @@
       };
       ctx.imageSmoothingEnabled = true;
       if (!radial || blend >= 1 || rectangle.width < 1 || rectangle.height < 1) {
+        this.projection = null;
         ctx.drawImage(this.frame, crop.x, crop.y, crop.width, crop.height, 0, 0, width, height);
         return result;
       }
@@ -135,26 +150,34 @@
         }
         const target = this.output.data;
         const halfWidth = (right - left) / 2, halfHeight = (bottom - top) / 2;
+        const key = [width, height, left, top, right, bottom, crop.x, crop.y, crop.width, crop.height].join(',');
         // Project each background pixel back along its ray to the video edge.
-        // This avoids seams between independently painted perimeter wedges.
-        for (let y = 0; y < height; y++) {
-          const dy = (y + .5 - cy) / halfHeight;
-          for (let x = 0; x < width; x++) {
-            const dx = (x + .5 - cx) / halfWidth;
-            const distance = Math.max(1, Math.abs(dx), Math.abs(dy));
-            const sx = Math.round(crop.x + (dx / distance + 1) * .5 * (crop.width - 1));
-            const sy = Math.round(crop.y + (dy / distance + 1) * .5 * (crop.height - 1));
-            const from = (Math.min(89, Math.max(0, sy)) * 160 + Math.min(159, Math.max(0, sx))) * 4;
-            const to = (y * width + x) * 4;
-            target[to] = pixels[from]; target[to + 1] = pixels[from + 1];
-            target[to + 2] = pixels[from + 2]; target[to + 3] = 255;
+        // Keep one map only: at most 400 * 2048 * 2 bytes, independent of time.
+        if (this.projection?.key !== key) {
+          const indices = new Uint16Array(width * height);
+          for (let y = 0; y < height; y++) {
+            const dy = (y + .5 - cy) / halfHeight;
+            for (let x = 0; x < width; x++) {
+              const dx = (x + .5 - cx) / halfWidth;
+              const distance = Math.max(1, Math.abs(dx), Math.abs(dy));
+              const sx = Math.round(crop.x + (dx / distance + 1) * .5 * (crop.width - 1));
+              const sy = Math.round(crop.y + (dy / distance + 1) * .5 * (crop.height - 1));
+              indices[y * width + x] = Math.min(89, Math.max(0, sy)) * 160 + Math.min(159, Math.max(0, sx));
+            }
           }
+          this.projection = { key, indices };
+        }
+        for (let i = 0; i < this.projection.indices.length; i++) {
+          const from = this.projection.indices[i] * 4, to = i * 4;
+          target[to] = pixels[from]; target[to + 1] = pixels[from + 1];
+          target[to + 2] = pixels[from + 2]; target[to + 3] = 255;
         }
         ctx.putImageData(this.output, 0, 0);
         blendWholeFrame();
         return result;
       }
       // Never blend an adjacent interior pixel into a stretched edge pixel.
+      this.projection = null;
       ctx.imageSmoothingEnabled = false;
       ctx.drawImage(this.frame, crop.x, crop.y, 1, 1, 0, 0, width, height);
       ctx.drawImage(this.frame, crop.x, crop.y, crop.width, crop.height, left, top, right - left, bottom - top);

@@ -1,14 +1,26 @@
 <!doctype html>
 <html><head><meta charset="utf-8"><title>Ambient verification</title>
+<script>
+const fixtureParameters=new URLSearchParams(location.search);
+document.documentElement.toggleAttribute('dark',!fixtureParameters.has('light'));
+</script>
 <style>
-html,body{margin:0;color:white;background:#0f0f0f;font:14px system-ui}ytd-app{display:block;background:#222;min-height:220vh}ytd-masthead{display:block;position:sticky;top:0;z-index:100;height:56px;background:#222;padding-left:24px;line-height:56px}
+html,body{margin:0;color:white;background:#0f0f0f;font:14px system-ui}html{--fixture-popup-base:#282828;--fixture-control-base:#303030;--fixture-control-text:#fff}ytd-app{display:block;background:#222;min-height:220vh}ytd-masthead{display:block;position:sticky;top:0;z-index:100;height:56px;background:#222;padding-left:24px;line-height:56px}
 #columns{display:flex;gap:24px;padding:24px;max-width:1200px;margin:auto;background:#222}#primary{flex:1;min-width:0}#secondary{width:250px;background:#222}
 #movie_player{position:relative;aspect-ratio:16/9;background:#000;overflow:hidden}.html5-video-container{position:absolute;inset:0}video{width:100%;height:100%;object-fit:contain}
 .ytp-chrome-bottom{position:absolute;z-index:60;bottom:0;left:12px;right:12px;height:48px;background:#0007}.ytp-right-controls{display:flex;justify-content:flex-end;height:40px}.ytp-right-controls-left,.ytp-right-controls-right{display:flex;height:40px}
-.ytp-button{border:0;color:white;background:transparent;width:48px;height:40px;cursor:pointer}#below,#description{background:#222;padding:16px}button{border-radius:8px;background:#303030;color:white;padding:8px;border:0}.thumb{height:110px;background:linear-gradient(45deg,#904eff,#ff823d);margin-bottom:12px;border-radius:10px}
+.ytp-button{border:0;color:white;background:transparent;width:48px;height:40px;cursor:pointer}#below,#description{background:#222;padding:16px}button{border-radius:8px;background:var(--fixture-control-base);color:var(--fixture-control-text);padding:8px;border:0}.thumb{height:110px;background:linear-gradient(45deg,#904eff,#ff823d);margin-bottom:12px;border-radius:10px}
 .ytSpecButtonShapeNextFilled{background:#f1f1f1;color:#0f0f0f}
 .ytSpecButtonShapeNextHost{position:relative;border-radius:999px}.ytSpecButtonShapeNextTonal{background:rgba(255,255,255,.1)}.ytChipShapeButtonReset{padding:0;background:transparent}.ytChipShapeActive,.ytChipShapeInactive{padding:8px 12px;margin-right:6px;border-radius:8px}.ytChipShapeActive{background:#f1f1f1;color:#0f0f0f}.ytChipShapeInactive{background:rgba(255,255,255,.1);color:white}
-#full-bleed-container{display:none}ytd-watch-flexy[theater] #full-bleed-container{display:block;height:44vh;background:#000}ytd-watch-flexy[theater] #movie_player{width:100%;height:100%;aspect-ratio:auto}ytd-watch-flexy[theater] .html5-video-container{background:#000}
+#full-bleed-container{display:none}:is(ytd-watch-flexy,ytd-watch-grid)[theater] #full-bleed-container{display:block;height:44vh;background:#000}:is(ytd-watch-flexy,ytd-watch-grid)[theater] #movie_player{width:100%;height:100%;aspect-ratio:auto}:is(ytd-watch-flexy,ytd-watch-grid)[theater] .html5-video-container{background:#000}
+/* Light mode changes the actual page palette, not only the popup fixture. */
+html:not([dark]),html:not([dark]) body{color:#0f0f0f;background:#fff}html:not([dark]){--fixture-popup-base:#fff;--fixture-control-base:#0000000d;--fixture-control-text:#0f0f0f}
+html:not([dark]) :is(ytd-app,ytd-masthead,#columns,#secondary,#below,#description){background:#fff}
+html:not([dark]) .ytSpecButtonShapeNextFilled{background:#0f0f0f;color:#fff}
+html:not([dark]) .ytSpecButtonShapeNextTonal{background:#0000000d;color:#0f0f0f}
+html:not([dark]) .ytChipShapeButtonReset{background:transparent}
+html:not([dark]) .ytChipShapeActive{background:#0f0f0f;color:#fff}
+html:not([dark]) .ytChipShapeInactive{background:#0000000d;color:#0f0f0f}
 </style><link id="ambient-style" rel="stylesheet" href="/ambient.css"><script>if(new URLSearchParams(location.search).has('baseline'))document.querySelector('#ambient-style').href='/baseline-ambient.css';</script></head>
 <body><ytd-app><ytd-masthead><div id="background">YouTube-style verification fixture</div></ytd-masthead>
 <div id="content"><div id="page-manager"><ytd-watch-flexy><div id="columns"><div id="primary"><div id="primary-inner">
@@ -16,10 +28,72 @@ html,body{margin:0;color:white;background:#0f0f0f;font:14px system-ui}ytd-app{di
 <div id="below"><h2>動画タイトルとボタンを保持</h2><button>共有</button><button>保存</button><div id="description">説明欄の背景</div><ytd-comments id="comments">コメント欄の背景</ytd-comments></div>
 </div></div><div id="secondary"><div class="thumb"></div>関連動画の文字<div class="thumb"></div></div></div></ytd-watch-flexy></div></div></ytd-app>
 <script>
+if(fixtureParameters.has('grid')){
+  const oldWatch=document.querySelector('ytd-watch-flexy');
+  const grid=document.createElement('ytd-watch-grid');
+  grid.append(...oldWatch.childNodes);oldWatch.replaceWith(grid);
+}
+// The demo keeps the legacy bag intact and models WebExtension per-key storage.
+// Only this self-authored fixture seeds the requested saved-OFF scenario.
+if(fixtureParameters.has('saved-off'))localStorage.setItem('yac-setting:enabled','false');
+const fixtureStorageListeners=new Set(),fixtureObservedStorage=new Map();
+const fixtureStorageDelay=Math.min(30000,Math.max(0,Number(fixtureParameters.get('storage-delay'))||0));
+let fixtureInitialStorageRead=true;
+function fixtureDecodeStored(raw){
+  if(raw===null)return undefined;
+  try{return JSON.parse(raw);}catch{return undefined;}
+}
+for(let index=0;index<localStorage.length;index++){
+  const key=localStorage.key(index);fixtureObservedStorage.set(key,localStorage.getItem(key));
+}
+function fixtureNotifyStorage(changes){
+  if(!Object.keys(changes).length)return;
+  for(const listener of [...fixtureStorageListeners])listener(changes,'local');
+}
 const browser={
-  runtime:new URLSearchParams(location.search).has('main')?{}:{getURL:filename=>new URL(filename,location.href).href},
-  storage:{local:{get:async()=>({ambient:JSON.parse(localStorage.getItem('ambient')||'null')}),set:async({ambient})=>localStorage.setItem('ambient',JSON.stringify(ambient))}}
+  runtime:fixtureParameters.has('main')?{}:{getURL:filename=>new URL(filename,location.href).href},
+  storage:{
+    onChanged:{addListener:listener=>fixtureStorageListeners.add(listener),removeListener:listener=>fixtureStorageListeners.delete(listener)},
+    local:{
+      get:async keys=>{
+        const names=typeof keys==='string'?[keys]:Array.isArray(keys)?keys:
+          keys&&typeof keys==='object'?Object.keys(keys):Array.from({length:localStorage.length},(_,index)=>localStorage.key(index));
+        const result={};
+        for(const key of names){
+          const raw=localStorage.getItem(key),value=fixtureDecodeStored(raw);
+          if(value!==undefined)result[key]=value;
+          else if(keys&&typeof keys==='object'&&!Array.isArray(keys))result[key]=keys[key];
+        }
+        const delay=fixtureInitialStorageRead?fixtureStorageDelay:0;fixtureInitialStorageRead=false;
+        if(delay)await new Promise(resolve=>setTimeout(resolve,delay));
+        return result;
+      },
+      set:async values=>{
+        const changes={};
+        for(const [key,value] of Object.entries(values)){
+          const oldRaw=localStorage.getItem(key),newRaw=JSON.stringify(value);
+          if(newRaw===undefined)throw new TypeError('Fixture storage requires JSON values');
+          if(oldRaw===newRaw)continue;
+          localStorage.setItem(key,newRaw);fixtureObservedStorage.set(key,newRaw);
+          changes[key]={oldValue:fixtureDecodeStored(oldRaw),newValue:fixtureDecodeStored(newRaw)};
+        }
+        queueMicrotask(()=>fixtureNotifyStorage(changes));
+      }
+    }
+  }
 };
+window.addEventListener('storage',event=>{
+  if(event.storageArea!==localStorage)return;
+  const changes={};
+  if(event.key===null){
+    for(const [key,raw] of fixtureObservedStorage)changes[key]={oldValue:fixtureDecodeStored(raw),newValue:undefined};
+    fixtureObservedStorage.clear();
+  }else{
+    changes[event.key]={oldValue:fixtureDecodeStored(event.oldValue),newValue:fixtureDecodeStored(event.newValue)};
+    if(event.newValue===null)fixtureObservedStorage.delete(event.key);else fixtureObservedStorage.set(event.key,event.newValue);
+  }
+  fixtureNotifyStorage(changes);
+});
 const sample=document.createElement('canvas');sample.width=640;sample.height=360;
 if(new URLSearchParams(location.search).has('enhancer')){
   const toolbarStyle=document.createElement('style');
@@ -53,7 +127,6 @@ if(new URLSearchParams(location.search).has('enhancer')){
   }
 }
 if(new URLSearchParams(location.search).has('surfaces')){
-  document.documentElement.toggleAttribute('dark',!new URLSearchParams(location.search).has('light'));
   const surfaceStyle=document.createElement('style');
   surfaceStyle.textContent=`
     tp-yt-app-drawer#guide{position:fixed;left:0;top:56px;bottom:0;width:210px;z-index:110}
@@ -72,6 +145,8 @@ if(new URLSearchParams(location.search).has('surfaces')){
     #fixture-report-menu{right:24px;top:404px;width:180px;background:#282828}
     tp-yt-paper-listbox{background:#282828;padding:8px}tp-yt-paper-listbox button{width:100%;text-align:left;background:transparent}
     tp-yt-paper-listbox button:hover{background:#ffffff24}
+    /* Model the observed native wrapper and DeepDark direct-child fill. */
+    ytd-popup-container .dropdown-content.style-scope.ytd-popup-container > *{background:var(--second-background,var(--fixture-popup-base))!important}
     html:not([dark]) :is(ytd-guide-renderer,ytd-popup-container){color:#0f0f0f}
     html:not([dark]) #guide :is(#contentContainer,#guide-wrapper,#guide-content),html:not([dark]) :is(yt-contextual-sheet-layout,#fixture-notifications,#fixture-report-menu,tp-yt-paper-listbox,ytd-simple-menu-header-renderer){background:#fff}
     html:not([dark]) ytd-popup-container button{color:#0f0f0f}
@@ -85,6 +160,11 @@ if(new URLSearchParams(location.search).has('surfaces')){
     if(document.querySelector('#fixture-popups'))return;
     const popups=document.createElement('ytd-popup-container');popups.id='fixture-popups';
     popups.innerHTML='<yt-sheet-view-model id="fixture-modern-menu" class="fixture-popup ytSheetViewModelHost ytSheetViewModelContextual"><yt-contextual-sheet-layout class="ytContextualSheetLayoutHost"><div class="ytContextualSheetLayoutContentContainer"><yt-list-view-model><yt-list-item-view-model>Add to queue</yt-list-item-view-model><yt-list-item-view-model>Save to Watch later</yt-list-item-view-model><yt-list-item-view-model>Save to playlist</yt-list-item-view-model><yt-list-item-view-model>Share</yt-list-item-view-model><yt-list-item-view-model>Report</yt-list-item-view-model></yt-list-view-model></div></yt-contextual-sheet-layout></yt-sheet-view-model><ytd-multi-page-menu-renderer id="fixture-notifications" class="fixture-popup"><div id="header"><ytd-simple-menu-header-renderer>Notifications</ytd-simple-menu-header-renderer></div><div id="sections"><ytd-notification-renderer>Example notification<br><small>Self-authored demonstration</small></ytd-notification-renderer><ytd-notification-renderer>Another example<br><small>No account content is used</small></ytd-notification-renderer></div></ytd-multi-page-menu-renderer><ytd-menu-popup-renderer id="fixture-report-menu" class="fixture-popup"><tp-yt-paper-listbox><button>Report</button></tp-yt-paper-listbox></ytd-menu-popup-renderer>';
+    for(const popup of [...popups.children]){
+      const dropdown=document.createElement('div');
+      dropdown.className='dropdown-content style-scope ytd-popup-container';
+      popup.replaceWith(dropdown);dropdown.append(popup);
+    }
     document.querySelector('ytd-app').append(popups);
   };
   document.querySelector('#background').append(openSurfaces);
@@ -97,7 +177,7 @@ if(new URLSearchParams(location.search).has('theme')||new URLSearchParams(locati
   // Model a theme extension's more specific page backgrounds without its code.
   const theme=document.createElement('style');
   if(new URLSearchParams(location.search).has('theme')){
-    theme.textContent='#content #page-manager ytd-watch-flexy,#content #page-manager #columns,#content #page-manager #primary,#content #page-manager #below,#content #page-manager #secondary{background-color:#212121!important}';
+    theme.textContent='#content #page-manager :is(ytd-watch-flexy,ytd-watch-grid),#content #page-manager #columns,#content #page-manager #primary,#content #page-manager #below,#content #page-manager #secondary{background-color:#212121!important}';
     theme.textContent+='#content #page-manager .box,#content #page-manager ytd-watch-next-secondary-results-renderer{background-color:#212121!important}ytd-engagement-panel-section-list-renderer #content,ytd-engagement-panel-title-header-renderer #header,ytd-transcript-search-panel-renderer{background-color:#272727!important}';
   }
   document.head.append(theme);
@@ -209,12 +289,12 @@ frame();setInterval(frame,1000/60);
 document.querySelector('video').srcObject=sample.captureStream(60);
 document.querySelector('.ytp-settings-button').onclick=e=>{const b=e.currentTarget;b.setAttribute('aria-expanded',String(b.getAttribute('aria-expanded')!=='true'));};
 const theaterContainer=document.createElement('div');theaterContainer.id='full-bleed-container';
-const watch=document.querySelector('ytd-watch-flexy'),moviePlayer=document.querySelector('#movie_player'),originalPlayerParent=moviePlayer.parentElement;
+const watch=document.querySelector('ytd-watch-flexy,ytd-watch-grid'),moviePlayer=document.querySelector('#movie_player'),originalPlayerParent=moviePlayer.parentElement;
 const fullBleedPlayer=document.createElement('div');fullBleedPlayer.id='player-full-bleed-container';fullBleedPlayer.className='style-scope ytd-watch-flexy';fullBleedPlayer.style.height='100%';theaterContainer.append(fullBleedPlayer);
 watch.prepend(theaterContainer);
 document.querySelector('.ytp-size-button').onclick=()=>{const theater=!watch.hasAttribute('theater');watch.toggleAttribute('theater',theater);if(theater)fullBleedPlayer.append(moviePlayer);else originalPlayerParent.prepend(moviePlayer);window.dispatchEvent(new Event('resize'));};
 document.querySelector('.ytp-fullscreen-button').onclick=()=>{if(document.fullscreenElement)document.exitFullscreen();else document.querySelector('#movie_player').requestFullscreen();};
-</script><script src="/black-bar-detector.js"></script><script src="/renderer.js"></script><script src="/flash-monitor.js"></script><script src="/worker-client.js"></script><script>
+</script><script src="/black-bar-detector.js"></script><script src="/renderer.js"></script><script src="/flash-monitor.js"></script><script src="/worker-client.js"></script><script src="/settings-store.js"></script><script>
 // Test the real dialog without displaying flashing imagery. Numeric detector
 // tests cover detection separately; this fixture simulates its positive result.
 if(new URLSearchParams(location.search).has('warning-demo')){

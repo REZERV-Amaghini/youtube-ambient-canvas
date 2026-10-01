@@ -28,8 +28,9 @@ Firefoxの永続インストールにはAMOの署名が必要です。
 - 背景のFPSは24〜60で調整でき、初期値は30FPS。設定はローカル保存。
 - 検索欄にも背景を反映。設定パネルはぼかしをかけた半透明のダーク背景。
 - 対称な黒帯の自動除外と、黒帯を背景に置き換えるスイッチ。
-- 開発版0.2.11では黒帯を320×180で検出し、圧縮ノイズ・小さな字幕やロゴ・境界の揺れを考慮。
+- 開発版0.2.12では黒帯を320×180で検出し、圧縮ノイズ・小さな字幕やロゴ・境界の揺れを考慮。
   動画の表示サイズを保ち、背景の色採取には別の160×90画像を使います。
+  採色と表示の境界を分け、検出できた帯内の明るい字幕・ロゴを表示側に残します。
   背景の色計算・描画は専用Workerへ分離し、YouTube側の半透明表示と設定操作はページ側に残します。
 - 歯車の隣の丸いアイコンから設定。暗いモノクロのパネルが動画プレーヤー内の
   右下、操作ボタン列の上に開きます。×または同じアイコンで閉じます。
@@ -37,9 +38,10 @@ Firefoxの永続インストールにはAMOの署名が必要です。
 - 日本語／英語の切り替えと保存。設定名・説明・アイコンの案内も切り替わります。
 - 埋め込みライブチャットの背景にも反映。案内カード・入力欄も透過し、
   背景オフで元に戻ります。スーパーチャット等の色付きカードは保持します。
-- 開発版0.2.11では、高速点滅が約3秒続いたときに暗い警告を最前面に表示。
+- 開発版0.2.12では、高速点滅が約3秒続いたときに暗い警告を最前面に表示。
   動画と背景はそのまま続きます。「濃さを下げる（15%）」と「二度と表示しない」を
   選べ、詳細設定から警告を再度オンにできます。検出や15%の濃さは安全を保証しません。
+  背景オフ・全画面でも警告の採色監視を続け、設定変更は開いている別タブへ反映します。
 - 設定はローカル保存のみ。追跡・外部通信・実行時依存はありません。
 
 ## 開発版のインストール
@@ -64,6 +66,7 @@ Add-onから`dist/firefox/manifest.json`を指定。一時アドオンは再起�
 `npm run check`で構文検査、`npm run demo`で自作のテスト映像を表示できます。
 `npm run test:flash`は数値データだけで点滅検出を検査し、点滅映像は表示しません。
 `npm run test:bars`は黒帯の境界と誤検出、`npm run test:worker`は古い画像の破棄・設定変更・終了処理を確認します。
+`npm test`は投影のRGBA一致、複数タブの設定同期、実コントローラーのOFF・全画面・seek・終了処理も検査します。
 `?warning-demo&store`では点滅させずに警告の操作と保存を確認できます。
 表示されたlocalhost URLへアクセスし、`?bars`で黒帯、`?chat`でチャットを追加してください。
 DevToolsで`tests/check-renderer.js`を実行すると描画とスクロール計算を検査
@@ -92,7 +95,7 @@ SHA-256一覧を`dist/`に生成します。明示したファイルだけを梱
 
 [プライバシー](PRIVACY.md)・[公開手順](docs/PUBLISHING.md)・
 [ストア説明](docs/LISTING.md)・[対応候補](docs/TARGETS.md)・
-[検証結果](docs/VALIDATION.md)
+[検証結果](docs/VALIDATION.md)・[残る品質確認](docs/QUALITY-GATES.md)
 
 ![YouTube Ambient Canvas — 実際のYouTube画面と日本語設定](assets/preview-hardwell-ja.gif)
 
@@ -108,7 +111,7 @@ open inside the player, with Japanese/English language selection. Embedded chat
 backgrounds are transparent while ambient is enabled. No tracking or remote code.
 MIT licensed.
 
-Development 0.2.11 adds an optional rapid-flash warning, enabled by default. A
+Development 0.2.12 adds an optional rapid-flash warning, enabled by default. A
 dark modal appears after about three seconds of detected rapid flashing while
 playback and ambient continue. You can reduce strength to 15% or disable further
 warnings; Advanced settings can re-enable them. Detection and reduced opacity

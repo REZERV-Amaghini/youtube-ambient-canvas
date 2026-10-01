@@ -14,7 +14,7 @@ function run(hz, duration, fps = 30, options = {}) {
   const monitor = new Monitor(), warnings = [];
   for (let n = 0; n <= duration * fps; n++) {
     const t = n / fps, on = Math.floor(t * hz * 2 + .001) % 2;
-    if (monitor.sample(on ? options.on || white : options.off || black, t * 1000, t, 'video')) warnings.push(t);
+    if (monitor.sample(on ? options.on || white : options.off || black, t * 1000, t * (options.rate || 1), 'video', undefined, options.rate || 1)) warnings.push(t);
   }
   return warnings;
 }
@@ -29,6 +29,9 @@ assert.deepEqual(run(0, 6), [], 'static frame');
 assert.deepEqual(run(6, 6, 30, { on: frame([145,145,145]), off: frame([140,140,140]) }), [], 'small brightness changes');
 assert.deepEqual(run(6, 6, 30, { on: frame([255,255,255], .1), off: frame([0,0,0], .1) }), [], 'small flashing area is outside this heuristic');
 assert.equal(run(6, 4, 30, { on: frame([255,0,0]), off: frame([0,148,0]) }).length, 1, 'saturated red transitions at similar luminance');
+assert.equal(run(6, 4, 24, { rate: 8 }).length, 1, 'fast playback does not masquerade as repeated seeks');
+assert.equal(run(24, 4, 60).length, 1, 'display-tick sampling can detect a frequency aliased by a 24 FPS background');
+assert.deepEqual(run(60, 4, 60), [], 'sampling at the same frequency can alias; never claim complete detection');
 const interrupted = new Monitor();
 let interruptedWarning = false;
 for (let n = 0; n < 180; n++) {

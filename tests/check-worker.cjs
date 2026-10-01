@@ -34,7 +34,7 @@ class Canvas {
     };
   }
   getContext() { return this.context; }
-  transferToImageBitmap() { return new Bitmap(this.width, this.height, this.data); }
+  transferToImageBitmap() { this.transfers = (this.transfers || 0) + 1; return new Bitmap(this.width, this.height, this.data); }
 }
 const run = (context, name) => vm.runInContext(fs.readFileSync(path.join(root, name), 'utf8'), context, { filename: name });
 const settle = async () => { await Promise.resolve(); await Promise.resolve(); };
@@ -53,7 +53,7 @@ function harness({ captureThrows = false, accepted = true } = {}) {
   const context = vm.createContext({
     URL, Uint8Array, Uint8ClampedArray, crypto: { getRandomValues: array => array.fill(1) },
     location: { href: 'https://www.youtube.com/watch?v=test' }, MessageChannel: Channel,
-    setTimeout: callback => { timers.set(++timerId, callback); return timerId; },
+    setTimeout: (callback, delay) => { callback.delay = delay;timers.set(++timerId, callback);return timerId; },
     clearTimeout: id => timers.delete(id), queueMicrotask,
     createImageBitmap: (source, options) => {
       if (captureThrows) throw new Error('Unavailable');
@@ -84,7 +84,9 @@ const viewport = { width: 1280, height: 720 };
 const result = (client, extra = {}) => ({
   type: 'frame', requestId: client.pending.requestId, generation: client.pending.generation,
   bitmap: new Bitmap(400, 320), pixels: null, readable: true, cropped: false,
-  videoCrop: { x: 0, y: 0, width: 160, height: 90 }, stableFrames: 4, ...extra
+  videoCrop: { x: 0, y: 0, width: 160, height: 90 },
+  samplingCrop: { x: 0, y: 0, width: 160, height: 90 },
+  sampleOnly: false, stableFrames: 4, ...extra
 });
 
 (async () => {
@@ -93,7 +95,7 @@ const result = (client, extra = {}) => ({
   h.ready();
   assert.equal(h.channels[0].port1.sent.length, 0);
   assert.equal(h.nodes[0].contentWindow.connection.target, 'chrome-extension://test');
-  assert.equal(h.client.draw(source, rectangle, viewport, true, { readPixels: true }), true);
+  assert.equal(h.client.draw(source, rectangle, viewport, true, { readPixels: true, fillBars: true }), true);
   for (let i = 0; i < 100; i++) assert.equal(h.client.draw(source, rectangle, viewport, true), false);
   assert.equal(h.captures.length, 1, 'Backpressure covers capture, with no pending queue');
   const captured = new Bitmap(); h.captures[0].resolve(captured); await settle();
@@ -105,6 +107,8 @@ const result = (client, extra = {}) => ({
   assert.equal(h.captures[0].options.resizeWidth, 320);
   assert.equal(h.captures[0].options.resizeHeight, 180);
   assert.equal(job.options.readPixels, true);
+  assert.equal(job.options.sampleOnly, false);
+  assert.equal(job.options.fillBars, true);
   const image = result(h.client, { pixels: new Uint8ClampedArray(160 * 90 * 4) });
   h.client.receive(image);
   assert.equal(image.bitmap.closed, 1); assert.equal(h.frames.length, 1);
@@ -132,6 +136,7 @@ const result = (client, extra = {}) => ({
   preserve.client.draw(source, rectangle, viewport, true); preserve.captures[0].resolve(new Bitmap()); await settle();
   const confirmed = result(preserve.client, { cropped: true, readable: false,
     videoCrop: { x: 0, y: 10, width: 160, height: 70 }, stableFrames: 7,
+    samplingCrop: { x: 0, y: 10, width: 160, height: 70 },
     pixels: new Uint8ClampedArray(160 * 90 * 4) });
   preserve.client.receive(confirmed);
   const confirmedCrop = preserve.client.crop, confirmedPixels = preserve.client.pixels;
@@ -194,6 +199,134 @@ const result = (client, extra = {}) => ({
   h.client.dispose(); timeout.client.dispose(); hung.client.dispose(); malformed.client.dispose(); unavailable.client.dispose();
   presentation.client.dispose();
 
+  const geometry = harness(); geometry.ready();
+  for (const [rect, view] of [
+    [{ ...rectangle, width: 0 }, viewport], [{ ...rectangle, height: 0 }, viewport],
+    [{ ...rectangle, width: NaN }, viewport], [{ ...rectangle, top: Infinity }, viewport],
+    [rectangle, { ...viewport, width: 0 }], [rectangle, { ...viewport, height: 32769 }]
+  ]) assert.equal(geometry.client.draw(source, rect, view, true), false, 'Unavailable geometry waits');
+  assert.equal(geometry.client.state, 'ready'); assert.equal(geometry.client.pending, null);
+  assert.equal(geometry.client.requestId, 0); assert.equal(geometry.captures.length, 0);
+  assert.equal(geometry.failures.length, 0); assert.equal(geometry.timers.size, 0);
+  geometry.client.dispose();
+
+  const suspendedStartup = harness();
+  const oldStartupTimer = [...suspendedStartup.timers.keys()][0];
+  suspendedStartup.client.setSuspended(true);
+  assert.equal(suspendedStartup.timers.size, 0, 'Suspended startup has no watchdog deadline');
+  assert.equal(suspendedStartup.client.draw(source, rectangle, viewport, true), false);
+  suspendedStartup.client.setSuspended(false);
+  assert.equal(suspendedStartup.timers.size, 1); assert.equal(suspendedStartup.timers.has(oldStartupTimer), false);
+  assert.equal([...suspendedStartup.timers.values()][0].delay, 4000, 'Startup resumes with a fresh full deadline');
+  suspendedStartup.client.setSuspended(true); suspendedStartup.ready();
+  assert.equal(suspendedStartup.client.state, 'ready'); assert.equal(suspendedStartup.timers.size, 0);
+  assert.equal(suspendedStartup.client.draw(source, rectangle, viewport, true), false, 'Ready while suspended still does not capture');
+  suspendedStartup.client.setSuspended(false); assert.equal(suspendedStartup.timers.size, 0);
+  suspendedStartup.client.dispose(); suspendedStartup.client.setSuspended(false);
+  assert.equal(suspendedStartup.timers.size, 0, 'Disposed transport never rearms watchdogs');
+
+  const suspendedJob = harness(); suspendedJob.ready();
+  suspendedJob.client.draw(source, rectangle, viewport, true);
+  const pendingBeforeSuspend = suspendedJob.client.pending;
+  const oldJobTimer = [...suspendedJob.timers.keys()][0];
+  suspendedJob.client.setSuspended(true); assert.equal(suspendedJob.timers.size, 0);
+  assert.equal(suspendedJob.client.pending, pendingBeforeSuspend, 'Suspension retains one capture and its ownership');
+  assert.equal(suspendedJob.client.draw(source, rectangle, viewport, true, { sampleOnly: true }), false);
+  const suspendedCapture = new Bitmap(); suspendedJob.captures[0].resolve(suspendedCapture); await settle();
+  assert.equal(suspendedJob.channels[0].port1.sent.length, 1, 'Already-owned capture transfers once without starting another job');
+  suspendedJob.client.setSuspended(false);
+  assert.equal(suspendedJob.timers.size, 1); assert.equal(suspendedJob.timers.has(oldJobTimer), false);
+  assert.equal([...suspendedJob.timers.values()][0].delay, 2000, 'Pending job resumes with a fresh full deadline');
+  assert.equal(suspendedJob.client.draw(source, rectangle, viewport, true), false, 'Resume never duplicates the pending job');
+  const resumedFrame = result(suspendedJob.client); suspendedJob.client.receive(resumedFrame);
+  assert.equal(resumedFrame.bitmap.closed, 1); assert.equal(suspendedJob.frames.length, 1);
+  assert.equal(suspendedJob.client.pending, null); assert.equal(suspendedJob.timers.size, 0);
+  suspendedJob.client.dispose();
+
+  const hiddenResult = harness(); hiddenResult.ready();
+  hiddenResult.client.draw(source, rectangle, viewport, true);
+  hiddenResult.captures[0].resolve(new Bitmap()); await settle();
+  hiddenResult.client.setSuspended(true);
+  const hiddenFrame = result(hiddenResult.client); hiddenResult.client.receive(hiddenFrame);
+  assert.equal(hiddenFrame.bitmap.closed, 1); assert.equal(hiddenResult.frames.length, 0);
+  assert.equal(hiddenResult.canvas.context.draws.length, 0, 'A result delivered during suspension is released without presentation');
+  assert.equal(hiddenResult.client.pending, null); hiddenResult.client.setSuspended(false);
+  assert.equal(hiddenResult.timers.size, 0); assert.equal(hiddenResult.client.state, 'ready');
+  hiddenResult.client.dispose();
+
+  const suspendedReset = harness(); suspendedReset.ready();
+  suspendedReset.client.draw(source, rectangle, viewport, true);
+  suspendedReset.client.setSuspended(true); suspendedReset.client.reset();
+  suspendedReset.client.setSuspended(false);
+  assert.equal(suspendedReset.client.draw(source, rectangle, viewport, true), false, 'Visibility reset keeps stale capture ownership until released');
+  const invalidatedHiddenCapture = new Bitmap(); suspendedReset.captures[0].resolve(invalidatedHiddenCapture); await settle();
+  assert.equal(invalidatedHiddenCapture.closed, 1); assert.equal(suspendedReset.channels[0].port1.sent.length, 0);
+  assert.equal(suspendedReset.client.pending, null); assert.equal(suspendedReset.timers.size, 0);
+  assert.equal(suspendedReset.failures.length, 0);
+  assert.equal(suspendedReset.client.draw(source, rectangle, viewport, true), true, 'A fresh job follows suspended stale capture disposal');
+  suspendedReset.client.dispose(); suspendedReset.captures[1].resolve(new Bitmap()); await settle();
+
+  const sampling = harness(); sampling.ready();
+  assert.equal(sampling.client.draw(source, rectangle, viewport, true, { sampleOnly: true }), true);
+  assert.equal(sampling.client.draw(source, rectangle, viewport, true), false, 'Sampling shares rendering backpressure');
+  sampling.captures[0].resolve(new Bitmap()); await settle();
+  assert.equal(sampling.channels[0].port1.sent[0].value.options.sampleOnly, true);
+  assert.equal(sampling.channels[0].port1.sent[0].value.options.fillBars, false);
+  const sampled = result(sampling.client, { sampleOnly: true, bitmap: null, cropped: true,
+    pixels: new Uint8ClampedArray(160 * 90 * 4),
+    videoCrop: { x: 0, y: 8, width: 160, height: 76 },
+    samplingCrop: { x: 0, y: 10, width: 160, height: 70 } });
+  sampling.client.receive(sampled);
+  assert.equal(sampling.canvas.width, 400); assert.equal(sampling.canvas.height, 400);
+  assert.equal(sampling.canvas.context.draws.length, 0, 'Sampling never presents or resizes the background');
+  assert.equal(sampling.frames[0].result.sampleOnly, true); assert.equal(sampling.client.pending, null);
+  assert.equal(sampling.client.crop.y, 10, 'Public crop retains the sampling ROI');
+  assert.equal(sampling.client.videoCrop.y, 8, 'Display ROI retains protected subtitles separately');
+  assert.equal(sampling.client.readPixels().length, 160 * 90 * 4);
+
+  sampling.client.draw(source, rectangle, viewport, true, { sampleOnly: true });
+  sampling.captures[1].resolve(new Bitmap()); await settle();
+  const staleSample = result(sampling.client, { sampleOnly: true, bitmap: null, pixels: sampled.pixels });
+  sampling.client.reset(); sampling.client.receive(staleSample);
+  assert.equal(sampling.frames.length, 1); assert.equal(sampling.client.pending, null);
+  assert.equal(sampling.client.readPixels(), null, 'Stale sampling cannot restore old safety-monitor pixels');
+  assert.equal(sampling.canvas.context.draws.length, 0);
+  sampling.client.draw(source, rectangle, viewport, true, { sampleOnly: true });
+  const unfinishedSample = new Bitmap(); sampling.client.dispose();
+  sampling.captures[2].resolve(unfinishedSample); await settle();
+  assert.equal(unfinishedSample.closed, 1, 'Disposed sampling closes late capture');
+
+  const rejectedSample = harness({ accepted: false }); rejectedSample.ready();
+  rejectedSample.client.draw(source, rectangle, viewport, true, { sampleOnly: true });
+  rejectedSample.captures[0].resolve(new Bitmap()); await settle();
+  rejectedSample.client.receive(result(rejectedSample.client, { sampleOnly: true, bitmap: null, pixels: sampled.pixels }));
+  assert.equal(rejectedSample.frames.length, 0); assert.equal(rejectedSample.client.pixels, null);
+  assert.equal(rejectedSample.client.pending, null); rejectedSample.client.dispose();
+
+  for (const extra of [
+    { pixels: null }, { pixels: new Uint8ClampedArray(10) },
+    { samplingCrop: { x: 0, y: 0, width: 161, height: 90 } },
+    { videoCrop: { x: 0, y: NaN, width: 160, height: 90 } },
+    { sampleOnly: false }, { bitmap: new Bitmap(400, 320) }
+  ]) {
+    const invalidSample = harness(); invalidSample.ready();
+    invalidSample.client.draw(source, rectangle, viewport, true, { sampleOnly: true });
+    invalidSample.captures[0].resolve(new Bitmap()); await settle();
+    const invalidReply = result(invalidSample.client, { sampleOnly: true, bitmap: null, pixels: sampled.pixels, ...extra });
+    invalidSample.client.receive(invalidReply);
+    assert.equal(invalidSample.client.state, 'failed', 'Sampling validates its complete pixel/crop/mode contract');
+    assert.equal(invalidSample.canvas.context.draws.length, 0); assert.equal(invalidSample.frames.length, 0);
+    if (invalidReply.bitmap) assert.equal(invalidReply.bitmap.closed, 1, 'Unexpected sampling bitmap is closed');
+    invalidSample.client.dispose();
+  }
+  const protectedSample = harness(); protectedSample.ready();
+  protectedSample.client.draw(source, rectangle, viewport, true, { sampleOnly: true });
+  protectedSample.captures[0].resolve(new Bitmap()); await settle();
+  protectedSample.client.receive(result(protectedSample.client, { sampleOnly: true, bitmap: null, pixels: null, readable: false }));
+  assert.equal(protectedSample.client.state, 'ready'); assert.equal(protectedSample.frames.length, 1);
+  assert.equal(protectedSample.client.readPixels(), null); assert.equal(protectedSample.canvas.context.draws.length, 0);
+  protectedSample.client.dispose();
+
   const pixelData = new Uint8ClampedArray(160 * 90 * 4);
   for (let y = 0; y < 90; y++) for (let x = 0; x < 160; x++) {
     const i = (y * 160 + x) * 4;
@@ -248,6 +381,32 @@ const result = (client, extra = {}) => ({
   assert.equal(workerResult.value.videoCrop.height, 70);
   assert.equal(workerResult.value.pixels.length, 160 * 90 * 4);
   assert.equal(workerResult.transfers.length, 2, 'Bitmap and copied sample buffer are transferred');
+  assert.equal(workerResult.value.sampleOnly, false);
+  assert.equal(workerResult.value.samplingCrop.height, 70);
+  const outputCanvas = vm.runInContext('canvas', workerContext);
+  const beforeInspection = { width: outputCanvas.width, height: outputCanvas.height,
+    draws: outputCanvas.context.draws.length, transfers: outputCanvas.transfers };
+  const inspectFrame = new Bitmap(320, 180, capturedPixels);
+  workerContext.self.onmessage({ data: { type: 'render', requestId: 41, generation: 0, barGeneration: 0,
+    frame: inspectFrame, rectangle, viewport: { width: 800, height: 2000 }, radial: true,
+    sourceKey: 'same-video', mediaTime: 4 / 30, options: { sampleOnly: true, readPixels: false } } });
+  const inspection = workerReplies.at(-1);
+  assert.equal(inspection.value.type, 'frame'); assert.equal(inspection.value.sampleOnly, true);
+  assert.equal(inspection.value.bitmap, null); assert.equal(inspection.value.pixels.length, 160 * 90 * 4);
+  assert.equal(inspection.value.samplingCrop.height, 70); assert.equal(inspectFrame.closed, 1);
+  assert.equal(inspection.transfers.length, 1); assert.equal(inspection.transfers[0], inspection.value.pixels.buffer);
+  assert.deepEqual({ width: outputCanvas.width, height: outputCanvas.height,
+    draws: outputCanvas.context.draws.length, transfers: outputCanvas.transfers }, beforeInspection,
+    'Worker sampling does not resize, render or allocate an output bitmap');
+  const filledInspectFrame = new Bitmap(320, 180, capturedPixels);
+  workerContext.self.onmessage({ data: { type: 'render', requestId: 42, generation: 0, barGeneration: 0,
+    frame: filledInspectFrame, rectangle, viewport, sourceKey: 'same-video', mediaTime: 4 / 30,
+    options: { sampleOnly: true, avoidBars: false, fillBars: true } } });
+  const filledInspection = workerReplies.at(-1).value;
+  assert.equal(filledInspection.type, 'frame'); assert.equal(filledInspection.samplingCrop.height, 90);
+  assert.equal(filledInspection.videoCrop.height, 70, 'fillBars detects a display ROI even with color exclusion OFF');
+  assert.equal(filledInspection.cropped, false, 'Color sampling keeps the full source when avoidBars is OFF');
+  assert.equal(filledInspectFrame.closed, 1); assert.equal(outputCanvas.transfers, beforeInspection.transfers);
   workerContext.self.onmessage({ data: { type: 'render', requestId: 5, generation: 1, barGeneration: 0,
     frame: new Bitmap(320, 180, capturedPixels), rectangle, viewport, radial: false,
     sourceKey: 'same-video', mediaTime: 4 / 30 } });
@@ -268,6 +427,10 @@ const result = (client, extra = {}) => ({
       frame: badCounterFrame, rectangle, viewport, sourceKey: 'same-video' } });
     assert.equal(badCounterFrame.closed, 1); assert.equal(workerReplies.at(-1).value.type, 'failed');
   }
+  const malformedMode = new Bitmap(320, 180, capturedPixels);
+  workerContext.self.onmessage({ data: { type: 'render', requestId: 101, generation: 0, barGeneration: 0,
+    frame: malformedMode, rectangle, viewport, sourceKey: 'same-video', options: { sampleOnly: 'true' } } });
+  assert.equal(malformedMode.closed, 1); assert.equal(workerReplies.at(-1).value.type, 'failed');
 
   const handlers = {}, workers = [], parent = {}, bridgeReplies = [];
   const token = '01'.repeat(16);
@@ -298,9 +461,12 @@ const result = (client, extra = {}) => ({
   assert.equal(workers[0].jobs[0].transfers[0], sourceFrame);
   workers[0].onmessage({ data: workerResult.value });
   assert.equal(bridgeReplies.at(-1).transfers.length, 2);
+  workers[0].onmessage({ data: inspection.value });
+  assert.equal(bridgeReplies.at(-1).value.bitmap, null);
+  assert.equal(bridgeReplies.at(-1).transfers.length, 1, 'Bridge transfers only the pixel buffer for sampling');
   bridgePort.onmessage({ data: { type: 'dispose' } });
   assert.equal(workers[0].terminated, true); assert.equal(bridgePort.closed, true);
   handlers.pagehide();
 
-  console.log('PASS: worker backpressure, stale generation, frame ownership, fallback, watchdog, crop stability, bounded output, bridge origin and teardown');
+  console.log('PASS: worker sampling/rendering modes, suspended watchdogs, geometry wait, pixel/crop contracts, backpressure, stale generation, frame ownership, fallback, bounded output, bridge origin and teardown');
 })().catch(error => { console.error(error); process.exitCode = 1; });

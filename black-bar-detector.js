@@ -23,6 +23,7 @@
 
     reset() {
       this.crop = { x: 0, y: 0, width: this.width, height: this.height };
+      this.displayCrop = { ...this.crop };
       this.pendingFrames = 0; this.exactFrames = 0; this.uncertainFrames = 0;
       this.stableFrames = 0; this.confidence = 'reset';
       this.sourceKey = undefined; this.mediaTime = undefined;
@@ -185,7 +186,28 @@
       return this.crop;
     }
 
-    sample(data, { sourceKey, mediaTime } = {}) {
+    sample(data, options = {}) {
+      const crop = this.analyze(data, options);
+      // Sampling may ignore sparse subtitles/logos; clipping must preserve them.
+      // Only remove the outer black run before the first bright sample, with a
+      // one-sample guard for antialiasing. Each axis considers the entire frame
+      // so corner logos are protected against either independent clip edge.
+      const edges = this.currentEdges();
+      if (data && data.length >= this.width * this.height * 4) {
+        for (let edge = 0; edge < 4; edge++) {
+          const lines = edge % 2 === 0 ? this.columns : this.rows;
+          const reverse = edge >= 2;
+          for (let offset = 0; offset < edges[edge]; offset++) {
+            const index = reverse ? lines.bright.length - 1 - offset : offset;
+            if (lines.bright[index]) { edges[edge] = Math.max(0, offset - 1); break; }
+          }
+        }
+      }
+      this.displayCrop = { x: edges[0], y: edges[1], width: this.width - edges[0] - edges[2], height: this.height - edges[1] - edges[3] };
+      return crop;
+    }
+
+    analyze(data, { sourceKey, mediaTime } = {}) {
       if (!data || data.length < this.width * this.height * 4) { this.reset(); this.confidence = 'invalid'; return this.crop; }
       const changedSource = sourceKey !== undefined && this.sourceKey !== undefined && sourceKey !== this.sourceKey;
       const discontinuity = Number.isFinite(mediaTime) && Number.isFinite(this.mediaTime) &&

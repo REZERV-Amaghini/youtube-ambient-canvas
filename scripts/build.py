@@ -7,7 +7,7 @@ import zipfile
 ROOT = Path(__file__).resolve().parent.parent
 DIST = ROOT / "dist"
 VERSION = json.loads((ROOT / "manifest.json").read_text(encoding="utf-8"))["version"]
-EXTENSION_FILES = ["black-bar-detector.js", "renderer.js", "flash-monitor.js", "worker-client.js",
+EXTENSION_FILES = ["settings-store.js", "black-bar-detector.js", "renderer.js", "flash-monitor.js", "worker-client.js",
                    "worker-host.html", "worker-host.js", "ambient-worker.js", "ambient.js", "ambient.css", "LICENSE"] + [
     f"assets/icon-{size}.png" for size in (16, 32, 48, 96, 128)
 ]
@@ -15,7 +15,8 @@ SOURCE_FILES = ["manifest.json", "README.md", "PRIVACY.md", "CONTRIBUTING.md", "
                 "LICENSE", ".gitignore", "package.json", "scripts/build.py",
                 "scripts/create_assets.py", "tests/fixture.html",
                 "tests/server.cjs", "tests/check-renderer.js", "tests/check-flash-monitor.cjs", "tests/check-black-bars.cjs",
-                "tests/check-worker.cjs", "tests/firefox-check.html", "tests/chat-fixture.html"]
+                "tests/check-worker.cjs", "tests/check-settings.cjs", "tests/check-ambient.cjs", "tests/check-projection.cjs",
+                "tests/firefox-check.html", "tests/chat-fixture.html"]
 
 
 def archive(name, entries):

@@ -14,7 +14,7 @@
       enabled: 'アンビエント背景', radial: '放射状モード', avoidBars: '黒帯を自動で除外', fillBars: '黒帯を背景に置き換える',
       strength: '濃さ', blur: 'ぼかし', saturation: '彩度', inset: '採色範囲（内側）', fps: '背景のFPS',
       appearance: '見た目', advanced: '詳細設定',
-      flashWarning: '高速点滅の警告', flashWarningDescription: '高速点滅が約3秒続くと警告します。二度と表示しない設定も、ここで戻せます。',
+      flashWarning: '高速点滅の警告', flashWarningDescription: '高速点滅が約3秒続くと警告します。背景オフ・全画面でも監視し、「二度と表示しない」の設定もここで戻せます。',
       flashTitle: '高速点滅を繰り返しているようです。',
       flashBody: '光の点滅は、光に敏感な方の体調に影響することがあります。必要に応じて、アンビエントの濃さを下げてください。',
       flashNote: '検出は完全ではありません。3秒未満の点滅や、濃さ15%でも安全を保証するものではありません。',
@@ -31,7 +31,7 @@
       enabled: 'Ambient background', radial: 'Radial mode', avoidBars: 'Detect and exclude black bars', fillBars: 'Replace black bars with ambient',
       strength: 'Strength', blur: 'Blur', saturation: 'Saturation', inset: 'Sample inset', fps: 'Background FPS',
       appearance: 'Appearance', advanced: 'Advanced settings',
-      flashWarning: 'Rapid-flash warning', flashWarningDescription: 'Warns after about 3 seconds of rapid flashing. Turn this back on here after choosing not to show it again.',
+      flashWarning: 'Rapid-flash warning', flashWarningDescription: 'Warns after about 3 seconds of rapid flashing, including with ambient off or in fullscreen. You can turn this back on here.',
       flashTitle: 'Rapid flashing appears to be repeating.',
       flashBody: 'Flashing light can affect people who are sensitive to it. Consider reducing the ambient strength.',
       flashNote: 'Detection is incomplete. Flashes shorter than 3 seconds and 15% strength are not guaranteed to be safe.',
@@ -61,10 +61,11 @@
   let video = null, player = null, lastVideo = null, lastTime = -1, lastGeometry = '';
   let open = false;
   let blend = 0, lastBlendTime = performance.now();
-  let frameRequest = 0, lastDrawFrame = 0, disposed = false;
+  let frameRequest = 0, lastDrawFrame = 0, disposed = false, paintDue = true;
   let chatDocument = null, chatFrame = null;
   const flashMonitor = new YacFlashMonitor();
-  let flashSettingsLoaded = false, flashWarningOpen = false, warnedVideoKey = '', warningFocus = null;
+  let settingsLoaded = false, flashWarningOpen = false, warnedVideoKey = '', warningFocus = null;
+  let lastSampleVideo = null, lastSampleTime = -1;
   const chatStyleId = 'yac-chat-style';
   // Theme extensions can give page surfaces more specific !important backgrounds.
   // Override only the surrounding surfaces while active, then restore their styles.
@@ -100,7 +101,7 @@
     for (const element of surfaces) {
       const overrides = { 'background-color': 'transparent', 'background-image': 'none', 'box-shadow': 'none' };
       if (element.localName === 'ytd-app') {
-        overrides['background-color'] = '#080b12';
+        overrides['background-color'] = 'var(--yac-page-base)';
         overrides.isolation = 'isolate';
       }
       const properties = savedSurfaces.get(element) || new Map();
@@ -118,7 +119,8 @@
     'html.yac-chat-active{--yt-live-chat-background-color:transparent;--yt-live-chat-action-panel-background-color:transparent}',
     'html.yac-chat-active,html.yac-chat-active body,html.yac-chat-active yt-live-chat-app,html.yac-chat-active yt-live-chat-renderer,html.yac-chat-active yt-live-chat-header-renderer,html.yac-chat-active yt-live-chat-item-list-renderer,html.yac-chat-active yt-live-chat-ticker-renderer,html.yac-chat-active yt-live-chat-renderer #chat,html.yac-chat-active yt-live-chat-renderer #contents,html.yac-chat-active yt-live-chat-renderer #items,html.yac-chat-active yt-live-chat-renderer #item-scroller,html.yac-chat-active yt-live-chat-renderer #panel-pages{background-color:transparent!important;background-image:none!important}',
     'html.yac-chat-active yt-live-chat-viewer-engagement-message-renderer #card,html.yac-chat-active yt-live-chat-message-input-renderer,html.yac-chat-active yt-live-chat-message-input-renderer #input-container{background:transparent!important;box-shadow:none!important}',
-    'html.yac-chat-active yt-live-chat-text-message-renderer{text-shadow:0 1px 3px #000b}',
+    'html.yac-chat-active yt-live-chat-text-message-renderer{text-shadow:0 1px 3px #fff9}',
+    'html.yac-chat-active[dark] yt-live-chat-text-message-renderer{text-shadow:0 1px 3px #000b}',
     `html.yac-chat-active{--yac-chat-menu:rgba(255,255,255,.86)}
     html.yac-chat-active[dark]{--yac-chat-menu:rgba(28,28,28,.86)}
     html.yac-chat-active :is(ytd-menu-popup-renderer,ytd-engagement-panel-section-list-renderer){
@@ -130,10 +132,12 @@
       background-color:transparent!important;background-image:none!important;
     }`
   ].join('\n');
-  const removers = [];
+  const removers = new Set();
   function listen(target, type, callback, options) {
     target.addEventListener(type, callback, options);
-    removers.push(() => target.removeEventListener(type, callback, options));
+    const remove = () => { target.removeEventListener(type, callback, options); removers.delete(remove); };
+    removers.add(remove);
+    return remove;
   }
   const button = document.createElement('button');
   button.id = 'yac-settings-button';
@@ -330,7 +334,7 @@
     if (event.key === 'Escape') { event.preventDefault(); setOpen(false, true); }
   });
   listen(panel, 'keyup', event => event.stopPropagation());
-  const nativeSettingsButtons = new WeakSet();
+  let videoListeners = [], gearListener = null, gearElement = null;
   const warningHost = document.createElement('div');
   warningHost.id = 'yac-flash-warning';
   const warningRoot = warningHost.attachShadow({ mode: 'open' });
@@ -370,23 +374,28 @@
     flashWarningOpen = false;warningDialog.close();flashMonitor.reset();
     if (returnFocus) (warningFocus?.isConnected ? warningFocus : button).focus({ preventScroll: true });
     warningFocus = null;
+    if (warningHost.parentElement !== document.documentElement) document.documentElement.append(warningHost);
+  }
+  function positionWarning() {
+    const container = document.fullscreenElement || document.documentElement;
+    if (warningHost.parentElement === container) return;
+    if (flashWarningOpen) warningDialog.close();
+    container.append(warningHost);
+    if (flashWarningOpen) warningDialog.showModal();
   }
   function showFlashWarning(key) {
     if (!settings.flashWarning || flashWarningOpen || warnedVideoKey === key) return;
     warnedVideoKey = key;
     warningFocus = document.activeElement;
     while (warningFocus?.shadowRoot?.activeElement) warningFocus = warningFocus.shadowRoot.activeElement;
-    localizeWarning();warningDialog.showModal();flashWarningOpen = true;warningReduce.focus();
+    localizeWarning();positionWarning();warningDialog.showModal();flashWarningOpen = true;warningReduce.focus();
     // Notification only: do not pause video, disable ambient, or change strength.
   }
   listen(neverCheckbox, 'change', () => {
-    settings.flashWarning = !neverCheckbox.checked;
-    apply();
-    extension.storage.local.set({ ambient: settings }).catch(console.warn);
+    settingsStore.set('flashWarning', !neverCheckbox.checked, true).catch(console.warn);
   });
   listen(warningReduce, 'click', () => {
-    settings.strength = 15;apply();
-    extension.storage.local.set({ ambient: settings }).catch(console.warn);
+    settingsStore.set('strength', 15, true).catch(console.warn);
     closeFlashWarning();draw();
   });
   listen(warningClose, 'click', () => closeFlashWarning());
@@ -423,18 +432,18 @@
   }
   for (const key of Object.keys(fields)) {
     listen(fields[key], 'input', () => {
-      settings[key] = key === 'language' ? fields[key].value :
+      const value = key === 'language' ? fields[key].value :
         booleanKeys.includes(key) ? fields[key].checked : Number(fields[key].value);
-      if (key === 'flashWarning') { flashMonitor.reset();warnedVideoKey = ''; }
-      apply();
-      draw();
+      settingsStore.set(key, value);
     });
-    listen(fields[key], 'change', () => extension.storage.local.set({ ambient: settings }).catch(console.warn));
+    listen(fields[key], 'change', () => settingsStore.set(key, settings[key], true).catch(console.warn));
   }
   function positionPanel() {
     if (!player) return;
     const controls = player.querySelector('.ytp-chrome-bottom');
-    const bottom = controls ? Math.max(48, player.clientHeight - controls.offsetTop + 8) : 60;
+    const preferredBottom = controls ? Math.max(48, player.clientHeight - controls.offsetTop + 8) : 60;
+    // Keep the header and close action reachable in a short player.
+    const bottom = Math.min(preferredBottom, Math.max(0, player.clientHeight - 64));
     panel.style.width = Math.min(320, Math.max(1, player.clientWidth - 24)) + 'px';
     panel.style.bottom = bottom + 'px';
     panel.style.maxHeight = Math.max(1, player.clientHeight - bottom - 8) + 'px';
@@ -492,15 +501,20 @@
     }
     const nextVideo = player?.querySelector('video.html5-main-video') || null;
     if (video !== nextVideo) {
+      for (const remove of videoListeners) remove();
+      videoListeners = [];
       restoreBars();
       invalidateFrame();
-      if (nextVideo) listen(nextVideo, 'seeking', () => { invalidateFrame();restoreBars();flashMonitor.reset(); });
+      if (nextVideo) {
+        videoListeners.push(listen(nextVideo, 'seeking', () => { invalidateFrame();restoreBars();flashMonitor.reset(); }));
+        videoListeners.push(listen(nextVideo, 'seeked', () => { invalidateFrame();draw(); }));
+      }
     }
     video = nextVideo;
     const gear = player?.querySelector('.ytp-right-controls .ytp-settings-button');
-    if (gear && !nativeSettingsButtons.has(gear)) {
-      nativeSettingsButtons.add(gear);
-      listen(gear, 'click', () => { if (open) setOpen(false); }, true);
+    if (gear !== gearElement) {
+      gearListener?.(); gearElement = gear;
+      gearListener = gear ? listen(gear, 'click', () => { if (open) setOpen(false); }, true) : null;
     }
     const toolbar = gear?.parentElement || player?.querySelector('.ytp-right-controls');
     if (toolbar && button.parentElement !== toolbar) toolbar.insertBefore(button, gear || toolbar.firstChild);
@@ -514,9 +528,11 @@
   }
   function restoreBars() {
     if (originalClip) {
-      const { element, value, priority } = originalClip;
-      if (value) element.style.setProperty('clip-path', value, priority);
-      else element.style.removeProperty('clip-path');
+      const { element, value, priority, applied } = originalClip;
+      if (element.style.getPropertyValue('clip-path') === applied && element.style.getPropertyPriority('clip-path') === 'important') {
+        if (value) element.style.setProperty('clip-path', value, priority);
+        else element.style.removeProperty('clip-path');
+      }
       originalClip = null;
     }
     player?.classList.remove('yac-fill-bars');
@@ -530,8 +546,12 @@
     const right = Math.max(0, bounds.right - rectangle.left - rectangle.width * (crop.x + crop.width) / 160);
     const bottom = Math.max(0, bounds.bottom - rectangle.top - rectangle.height * (crop.y + crop.height) / 90);
     if (Math.max(left, top, right, bottom) < 1) { restoreBars(); return; }
-    if (!originalClip) originalClip = { element: video, value: video.style.getPropertyValue('clip-path'), priority: video.style.getPropertyPriority('clip-path') };
+    const current = video.style.getPropertyValue('clip-path'), priority = video.style.getPropertyPriority('clip-path');
+    if (!originalClip || current !== originalClip.applied || priority !== 'important') {
+      originalClip = { element: video, value: current, priority };
+    }
     video.style.setProperty('clip-path', 'inset(' + [top, right, bottom, left].map(v => v.toFixed(2) + 'px').join(' ') + ')', 'important');
+    originalClip.applied = video.style.getPropertyValue('clip-path');
     player.classList.add('yac-fill-bars');
     const p = player.getBoundingClientRect(), pad = renderer.padding;
     const width = 400, height = Math.min(2048, Math.max(80, Math.round(width * (p.height + pad * 2) / (p.width + pad * 2))));
@@ -556,20 +576,34 @@
     if (resetBars) renderer?.reset?.();
     else renderer?.invalidate?.();
     lastTime = -1;
+    paintDue = true;
+    if (resetBars) { lastSampleVideo = null; lastSampleTime = -1; }
   }
   function sourceKey() {
     return (new URLSearchParams(location.search).get('v') || '') + '|' + (video?.currentSrc || '');
   }
+  function warningKey() { return new URLSearchParams(location.search).get('v') || video?.currentSrc || 'current-video'; }
+  function wantsMonitoring() {
+    return settingsLoaded && settings.flashWarning && !flashWarningOpen && !!video && !video.paused && warnedVideoKey !== warningKey();
+  }
+  function validGeometry(rect) {
+    return [rect.left, rect.top, rect.width, rect.height, innerWidth, innerHeight].every(Number.isFinite) &&
+      rect.width > 0 && rect.height > 0 && innerWidth > 0 && innerHeight > 0;
+  }
   function acceptFrame(meta) {
-    return !disposed && settings.enabled && location.pathname === '/watch' && !document.hidden &&
-      !document.fullscreenElement && video === meta.source && !video.seeking &&
-      sourceKey() === meta.sourceKey && inputRevision === meta.options.revision;
+    if (disposed || !settingsLoaded || location.pathname !== '/watch' || document.hidden ||
+        video !== meta.source || video.seeking || sourceKey() !== meta.sourceKey || inputRevision !== meta.options.revision ||
+        !validGeometry(getRectangle())) return false;
+    return meta.options.sampleOnly ? wantsMonitoring() : settings.enabled && !document.fullscreenElement;
   }
   function presentFrame(result, meta) {
-    const warningKey = new URLSearchParams(location.search).get('v') || video.currentSrc || 'current-video';
-    if (flashSettingsLoaded && settings.flashWarning && !flashWarningOpen && !video.paused && warnedVideoKey !== warningKey) {
-      if (flashMonitor.sample(renderer.readPixels(), meta.options.sampleTime, meta.mediaTime, meta.sourceKey, result.videoCrop)) showFlashWarning(warningKey);
+    lastSampleVideo = meta.source; lastSampleTime = meta.mediaTime;
+    if (wantsMonitoring()) {
+      if (flashMonitor.sample(renderer.readPixels(), meta.options.sampleTime, meta.mediaTime, meta.sourceKey, result.samplingCrop, video.playbackRate)) showFlashWarning(warningKey());
     } else flashMonitor.reset();
+    // Monitoring remains available with ambient OFF and in fullscreen. These
+    // jobs only inspect pixels and must never present a background or clip video.
+    if (result.sampleOnly || meta.options.sampleOnly) return;
     canvas.dataset.blend = meta.options.blend.toFixed(3);
     // The Worker captured this frame before scrolling or a layout change.
     // Clip the current video box, never combine an old rectangle with new bounds.
@@ -589,14 +623,21 @@
   const hostUrl = extension?.runtime?.getURL?.('worker-host.html');
   if (hostUrl && typeof YacWorkerRenderer === 'function') {
     renderer = new YacWorkerRenderer(canvas, { hostUrl, acceptFrame, onFrame: presentFrame, onFailure: useMainRenderer });
+    renderer.setSuspended?.(document.hidden);
     canvas.dataset.renderMode = 'worker';
   } else useMainRenderer();
-  function draw() {
-    const active = settings.enabled && location.pathname === '/watch' && !document.fullscreenElement && !!video;
+  function draw(requestPaint = true) {
+    if (requestPaint) paintDue = true;
+    const active = settingsLoaded && settings.enabled && location.pathname === '/watch' && !document.fullscreenElement && !!video;
     // Native UI styling stays independent of Worker startup, busy jobs and fallback.
     setAmbientActive(active);
-    const ready = active && !document.hidden &&
-      !document.fullscreenElement && canvas.isConnected && video && video.readyState >= 2;
+    if (!active) {
+      restoreBars();
+      setStatus(!settings.enabled ? 'off' : document.fullscreenElement ? 'fullscreen' : 'waiting');
+    }
+    const monitoring = wantsMonitoring();
+    const ready = settingsLoaded && location.pathname === '/watch' && !document.hidden &&
+      (active || monitoring) && canvas.isConnected && video && !video.seeking && video.readyState >= 2;
     if (!ready) {
       flashMonitor.reset();
       restoreBars();
@@ -604,6 +645,7 @@
       return;
     }
     const rect = getRectangle();
+    if (!validGeometry(rect)) { flashMonitor.reset();restoreBars();setStatus('waiting');return; }
     const headerBottom = Math.max(0, document.querySelector('ytd-masthead')?.getBoundingClientRect().bottom || 0);
     const targetBlend = YacRenderer.scrollBlend(rect, { top: headerBottom, height: innerHeight });
     const now = performance.now();
@@ -612,23 +654,29 @@
     lastBlendTime = now;
     updateAppearance();
     const geometry = [rect.left, rect.top, rect.width, rect.height, innerWidth, innerHeight, blend.toFixed(3)].join(',');
-    if (video === lastVideo && video.currentTime === lastTime && geometry === lastGeometry &&
-      (!settings.avoidBars || !renderer.readable || renderer.stableFrames >= 4)) return;
+    const unchanged = video === lastVideo && video.currentTime === lastTime && geometry === lastGeometry &&
+      (!(settings.avoidBars || settings.fillBars) || !renderer.readable || renderer.stableFrames >= 4);
+    const paint = active && paintDue && !unchanged;
+    const sample = monitoring && (video !== lastSampleVideo || video.currentTime !== lastSampleTime);
+    if (!paint && !sample) return;
     try {
       const options = { ...settings, blend, sourceKey: sourceKey(), sampleTime: now, mediaTime: video.currentTime, geometry, revision: inputRevision,
-        readPixels: flashSettingsLoaded && settings.flashWarning && !video.paused };
+        sampleOnly: !paint, readPixels: monitoring };
       const mediaTime = video.currentTime;
-      const result = renderer.draw(video, rect, { width: innerWidth, height: innerHeight }, settings.radial, options);
-      if (typeof result === 'boolean') return;
-      presentFrame(result, { source: video, rectangle: rect, options, sourceKey: options.sourceKey, mediaTime });
+      const result = !paint && canvas.dataset.renderMode === 'main' ?
+        renderer.inspect(video, rect, { width: innerWidth, height: innerHeight }, options) :
+        renderer.draw(video, rect, { width: innerWidth, height: innerHeight }, settings.radial, options);
+      if (typeof result === 'boolean') { if (result && paint) paintDue = false;return; }
+      const meta = { source: video, rectangle: rect, options, sourceKey: options.sourceKey, mediaTime };
+      if (acceptFrame(meta)) { if (paint) paintDue = false;presentFrame(result, meta); }
     } catch (error) {
       restoreBars();
       setStatus('failed');
     }
   }
   listen(document, 'yt-navigate-finish', () => { closeFlashWarning(false);flashMonitor.reset();invalidateFrame();discover(); draw(); });
-  listen(document, 'visibilitychange', () => { invalidateFrame(); draw(); });
-  listen(document, 'fullscreenchange', () => { invalidateFrame();discover(); draw(); });
+  listen(document, 'visibilitychange', () => { renderer?.setSuspended?.(document.hidden);invalidateFrame(); draw(); });
+  listen(document, 'fullscreenchange', () => { invalidateFrame();positionWarning();discover(); draw(); });
   listen(window, 'resize', () => { restoreBars();invalidateFrame(false);positionPanel(); draw(); });
   const discoverTimer = setInterval(discover, 1000);
   function animate(now) {
@@ -640,11 +688,15 @@
     if (elapsed + .5 >= interval) {
       const steps = Math.max(1, Math.floor((elapsed + .5) / interval));
       lastDrawFrame = now - Math.max(0, elapsed - steps * interval);
-      draw();
+      paintDue = true;
     }
+    // Warning sampling follows the display tick, independently of the chosen
+    // background FPS. One Worker job at a time still provides backpressure.
+    if (paintDue || wantsMonitoring()) draw(false);
   }
   listen(document, 'yac-dispose', () => {
     disposed = true;
+    settingsStore.dispose();
     renderer?.dispose?.();
     closeFlashWarning(false);warningHost.remove();
     clearInterval(discoverTimer); cancelAnimationFrame(frameRequest);
@@ -660,16 +712,13 @@
   }, { once: true });
   apply(); discover(); draw();
   frameRequest = requestAnimationFrame(animate);
-  extension.storage.local.get('ambient').then(({ ambient: saved }) => {
-    if (disposed) return;
-    if (saved) {
-      if (['ja', 'en'].includes(saved.language)) settings.language = saved.language;
-      for (const key of booleanKeys) if (typeof saved[key] === 'boolean') settings[key] = saved[key];
-      for (const [key, min, max] of [['strength', 15, 100], ['blur', 0, 160], ['saturation', 0, 250], ['inset', 0, 40], ['fps', 24, 60]]) {
-        if (Number.isFinite(saved[key])) settings[key] = Math.min(max, Math.max(min, saved[key]));
-      }
-      settings.fps = Math.round(settings.fps);
+  const settingsStore = new YacSettingsStore(extension.storage, settings, {
+    onChange(snapshot, { loaded, error }) {
+      if (disposed) return;
+      if (snapshot.flashWarning !== settings.flashWarning) { flashMonitor.reset();warnedVideoKey = ''; }
+      settingsLoaded = loaded;Object.assign(settings, snapshot);
+      if (error) console.warn(error);
+      apply();draw();
     }
-    flashSettingsLoaded = true;apply(); draw();
-  }).catch(error => { flashSettingsLoaded = true;console.warn(error);draw(); });
+  });
 })();
