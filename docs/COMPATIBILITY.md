@@ -1,4 +1,4 @@
-# Theme compatibility - 0.2.9 development revision
+# Theme compatibility - 0.2.10 development revision
 
 Some YouTube theme extensions apply high-specificity `!important` backgrounds.
 With Enhancer for YouTube's dark theme, these rules can cover the ambient canvas
@@ -71,14 +71,17 @@ No YouTube or Enhancer JavaScript functions are replaced.
 
 ## Enhancer control bar
 
-Version 0.2.9 gives the observed `.efyt-control-bar` a 72% neutral dark background
-and 12px backdrop blur while ambient is active. This bar stays dark in either
-YouTube theme, matching Enhancer's original toolbar appearance. Only its surface
-is changed: positioning, sizing, corner radii, icon fills, active/hover states,
-button targets and tooltips remain controlled by Enhancer.
+Version 0.2.10 gives the observed `.efyt-control-bar` a 28% neutral dark background,
+16px backdrop blur and a subtle 1px inset edge while ambient is active. The previous
+72% surface still appeared too opaque in user testing. Small icon drop shadows
+support readability over bright ambient colors. Positioning, sizing, corner radii,
+icon fills, active/hover colors, button targets and tooltips remain controlled by
+Enhancer. The surface remains neutral dark in either YouTube theme.
 It is excluded from the inline layout guard. Turning ambient off or entering
-fullscreen removes these scoped CSS rules and restores its original surface.
+fullscreen removes these scoped CSS rules and restores its original surface and icon filters.
 Use `?enhancer&controls&theme=deepdark` to check the self-authored toolbar fixture.
+Add `&compare-toolbar` to compare the previous and current surface over identical
+bright demonstration backdrops.
 
 ## Menus, notifications and guide
 

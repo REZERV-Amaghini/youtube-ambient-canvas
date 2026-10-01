@@ -1,4 +1,14 @@
-# 検証結果 — 0.2.9 development / 2026-10-01
+# 検証結果 — 0.2.10 development / 2026-10-01
+
+## 0.2.10 lighter Enhancer control bar
+
+- User feedback showed the 72% background still looks like a solid dark strip. Live YouTube inspection confirmed the previous rule is applied: `rgba(28,28,28,.72)`, 12px blur, with no inline override. The visible issue is the chosen opacity, not a missing selector.
+- Reduced the bar to 28% neutral dark opacity, increased backdrop blur to 16px and added a subtle 1px inset edge without changing its size or corner radius. Small icon drop shadows support readability; icon fills and interaction colors are unchanged.
+- Compared 0.2.9 and 0.2.10 over identical self-authored bright pink/cyan backdrops under DeepDark. Verified the revised surface, unchanged 18px radius and icon fills, clickable active state and tooltip.
+- Verified OFF restores the opaque bar, original shadow/filter state and native geometry, preserving the active icon color and keeping ambient settings open. ON re-enables the revised surface.
+- Updated installed-extension appearance on actual YouTube/Firefox requires a reload of 0.2.10. Chrome/Firefox development packages use the same source; store publication remains on 0.2.2.
+
+## Previous 0.2.9 verification
 
 ## 0.2.9 translucent Enhancer control bar
 

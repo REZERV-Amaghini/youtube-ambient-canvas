@@ -32,6 +32,22 @@ if(new URLSearchParams(location.search).has('enhancer')){
   toolbar.innerHTML='<button id="fixture-efyt-loop" aria-label="Demo loop" aria-pressed="false" data-tooltip="Demo loop"><svg viewBox="0 0 24 24"><path d="M4 6h13V3l5 4-5 4V8H4zm16 12H7v3l-5-4 5-4v3h13z"/></svg></button><button aria-label="Demo picture" data-tooltip="Demo picture"><svg viewBox="0 0 24 24"><path d="M2 4h20v16H2zm2 2v12h16V6zm1 10 4-5 3 3 3-4 4 6z"/></svg></button><button aria-label="Demo expand" data-tooltip="Demo expand"><svg viewBox="0 0 24 24"><path d="M2 2h8v2H4v6H2zm12 0h8v8h-2V4h-6zM2 14h2v6h6v2H2zm18 0h2v8h-8v-2h6z"/></svg></button><button aria-label="Demo options" data-tooltip="Demo options"><svg viewBox="0 0 24 24"><path d="M3 5h18v2H3zm0 6h18v2H3zm0 6h18v2H3z"/></svg></button>';
   toolbar.querySelector('button').onclick=e=>{const b=e.currentTarget;b.setAttribute('aria-pressed',String(b.getAttribute('aria-pressed')!=='true'));};
   document.querySelector('#movie_player').after(toolbar);
+  if(new URLSearchParams(location.search).has('compare-toolbar')){
+    const compare=document.createElement('div');compare.id='fixture-toolbar-comparison';
+    const comparisonStyle=document.createElement('style');
+    comparisonStyle.textContent=`
+      #fixture-toolbar-comparison{margin:8px 0;padding:12px;border-radius:12px;color:white}
+      #fixture-toolbar-comparison .fixture-surface{display:inline-block;width:48%;text-align:center;border-radius:10px;background:linear-gradient(90deg,#877b9c,#c287a2,#91bbc3)}
+      #fixture-toolbar-comparison .efyt-control-bar{margin:8px auto}
+      html.yac-active .efyt-control-bar[data-fixture-baseline]{background-color:rgba(28,28,28,.72)!important;box-shadow:none!important;backdrop-filter:blur(12px)!important}
+      html.yac-active .efyt-control-bar[data-fixture-baseline] button svg{filter:none!important}
+    `;
+    document.head.append(comparisonStyle);
+    const previous=toolbar.cloneNode(true);previous.setAttribute('data-fixture-baseline','');previous.querySelector('[id]').removeAttribute('id');
+    const before=document.createElement('div');before.className='fixture-surface';before.textContent='Before · 0.2.9';before.append(previous);
+    const after=document.createElement('div');after.className='fixture-surface';after.textContent='After · 0.2.10';after.append(toolbar);
+    compare.append(before,after);document.querySelector('#movie_player').after(compare);
+  }
 }
 if(new URLSearchParams(location.search).has('surfaces')){
   document.documentElement.toggleAttribute('dark',!new URLSearchParams(location.search).has('light'));
