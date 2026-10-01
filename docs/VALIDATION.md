@@ -1,4 +1,89 @@
-# 検証結果 — 0.2.12 development / 2026-10-01
+# 検証結果 — 0.2.17 development / 2026-10-01
+
+## 0.2.17 comment-load competition and frame pacing
+
+- Removed the unconditional whole-page surface scan from every-second discovery
+  and player resize. Structural changes schedule one coalesced idle callback,
+  with a timer fallback and a one-second refresh rate limit. Theater/player-mode
+  changes sync immediately. Background OFF restores tracked styles immediately.
+- The real controller with deterministic DOM/clock tests performs no additional
+  surface scans during stable discovery, loading 50 comment threads, unrelated
+  playback/comment classes, or hidden-tab changes. Late ticket/transcript panels,
+  new inline theme values, resize bursts, theater enter/exit, resume, OFF and
+  disposal preserve transparency and restore the latest original style.
+- Worker `canAcceptFrame()` is checked before geometry/computed-style work.
+  Worker startup/ready/failure/disposal state is recorded on the background canvas.
+  No capture queue is introduced. Repeated opacity and clip writes are skipped.
+- Feature-detected video-frame callbacks supply a new-frame serial; callbacks
+  themselves remain on the main thread. Sampling and background paint deadlines
+  are separate, so sample-only jobs are not captured again at a later paint tick.
+  Unchanged-frame geometry probes follow background FPS; busy frames skip them.
+  Unsupported browsers retain the existing display-tick path.
+- Main and Worker controller tests capture 90 frames in three seconds for 30 FPS
+  video at 120 Hz, with background settings of 24/30/60 FPS. The real flash monitor
+  retains its sustained three-second trigger on those numeric timestamp streams.
+  Paused bar convergence, forced geometry/preferences, seek, same/new video
+  replacement, hidden/resume, stale callbacks, rejection/backpressure, fallback
+  and disposal are tested. No visibly flashing video is shown by these tests.
+- The browser tool again rejected the current YouTube tab due to a saved access
+  setting. Actual comment-load latency and installed-extension CPU/GPU cost remain
+  unmeasured; these tests prove control flow, not a measured browser speedup.
+
+API behavior: [video-frame callbacks](https://developer.mozilla.org/en-US/docs/Web/API/HTMLVideoElement/requestVideoFrameCallback),
+[idle callbacks](https://developer.mozilla.org/en-US/docs/Web/API/Window/requestIdleCallback).
+
+## 0.2.16 lighter shared controls
+
+- Reduced common paint opacity from .28/.40/.50 to .22/.34/.44 for normal,
+  hover and selected controls. RGB, blur, borders and state priority are unchanged.
+  Actual installed-extension appearance remains unverified.
+
+## 0.2.15 shared dark control palette
+
+- `ambient.css` now defines one control RGB value, normal/hover/selected paint
+  opacity and blur. Defaults are RGB 18/20/25, opacity .28/.40/.50 and 12px blur.
+  Search input/button, Enhancer toolbar, native modern/legacy Tonal/Outline/
+  Filled faces, filter chips and chip-navigation buttons consume this palette.
+  Text-only buttons keep transparent resting faces and use the shared hover face.
+- Control overrides are scoped to component faces; DeepDark's layout/playlist
+  variables keep their existing values. Toolbar and search use the same face. Selected chip
+  and pressed faces take precedence over hover; disabled opacity, geometry,
+  native focus outlines, SVG fills and feedback layers are left to the components.
+- Filled neutral buttons and selected chips use theme-sensitive primary text
+  without `!important`, so the theme's accent and hover text colors can win.
+  Search borders and input focus from 0.2.13 are retained.
+- Syntax checks, all nine fixture inline-script parses, exact package/source
+  archive checks and SHA-256 validation pass. Mozilla web-ext 9.4 reports zero
+  errors, notices and warnings. Independent source review checked state priority,
+  text accents and separation from the currently playing playlist row.
+- Combine `?search&controls&enhancer` with `&theme=deepdark` or `&light` for the
+  self-authored manual fixture. These source changes do not establish installed
+  Chrome/Firefox appearance; actual bright/dark scenes and interaction remain
+  unverified because the browser's saved access setting blocks the YouTube tab.
+
+## 0.2.13 search-field surface
+
+- Removed the fully transparent masthead search-face rule. Modern lowercase and
+  uppercase class names and the legacy input container now have light/dark
+  translucent backgrounds and visible border colors; input focus keeps the
+  theme's accent color with YouTube's action color as fallback. Search buttons
+  also keep a translucent face, while inner inputs remain transparent to avoid
+  stacking fills. Native size, padding, radius and text colors are untouched.
+- DeepDark uses `--main-background` for both the search background and border.
+  The transparent masthead variable therefore erased both. The new legacy
+  selector includes `.ytd-searchbox` to outrank the theme's mode-specific rule.
+  The JavaScript surface guard does not select these search controls.
+- Added `?search` to the self-authored fixture for current lowercase/uppercase
+  and legacy markup. Combine it with `&light` or `&theme=deepdark`, then focus
+  each input and switch ambient OFF/ON. Fixture syntax and package checks do
+  not prove rendered appearance.
+- `npm run check`, all nine fixture inline-script syntax checks and the exact
+  Chrome/Firefox/source archive and SHA-256 checks pass. Mozilla web-ext 9.4
+  reports zero errors, notices and warnings. Independent source review confirms
+  normal/focus selector priority over DeepDark and removal with `yac-active`.
+- The browser tool still rejects the actual YouTube tab, citing a saved access
+  setting. Installed Chrome/Firefox appearance, focus/clear/suggestions and
+  OFF restoration remain unverified. No alternate browser route was used.
 
 ## 0.2.12 controller, display boundaries and sampling
 

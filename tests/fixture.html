@@ -25,7 +25,7 @@ html:not([dark]) .ytChipShapeInactive{background:#0000000d;color:#0f0f0f}
 <body><ytd-app><ytd-masthead><div id="background">YouTube-style verification fixture</div></ytd-masthead>
 <div id="content"><div id="page-manager"><ytd-watch-flexy><div id="columns"><div id="primary"><div id="primary-inner">
 <div id="movie_player"><div class="html5-video-container"><video class="html5-main-video" autoplay muted playsinline></video></div><div class="ytp-chrome-bottom"><div class="ytp-right-controls"><div class="ytp-right-controls-left"><button class="ytp-settings-button ytp-button" aria-label="設定" aria-expanded="false">⚙</button></div><div class="ytp-right-controls-right"><button class="ytp-size-button ytp-button" aria-label="シアターモード">▭</button><button class="ytp-fullscreen-button ytp-button" aria-label="全画面">⛶</button></div></div></div></div>
-<div id="below"><h2>動画タイトルとボタンを保持</h2><button>共有</button><button>保存</button><div id="description">説明欄の背景</div><ytd-comments id="comments">コメント欄の背景</ytd-comments></div>
+<div id="below"><h2>動画タイトルとボタンを保持</h2><button class="ytSpecButtonShapeNextHost ytSpecButtonShapeNextMono ytSpecButtonShapeNextTonal">共有</button><button class="ytSpecButtonShapeNextHost ytSpecButtonShapeNextMono ytSpecButtonShapeNextTonal">保存</button><div id="description">説明欄の背景</div><ytd-comments id="comments">コメント欄の背景</ytd-comments></div>
 </div></div><div id="secondary"><div class="thumb"></div>関連動画の文字<div class="thumb"></div></div></div></ytd-watch-flexy></div></div></ytd-app>
 <script>
 if(fixtureParameters.has('grid')){
@@ -95,6 +95,24 @@ window.addEventListener('storage',event=>{
   fixtureNotifyStorage(changes);
 });
 const sample=document.createElement('canvas');sample.width=640;sample.height=360;
+if(fixtureParameters.has('search')){
+  // Current lowercase/uppercase class names and the legacy field share the
+  // same native-sized faces. The theme fixture is loaded later in the document.
+  const searchStyle=document.createElement('style');
+  searchStyle.textContent=`
+    ytd-masthead{height:auto;min-height:56px;padding:8px 24px;line-height:normal}
+    #fixture-searches{display:flex;flex-wrap:wrap;gap:12px;margin-top:8px}
+    #fixture-searches :is(yt-searchbox,ytd-searchbox){display:flex;width:280px;height:40px}
+    #fixture-searches :is(.ytSearchboxComponentInputBox,.YtSearchboxComponentInputBox,#container){display:flex;flex:1;min-width:0;align-items:center;border:1px solid #555;border-radius:20px 0 0 20px;background:var(--fixture-popup-base);padding:0 12px}
+    #fixture-searches input{width:100%;min-width:0;padding:0;color:inherit;background:transparent;border:0;outline:none;font:inherit}
+    #fixture-searches :is(.ytSearchboxComponentSearchButton,.YtSearchboxComponentSearchButton,#search-icon-legacy){width:52px;border:1px solid #555;border-left:0;border-radius:0 20px 20px 0;background:var(--fixture-control-base);padding:0;cursor:pointer}
+  `;
+  document.head.append(searchStyle);
+  const searches=document.createElement('div');searches.id='fixture-searches';
+  searches.innerHTML='<yt-searchbox><div class="ytSearchboxComponentInputBox"><input aria-label="Current search" value="Current search"></div><button class="ytSearchboxComponentSearchButton" aria-label="Current search button">⌕</button></yt-searchbox><yt-searchbox><div class="YtSearchboxComponentInputBox"><input aria-label="Uppercase search" value="Uppercase search"></div><button class="YtSearchboxComponentSearchButton" aria-label="Uppercase search button">⌕</button></yt-searchbox><ytd-searchbox mode="legacy"><div id="container" class="ytd-searchbox"><div id="search-input"><input aria-label="Legacy search" value="Legacy search"></div></div><button id="search-icon-legacy" class="ytd-searchbox" aria-label="Legacy search button">⌕</button></ytd-searchbox>';
+  searches.querySelectorAll('button').forEach(button=>button.onclick=()=>button.closest('yt-searchbox,ytd-searchbox').querySelector('input').focus());
+  document.querySelector('ytd-masthead').append(searches);
+}
 if(new URLSearchParams(location.search).has('enhancer')){
   const toolbarStyle=document.createElement('style');
   toolbarStyle.textContent=`

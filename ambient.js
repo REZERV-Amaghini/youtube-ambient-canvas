@@ -61,7 +61,9 @@
   let video = null, player = null, lastVideo = null, lastTime = -1, lastGeometry = '';
   let open = false;
   let blend = 0, lastBlendTime = performance.now();
-  let frameRequest = 0, lastDrawFrame = 0, disposed = false, paintDue = true;
+  let frameRequest = 0, lastDrawFrame = 0, disposed = false, paintDue = true, forcePaint = true;
+  let geometryCheckDue = true;
+  let frameVideo = null, videoFrameRequest = null, frameEpoch = 0, frameSerial = 0, submittedSerial = -1;
   let chatDocument = null, chatFrame = null;
   const flashMonitor = new YacFlashMonitor();
   let settingsLoaded = false, flashWarningOpen = false, warnedVideoKey = '', warningFocus = null;
@@ -84,6 +86,7 @@
     ':is(ytd-watch-flexy,ytd-watch-grid) ytd-playlist-panel-renderer :is(#container,#items)'
   ].join(',');
   const savedSurfaces = new Map();
+  let surfacesDirty = true, surfaceJob = null, nextSurfaceRefresh = 0;
   function restoreSurface(element, properties) {
     for (const [name, original] of properties) {
       // A theme may change while ambient is active; keep changes we did not make.
@@ -115,6 +118,85 @@
       }
     }
   }
+  function cancelSurfaceRefresh() {
+    if (!surfaceJob) return;
+    if (surfaceJob.idle) cancelIdleCallback(surfaceJob.id);
+    else clearTimeout(surfaceJob.id);
+    surfaceJob = null;
+  }
+  function refreshPageSurfaces(immediate = false) {
+    const active = document.documentElement.classList.contains('yac-active');
+    if (disposed || !active || document.hidden || !surfacesDirty) return;
+    if (immediate) {
+      cancelSurfaceRefresh();
+      surfacesDirty = false;
+      syncPageSurfaces(true);
+      nextSurfaceRefresh = performance.now() + 1000;
+      return;
+    }
+    if (surfaceJob) return;
+    const delay = Math.max(0, nextSurfaceRefresh - performance.now());
+    if (delay) {
+      surfaceJob = { idle: false, id: setTimeout(() => {
+        surfaceJob = null; refreshPageSurfaces();
+      }, delay) };
+      return;
+    }
+    const run = () => { surfaceJob = null; refreshPageSurfaces(true); };
+    surfaceJob = typeof requestIdleCallback === 'function' && typeof cancelIdleCallback === 'function' ?
+      { idle: true, id: requestIdleCallback(run, { timeout: 1000 }) } :
+      { idle: false, id: setTimeout(run, 0) };
+  }
+  function markSurfacesDirty() { surfacesDirty = true; refreshPageSurfaces(); }
+  const commentContent = 'ytd-comment-thread-renderer,ytd-comment-renderer,ytd-comment-view-model,ytd-comment-replies-renderer';
+  const surfaceClasses = new Set(['box', 'ytd-watch-flexy', 'ytd-watch-grid', 'player-container-background',
+    'input-container', 'ytd-transcript-search-box-renderer', 'ytp-fullscreen', 'ytp-miniplayer-ui',
+    'html5-video-container', 'html5-main-video']);
+  const ownElement = element => element?.nodeType === 1 && !!element.closest('[id^="yac-"]');
+  function relevantSurfaceMutation(record) {
+    const element = record.target;
+    if (ownElement(element) || element.nodeType === 1 && element.closest(commentContent)) return false;
+    if (record.type === 'attributes') {
+      if (record.attributeName === 'style') {
+        // Ignore our applied styles and unrelated clip-path/opacity changes.
+        const properties = savedSurfaces.get(element);
+        return properties && [...properties].some(([name, original]) =>
+          element.style.getPropertyValue(name) !== original.applied || element.style.getPropertyPriority(name) !== 'important');
+      }
+      if (record.attributeName === 'theater') return element.matches('ytd-watch-flexy,ytd-watch-grid');
+      if (record.attributeName === 'class') {
+        const structuralClasses = value => (value || '').split(/\s+/).filter(name => surfaceClasses.has(name)).sort().join(' ');
+        if (structuralClasses(record.oldValue) === structuralClasses(element.getAttribute('class'))) return false;
+      }
+      return savedSurfaces.has(element) || element.matches(pageSurfaces);
+    }
+    // Comment bodies/threads do not contain the structural page surfaces we guard.
+    // Do not turn a batch of loaded comments into repeated whole-page scans.
+    for (const node of record.addedNodes) {
+      if (node.nodeType !== 1 || ownElement(node) || node.matches(commentContent)) continue;
+      if (node.matches(pageSurfaces) || node.querySelector(pageSurfaces)) return true;
+    }
+    for (const node of record.removedNodes) {
+      if (node.nodeType !== 1 || ownElement(node) || node.matches(commentContent)) continue;
+      for (const surface of savedSurfaces.keys()) if (node.contains(surface)) return true;
+    }
+    return false;
+  }
+  const surfaceObserver = new MutationObserver(records => {
+    if (disposed) return;
+    const relevant = records.filter(relevantSurfaceMutation);
+    if (!relevant.length) return;
+    surfacesDirty = true;
+    // Theater/fullscreen container changes must not expose an opaque surround
+    // while waiting for the normal coalesced refresh.
+    const modeChange = relevant.some(record => record.type === 'attributes' &&
+      (record.attributeName === 'theater' || record.attributeName === 'class' && record.target.id === 'movie_player'));
+    refreshPageSurfaces(modeChange);
+  });
+  surfaceObserver.observe(document.documentElement, {
+    childList: true, subtree: true, attributes: true, attributeOldValue: true,
+    attributeFilter: ['style', 'class', 'id', 'theater']
+  });
   const chatCss = [
     'html.yac-chat-active{--yt-live-chat-background-color:transparent;--yt-live-chat-action-panel-background-color:transparent}',
     'html.yac-chat-active,html.yac-chat-active body,html.yac-chat-active yt-live-chat-app,html.yac-chat-active yt-live-chat-renderer,html.yac-chat-active yt-live-chat-header-renderer,html.yac-chat-active yt-live-chat-item-list-renderer,html.yac-chat-active yt-live-chat-ticker-renderer,html.yac-chat-active yt-live-chat-renderer #chat,html.yac-chat-active yt-live-chat-renderer #contents,html.yac-chat-active yt-live-chat-renderer #items,html.yac-chat-active yt-live-chat-renderer #item-scroller,html.yac-chat-active yt-live-chat-renderer #panel-pages{background-color:transparent!important;background-image:none!important}',
@@ -404,8 +486,9 @@
   listen(warningDialog, 'keyup', event => event.stopPropagation());
   function updateAppearance() {
     const attenuation = 1 - .55 * blend;
-    canvas.style.opacity = (settings.strength / 100 * attenuation).toFixed(4);
-    barCanvas.style.opacity = canvas.style.opacity;
+    const opacity = (settings.strength / 100 * attenuation).toFixed(4);
+    if (canvas.style.opacity !== opacity) canvas.style.opacity = opacity;
+    if (barCanvas.style.opacity !== opacity) barCanvas.style.opacity = opacity;
   }
   function apply() {
     localize();
@@ -439,7 +522,7 @@
     listen(fields[key], 'change', () => settingsStore.set(key, settings[key], true).catch(console.warn));
   }
   function positionPanel() {
-    if (!player) return;
+    if (!open || !player || document.hidden) return;
     const controls = player.querySelector('.ytp-chrome-bottom');
     const preferredBottom = controls ? Math.max(48, player.clientHeight - controls.offsetTop + 8) : 60;
     // Keep the header and close action reachable in a short player.
@@ -452,7 +535,7 @@
     restoreBars();
     invalidateFrame(false);
     positionPanel();
-    syncPageSurfaces(document.documentElement.classList.contains('yac-active'));
+    markSurfacesDirty();
   });
   function clearChat() {
     chatDocument?.documentElement?.classList.remove('yac-chat-active');
@@ -484,11 +567,19 @@
   }
   function setAmbientActive(active) {
     const changed = document.documentElement.classList.contains('yac-active') !== active;
-    document.documentElement.classList.toggle('yac-active', active);
-    chatDocument?.documentElement?.classList.toggle('yac-chat-active', active);
-    if (changed) syncPageSurfaces(active);
+    if (changed) document.documentElement.classList.toggle('yac-active', active);
+    if (chatDocument?.documentElement?.classList.contains('yac-chat-active') !== active) {
+      chatDocument?.documentElement?.classList.toggle('yac-chat-active', active);
+    }
+    if (changed) {
+      cancelSurfaceRefresh();
+      surfacesDirty = true;
+      if (active) refreshPageSurfaces(true);
+      else syncPageSurfaces(false);
+    }
   }
   function discover() {
+    if (disposed || document.hidden) return;
     const app = document.querySelector('ytd-app');
     if (app && canvas.parentElement !== app) app.prepend(canvas);
     const next = document.querySelector('#movie_player');
@@ -501,16 +592,20 @@
     }
     const nextVideo = player?.querySelector('video.html5-main-video') || null;
     if (video !== nextVideo) {
+      stopVideoFrames();
       for (const remove of videoListeners) remove();
       videoListeners = [];
       restoreBars();
       invalidateFrame();
       if (nextVideo) {
-        videoListeners.push(listen(nextVideo, 'seeking', () => { invalidateFrame();restoreBars();flashMonitor.reset(); }));
-        videoListeners.push(listen(nextVideo, 'seeked', () => { invalidateFrame();draw(); }));
+        videoListeners.push(listen(nextVideo, 'seeking', () => { stopVideoFrames();invalidateFrame();restoreBars();flashMonitor.reset(); }));
+        videoListeners.push(listen(nextVideo, 'seeked', () => { startVideoFrames();invalidateFrame();draw(); }));
+        videoListeners.push(listen(nextVideo, 'emptied', () => { stopVideoFrames();invalidateFrame();restoreBars();flashMonitor.reset(); }));
+        videoListeners.push(listen(nextVideo, 'loadeddata', () => { startVideoFrames();invalidateFrame();draw(); }));
       }
     }
     video = nextVideo;
+    if (frameVideo !== video && video && !video.seeking) startVideoFrames();
     const gear = player?.querySelector('.ytp-right-controls .ytp-settings-button');
     if (gear !== gearElement) {
       gearListener?.(); gearElement = gear;
@@ -524,7 +619,7 @@
     if (button.hidden || !toolbar || !player) setOpen(false);
     positionPanel();
     syncChat();
-    syncPageSurfaces(document.documentElement.classList.contains('yac-active'));
+    refreshPageSurfaces();
   }
   function restoreBars() {
     if (originalClip) {
@@ -535,7 +630,7 @@
       }
       originalClip = null;
     }
-    player?.classList.remove('yac-fill-bars');
+    if (player?.classList.contains('yac-fill-bars')) player.classList.remove('yac-fill-bars');
   }
   function replaceBars(result, rectangle) {
     if (!settings.fillBars) { restoreBars(); return; }
@@ -550,9 +645,10 @@
     if (!originalClip || current !== originalClip.applied || priority !== 'important') {
       originalClip = { element: video, value: current, priority };
     }
-    video.style.setProperty('clip-path', 'inset(' + [top, right, bottom, left].map(v => v.toFixed(2) + 'px').join(' ') + ')', 'important');
+    const clip = 'inset(' + [top, right, bottom, left].map(v => v.toFixed(2) + 'px').join(' ') + ')';
+    if (current !== clip || priority !== 'important') video.style.setProperty('clip-path', clip, 'important');
     originalClip.applied = video.style.getPropertyValue('clip-path');
-    player.classList.add('yac-fill-bars');
+    if (!player.classList.contains('yac-fill-bars')) player.classList.add('yac-fill-bars');
     const p = player.getBoundingClientRect(), pad = renderer.padding;
     const width = 400, height = Math.min(2048, Math.max(80, Math.round(width * (p.height + pad * 2) / (p.width + pad * 2))));
     if (barCanvas.width !== width || barCanvas.height !== height) { barCanvas.width = width; barCanvas.height = height; }
@@ -576,8 +672,27 @@
     if (resetBars) renderer?.reset?.();
     else renderer?.invalidate?.();
     lastTime = -1;
-    paintDue = true;
-    if (resetBars) { lastSampleVideo = null; lastSampleTime = -1; }
+    paintDue = true; forcePaint = true; geometryCheckDue = true;
+    if (resetBars) { lastSampleVideo = null; lastSampleTime = -1; submittedSerial = -1; }
+  }
+  function stopVideoFrames() {
+    frameEpoch++;
+    if (frameVideo && videoFrameRequest !== null) frameVideo.cancelVideoFrameCallback?.(videoFrameRequest);
+    videoFrameRequest = null; frameVideo = null;
+  }
+  function startVideoFrames() {
+    stopVideoFrames();
+    if (disposed || document.hidden || !video || typeof video.requestVideoFrameCallback !== 'function' ||
+        typeof video.cancelVideoFrameCallback !== 'function') return;
+    const source = video, epoch = frameEpoch;
+    frameVideo = source; frameSerial = 0; submittedSerial = -1;
+    const next = () => {
+      try { videoFrameRequest = source.requestVideoFrameCallback(() => {
+        if (disposed || document.hidden || epoch !== frameEpoch || source !== video) return;
+        videoFrameRequest = null; frameSerial++; next();
+      }); } catch { stopVideoFrames(); }
+    };
+    next();
   }
   function sourceKey() {
     return (new URLSearchParams(location.search).get('v') || '') + '|' + (video?.currentSrc || '');
@@ -627,7 +742,7 @@
     canvas.dataset.renderMode = 'worker';
   } else useMainRenderer();
   function draw(requestPaint = true) {
-    if (requestPaint) paintDue = true;
+    if (requestPaint) { paintDue = true; forcePaint = true; }
     const active = settingsLoaded && settings.enabled && location.pathname === '/watch' && !document.fullscreenElement && !!video;
     // Native UI styling stays independent of Worker startup, busy jobs and fallback.
     setAmbientActive(active);
@@ -644,6 +759,15 @@
       setStatus(!settings.enabled ? 'off' : document.fullscreenElement ? 'fullscreen' : 'waiting');
       return;
     }
+    // Do not force layout or update styles for frames the Worker cannot accept.
+    if (renderer.canAcceptFrame && !renderer.canAcceptFrame()) return;
+    const paced = frameVideo === video;
+    const fresh = paced ? frameSerial !== submittedSerial : video !== lastSampleVideo || video.currentTime !== lastSampleTime;
+    // Keep layout/scroll tracking at background FPS without measuring the same
+    // paused/decoded frame at every display tick. paintDue may stay latched while
+    // waiting for a fresh frame, so it cannot also be the geometry deadline.
+    if (paced && !fresh && !(active && (forcePaint || geometryCheckDue))) return;
+    geometryCheckDue = false;
     const rect = getRectangle();
     if (!validGeometry(rect)) { flashMonitor.reset();restoreBars();setStatus('waiting');return; }
     const headerBottom = Math.max(0, document.querySelector('ytd-masthead')?.getBoundingClientRect().bottom || 0);
@@ -656,26 +780,35 @@
     const geometry = [rect.left, rect.top, rect.width, rect.height, innerWidth, innerHeight, blend.toFixed(3)].join(',');
     const unchanged = video === lastVideo && video.currentTime === lastTime && geometry === lastGeometry &&
       (!(settings.avoidBars || settings.fillBars) || !renderer.readable || renderer.stableFrames >= 4);
-    const paint = active && paintDue && !unchanged;
-    const sample = monitoring && (video !== lastSampleVideo || video.currentTime !== lastSampleTime);
+    const settling = video.paused && (settings.avoidBars || settings.fillBars) && renderer.readable && renderer.stableFrames < 4;
+    const paint = active && (forcePaint || paintDue && (fresh || geometry !== lastGeometry || settling)) && (!unchanged || forcePaint);
+    const sample = monitoring && fresh;
     if (!paint && !sample) return;
     try {
       const options = { ...settings, blend, sourceKey: sourceKey(), sampleTime: now, mediaTime: video.currentTime, geometry, revision: inputRevision,
         sampleOnly: !paint, readPixels: monitoring };
       const mediaTime = video.currentTime;
+      const serial = frameSerial;
       const result = !paint && canvas.dataset.renderMode === 'main' ?
         renderer.inspect(video, rect, { width: innerWidth, height: innerHeight }, options) :
         renderer.draw(video, rect, { width: innerWidth, height: innerHeight }, settings.radial, options);
-      if (typeof result === 'boolean') { if (result && paint) paintDue = false;return; }
+      const accepted = () => { if (paced) submittedSerial = serial;if (paint) { paintDue = false;forcePaint = false; } };
+      if (typeof result === 'boolean') { if (result) accepted();return; }
       const meta = { source: video, rectangle: rect, options, sourceKey: options.sourceKey, mediaTime };
-      if (acceptFrame(meta)) { if (paint) paintDue = false;presentFrame(result, meta); }
+      if (acceptFrame(meta)) { accepted();presentFrame(result, meta); }
     } catch (error) {
       restoreBars();
       setStatus('failed');
     }
   }
   listen(document, 'yt-navigate-finish', () => { closeFlashWarning(false);flashMonitor.reset();invalidateFrame();discover(); draw(); });
-  listen(document, 'visibilitychange', () => { renderer?.setSuspended?.(document.hidden);invalidateFrame(); draw(); });
+  listen(document, 'visibilitychange', () => {
+    if (document.hidden) stopVideoFrames(); else startVideoFrames();
+    renderer?.setSuspended?.(document.hidden);invalidateFrame();
+    cancelSurfaceRefresh();surfacesDirty = true;
+    if (!document.hidden) discover();
+    draw();refreshPageSurfaces(true);
+  });
   listen(document, 'fullscreenchange', () => { invalidateFrame();positionWarning();discover(); draw(); });
   listen(window, 'resize', () => { restoreBars();invalidateFrame(false);positionPanel(); draw(); });
   const discoverTimer = setInterval(discover, 1000);
@@ -688,7 +821,7 @@
     if (elapsed + .5 >= interval) {
       const steps = Math.max(1, Math.floor((elapsed + .5) / interval));
       lastDrawFrame = now - Math.max(0, elapsed - steps * interval);
-      paintDue = true;
+      paintDue = true; geometryCheckDue = true;
     }
     // Warning sampling follows the display tick, independently of the chosen
     // background FPS. One Worker job at a time still provides backpressure.
@@ -696,10 +829,12 @@
   }
   listen(document, 'yac-dispose', () => {
     disposed = true;
+    stopVideoFrames();
     settingsStore.dispose();
     renderer?.dispose?.();
     closeFlashWarning(false);warningHost.remove();
     clearInterval(discoverTimer); cancelAnimationFrame(frameRequest);
+    surfaceObserver.disconnect();cancelSurfaceRefresh();
     panelResizeObserver.disconnect();
     chatFrame?.removeEventListener('load', syncChat);
     clearChat();

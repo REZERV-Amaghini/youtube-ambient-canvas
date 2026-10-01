@@ -16,6 +16,7 @@ SOURCE_FILES = ["manifest.json", "README.md", "PRIVACY.md", "CONTRIBUTING.md", "
                 "scripts/create_assets.py", "tests/fixture.html",
                 "tests/server.cjs", "tests/check-renderer.js", "tests/check-flash-monitor.cjs", "tests/check-black-bars.cjs",
                 "tests/check-worker.cjs", "tests/check-settings.cjs", "tests/check-ambient.cjs", "tests/check-projection.cjs",
+                "tests/check-surfaces.cjs", "tests/check-frame-pacing.cjs",
                 "tests/firefox-check.html", "tests/chat-fixture.html"]
 
 

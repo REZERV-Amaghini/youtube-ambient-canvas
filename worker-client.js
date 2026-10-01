@@ -16,7 +16,7 @@
       this.canvas = canvas;
       this.context = canvas.getContext('2d', { alpha: false });
       this.padding = 180;
-      this.state = 'starting';
+      this.setState('starting');
       this.suspended = false;
       this.generation = 0;
       this.barGeneration = 0;
@@ -65,6 +65,11 @@
       }
     }
     readPixels() { return this.readable ? this.pixels : null; }
+    setState(state) {
+      this.state = state;
+      if (this.canvas.dataset) this.canvas.dataset.workerState = state;
+    }
+    canAcceptFrame() { return this.state === 'ready' && !this.pending && !this.suspended; }
     armStartupTimeout() {
       clearTimeout(this.startupTimer); this.startupTimer = null;
       if (this.state === 'starting' && !this.suspended) {
@@ -92,7 +97,7 @@
       this.armStartupTimeout(); this.armJobTimeout();
     }
     draw(source, rectangle, viewport, radial, options = {}) {
-      if (this.state !== 'ready' || this.pending || this.suspended) return false;
+      if (!this.canAcceptFrame()) return false;
       // A temporarily hidden player has no geometry. Wait without capturing or
       // converting a layout transition into a permanent Worker failure.
       if (!validGeometry(rectangle, viewport)) return false;
@@ -128,7 +133,7 @@
     receive(value) {
       if (!value || this.state === 'disposed' || this.state === 'failed') { value?.bitmap?.close?.(); return; }
       if (value.type === 'ready' && this.state === 'starting') {
-        clearTimeout(this.startupTimer); this.startupTimer = null; this.state = 'ready'; return;
+        clearTimeout(this.startupTimer); this.startupTimer = null; this.setState('ready'); return;
       }
       if (value.type === 'failed') { this.fail(value.reason || 'Ambient worker failed'); return; }
       if (value.type !== 'frame') return;
@@ -189,7 +194,7 @@
     }
     fail(reason) {
       if (this.state === 'failed' || this.state === 'disposed') return;
-      this.state = 'failed'; this.closeTransport(); this.onFailure(reason);
+      this.setState('failed'); this.closeTransport(); this.onFailure(reason);
     }
     closeTransport() {
       clearTimeout(this.startupTimer); clearTimeout(this.jobTimer);
@@ -197,6 +202,6 @@
       try { this.port?.postMessage({ type: 'dispose' }); } catch (error) { /* Already detached. */ }
       this.port?.close(); this.frame?.remove(); this.pending = null; this.pixels = null;
     }
-    dispose() { this.state = 'disposed'; this.generation++; this.closeTransport(); }
+    dispose() { this.setState('disposed'); this.generation++; this.closeTransport(); }
   };
 })();

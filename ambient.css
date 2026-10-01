@@ -10,11 +10,23 @@
 }
 
 html.yac-active {
+  /* Shared control palette. Alpha is paint opacity: lower means more transparent.
+     Change these values to style page buttons, chips, search and the toolbar. */
+  --yac-control-rgb: 18, 20, 25;
+  --yac-control-opacity: .22;
+  --yac-control-hover-opacity: .34;
+  --yac-control-selected-opacity: .44;
+  --yac-control-blur: 12px;
+  --yac-control-surface: rgba(var(--yac-control-rgb), var(--yac-control-opacity));
+  --yac-control-hover-surface: rgba(var(--yac-control-rgb), var(--yac-control-hover-opacity));
+  --yac-control-selected-surface: rgba(var(--yac-control-rgb), var(--yac-control-selected-opacity));
+  --yac-control-text: var(--yt-spec-text-primary, #0f0f0f);
   --yac-page-base: #fff;
   --yac-secondary-surface: rgba(255, 255, 255, .9);
   --yac-hover-surface: rgba(0, 0, 0, .08);
-  --yac-chip-arrow-surface: rgba(255, 255, 255, .66);
+  --yac-chip-arrow-surface: var(--yac-control-surface);
   --yac-text-shadow: 0 1px 3px rgba(255, 255, 255, .6);
+  --yac-search-border: rgba(0, 0, 0, .22);
   background: var(--yac-page-base) !important;
 }
 html.yac-active[dark],
@@ -22,8 +34,9 @@ html.yac-active:has(link#efyt-dark-theme) {
   --yac-page-base: #080b12;
   --yac-secondary-surface: rgba(28, 28, 28, .9);
   --yac-hover-surface: rgba(255, 255, 255, .14);
-  --yac-chip-arrow-surface: rgba(18, 20, 25, .34);
+  --yac-control-text: var(--main-text, var(--yt-spec-text-primary, #f1f1f1));
   --yac-text-shadow: 0 1px 4px #000c;
+  --yac-search-border: rgba(255, 255, 255, .24);
 }
 html.yac-active #yac-background { display: block !important; }
 html.yac-active body { background: transparent !important; }
@@ -34,22 +47,47 @@ html.yac-active ytd-app {
   background: var(--yac-page-base) !important;
   --yt-spec-base-background: transparent;
 }
-/* DeepDark consumes these values when drawing its own surfaces. Native YouTube
-   controls keep their original fills, corner radii, colors and interaction states. */
+/* Keep theme layout/playlist surfaces separate from the control palette. */
 html.yac-active :is(ytd-watch-flexy,ytd-watch-grid,ytd-masthead) {
   --main-background: transparent !important;
   --second-background: var(--yac-secondary-surface) !important;
   --hover-background: var(--yac-hover-surface) !important;
 }
-html.yac-active :is(ytd-masthead,ytd-watch-flexy,ytd-watch-grid) :is(.ytSpecButtonShapeNextTonal,.ytSpecButtonShapeNextOutline,.ytSpecButtonShapeNextFilled,.yt-spec-button-shape-next--tonal,.yt-spec-button-shape-next--outline,.yt-spec-button-shape-next--filled),
-html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-chip-cloud-renderer :is(.ytChipShapeActive,.ytChipShapeInactive,.YtChipShapeActive,.YtChipShapeInactive,#chip-container) {
-  -webkit-backdrop-filter: blur(12px) !important;
-  backdrop-filter: blur(12px) !important;
+/* Paint actual component faces, not every button or structural wrapper. Native
+   dimensions, icon accents, focus outlines and disabled opacity stay intact. */
+html.yac-active :is(ytd-masthead,ytd-watch-flexy,ytd-watch-grid,ytd-popup-container,tp-yt-app-drawer) :is(.ytSpecButtonShapeNextHost,.yt-spec-button-shape-next):is(.ytSpecButtonShapeNextTonal,.ytSpecButtonShapeNextOutline,.ytSpecButtonShapeNextFilled,.yt-spec-button-shape-next--tonal,.yt-spec-button-shape-next--outline,.yt-spec-button-shape-next--filled),
+html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-chip-cloud-renderer :is(.ytChipShapeActive,.ytChipShapeInactive,.YtChipShapeActive,.YtChipShapeInactive),
+html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-chip-cloud-renderer #chip-container {
+  background-color: var(--yac-control-surface) !important;
+  background-image: none !important;
+  -webkit-backdrop-filter: blur(var(--yac-control-blur)) !important;
+  backdrop-filter: blur(var(--yac-control-blur)) !important;
+}
+html.yac-active :is(ytd-masthead,ytd-watch-flexy,ytd-watch-grid,ytd-popup-container,tp-yt-app-drawer) :is(.ytSpecButtonShapeNextHost,.yt-spec-button-shape-next):is(.ytSpecButtonShapeNextTonal,.ytSpecButtonShapeNextOutline,.ytSpecButtonShapeNextFilled,.ytSpecButtonShapeNextText,.yt-spec-button-shape-next--tonal,.yt-spec-button-shape-next--outline,.yt-spec-button-shape-next--filled,.yt-spec-button-shape-next--text):is(:hover,:focus-visible),
+html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-chip-cloud-renderer :is(.ytChipShapeActive,.ytChipShapeInactive,.YtChipShapeActive,.YtChipShapeInactive):is(:hover,:focus-within),
+html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-chip-cloud-renderer #chip-container:is(:hover,:focus-within) {
+  background-color: var(--yac-control-hover-surface) !important;
+}
+html.yac-active :is(ytd-masthead,ytd-watch-flexy,ytd-watch-grid,ytd-popup-container,tp-yt-app-drawer) :is(.ytSpecButtonShapeNextHost,.yt-spec-button-shape-next):is(.ytSpecButtonShapeNextTonal,.ytSpecButtonShapeNextOutline,.ytSpecButtonShapeNextFilled,.yt-spec-button-shape-next--tonal,.yt-spec-button-shape-next--outline,.yt-spec-button-shape-next--filled):is([aria-pressed="true"],[aria-selected="true"]),
+html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-chip-cloud-renderer :is(.ytChipShapeActive,.YtChipShapeActive),
+html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-chip-cloud-renderer :is(.ytChipShapeActive,.YtChipShapeActive):is(:hover,:focus-within),
+html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-chip-cloud-renderer yt-chip-cloud-chip-renderer[selected] #chip-container {
+  background-color: var(--yac-control-selected-surface) !important;
+}
+/* Native Filled and selected chip variants normally put dark text on white.
+   Match text to the page theme now that their faces share the dark palette. */
+html.yac-active :is(ytd-masthead,ytd-watch-flexy,ytd-watch-grid,ytd-popup-container,tp-yt-app-drawer) :is(.ytSpecButtonShapeNextMono,.yt-spec-button-shape-next--mono):is(.ytSpecButtonShapeNextFilled,.yt-spec-button-shape-next--filled),
+html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-chip-cloud-renderer :is(.ytChipShapeActive,.YtChipShapeActive),
+html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-chip-cloud-renderer yt-chip-cloud-chip-renderer[selected] #chip-container {
+  color: var(--yac-control-text);
 }
 html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-chip-cloud-renderer :is(#left-arrow-button,#right-arrow-button) button {
   background-color: var(--yac-chip-arrow-surface) !important;
-  -webkit-backdrop-filter: blur(12px) !important;
-  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(var(--yac-control-blur)) !important;
+  backdrop-filter: blur(var(--yac-control-blur)) !important;
+}
+html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-chip-cloud-renderer :is(#left-arrow-button,#right-arrow-button) button:is(:hover,:focus-visible) {
+  background-color: var(--yac-control-hover-surface) !important;
 }
 
 /* Portalled menus and the guide are outside the watch-page layout. Give each
@@ -98,14 +136,14 @@ html.yac-active tp-yt-app-drawer#guide :is(#guide-wrapper,#guide-content) {
   background-color: transparent !important;
   background-image: none !important;
 }
-/* Enhancer keeps a dark toolbar even in light mode. Preserve geometry, icon
-   fills and interaction states; use a faint surface and readable icon edges. */
+/* Search and the Enhancer toolbar share the native tonal button surface.
+   Preserve the toolbar geometry, icon fills and interaction states. */
 html.yac-active .efyt-control-bar {
-  background-color: rgba(18, 20, 25, .28) !important;
+  background-color: var(--yac-control-surface) !important;
   background-image: none !important;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .14) !important;
-  -webkit-backdrop-filter: blur(16px) !important;
-  backdrop-filter: blur(16px) !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: blur(var(--yac-control-blur)) !important;
+  backdrop-filter: blur(var(--yac-control-blur)) !important;
 }
 html.yac-active .efyt-control-bar button svg {
   filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .6)) !important;
@@ -175,14 +213,38 @@ html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-video-metadata-carousel-v
   opacity: 1 !important;
   visibility: visible !important;
 }
-/* Both current and legacy search layouts should reveal the page ambient. */
-html.yac-active ytd-masthead yt-searchbox .ytSearchboxComponentInputBox,
-html.yac-active ytd-masthead yt-searchbox .ytSearchboxComponentSearchButton,
-html.yac-active ytd-masthead yt-searchbox input,
+/* DeepDark uses --main-background for both the search face and its border.
+   The masthead is transparent, but the editable field must remain visible.
+   Keep native geometry and input text; paint each outer face only once. */
+html.yac-active ytd-masthead :is(yt-searchbox,ytd-searchbox) :is(.ytSearchboxComponentInputBox,.YtSearchboxComponentInputBox),
 html.yac-active ytd-masthead ytd-searchbox #container,
-html.yac-active ytd-masthead ytd-searchbox #search-input,
-html.yac-active ytd-masthead ytd-searchbox input,
+html.yac-active ytd-masthead ytd-searchbox #container.ytd-searchbox {
+  background-color: var(--yac-control-surface) !important;
+  background-image: none !important;
+  border-color: var(--yac-search-border) !important;
+  -webkit-backdrop-filter: blur(var(--yac-control-blur)) !important;
+  backdrop-filter: blur(var(--yac-control-blur)) !important;
+}
+html.yac-active ytd-masthead :is(yt-searchbox,ytd-searchbox) :is(.ytSearchboxComponentSearchButton,.YtSearchboxComponentSearchButton),
 html.yac-active ytd-masthead ytd-searchbox #search-icon-legacy {
+  background-color: var(--yac-control-surface) !important;
+  background-image: none !important;
+  border-color: var(--yac-search-border) !important;
+  -webkit-backdrop-filter: blur(var(--yac-control-blur)) !important;
+  backdrop-filter: blur(var(--yac-control-blur)) !important;
+}
+html.yac-active ytd-masthead :is(yt-searchbox,ytd-searchbox) :is(.ytSearchboxComponentSearchButton,.YtSearchboxComponentSearchButton):hover,
+html.yac-active ytd-masthead ytd-searchbox #search-icon-legacy:hover {
+  background-color: var(--yac-control-hover-surface) !important;
+}
+html.yac-active ytd-masthead :is(yt-searchbox,ytd-searchbox) :is(.ytSearchboxComponentInputBox,.YtSearchboxComponentInputBox):focus-within,
+html.yac-active ytd-masthead ytd-searchbox:focus-within #container.ytd-searchbox,
+html.yac-active ytd-masthead ytd-searchbox[has-focus] #container.ytd-searchbox {
+  border-color: var(--main-color, var(--yt-spec-call-to-action, #1c62b9)) !important;
+  box-shadow: inset 0 0 0 1px var(--main-color, var(--yt-spec-call-to-action, #1c62b9)) !important;
+}
+html.yac-active ytd-masthead :is(yt-searchbox,ytd-searchbox) input,
+html.yac-active ytd-masthead ytd-searchbox #search-input {
   background-color: transparent !important;
 }
 #movie_player #yac-settings-button {

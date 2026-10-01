@@ -1,14 +1,14 @@
-# 公開手順 — 0.2.12 development
+# 公開手順 — 0.2.17 development
 
 以下は開発版の生成物です。実際の拡張機能での品質確認は `QUALITY-GATES.md` に記載しています。
 公開配布版0.2.2のストア提出・Releaseとは分けて扱います。
 
 |提出物|用途|
 |---|---|
-|`dist/youtube-ambient-canvas-chrome-0.2.12.zip`|Chrome開発版|
-|`dist/youtube-ambient-canvas-firefox-0.2.12.zip`|Firefox開発版|
-|`dist/youtube-ambient-canvas-source-0.2.12.zip`|公開ソース／AMOのソース資料|
-|`dist/youtube-ambient-canvas-store-assets-0.2.12.zip`|説明文・アイコン・画像|
+|`dist/youtube-ambient-canvas-chrome-0.2.17.zip`|Chrome開発版|
+|`dist/youtube-ambient-canvas-firefox-0.2.17.zip`|Firefox開発版|
+|`dist/youtube-ambient-canvas-source-0.2.17.zip`|公開ソース／AMOのソース資料|
+|`dist/youtube-ambient-canvas-store-assets-0.2.17.zip`|説明文・アイコン・画像|
 |`dist/SHA256SUMS.txt`|チェックサム|
 
 本体ZIPは実行コード、マニフェスト、アイコン、ライセンスのみです。

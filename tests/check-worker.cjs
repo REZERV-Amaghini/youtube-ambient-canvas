@@ -39,7 +39,7 @@ class Canvas {
 const run = (context, name) => vm.runInContext(fs.readFileSync(path.join(root, name), 'utf8'), context, { filename: name });
 const settle = async () => { await Promise.resolve(); await Promise.resolve(); };
 
-function harness({ captureThrows = false, accepted = true } = {}) {
+function harness({ captureThrows = false, accepted = true, dataset = true } = {}) {
   const nodes = [], captures = [], channels = [], timers = new Map(), frames = [], failures = [];
   let timerId = 0;
   class Port {
@@ -70,6 +70,7 @@ function harness({ captureThrows = false, accepted = true } = {}) {
   });
   run(context, 'worker-client.js');
   const canvas = new Canvas();
+  if (dataset) canvas.dataset = {};
   const client = new context.YacWorkerRenderer(canvas, {
     hostUrl: 'chrome-extension://test/worker-host.html',
     onFrame: (result, meta) => frames.push({ result, meta }),
@@ -91,15 +92,21 @@ const result = (client, extra = {}) => ({
 
 (async () => {
   const h = harness();
+  assert.equal(h.canvas.dataset.workerState, 'starting');
+  assert.equal(h.client.canAcceptFrame(), false, 'Preflight rejects startup without capturing');
   assert.equal(h.client.draw(source, rectangle, viewport, true), false, 'Starting transport does not capture');
   h.ready();
+  assert.equal(h.canvas.dataset.workerState, 'ready');
+  assert.equal(h.client.canAcceptFrame(), true, 'Ready transport accepts work');
   assert.equal(h.channels[0].port1.sent.length, 0);
   assert.equal(h.nodes[0].contentWindow.connection.target, 'chrome-extension://test');
   assert.equal(h.client.draw(source, rectangle, viewport, true, { readPixels: true, fillBars: true }), true);
+  assert.equal(h.client.canAcceptFrame(), false, 'Preflight includes asynchronous capture ownership');
   for (let i = 0; i < 100; i++) assert.equal(h.client.draw(source, rectangle, viewport, true), false);
   assert.equal(h.captures.length, 1, 'Backpressure covers capture, with no pending queue');
   const captured = new Bitmap(); h.captures[0].resolve(captured); await settle();
   assert.equal(h.channels[0].port1.sent.length, 1);
+  assert.equal(h.client.canAcceptFrame(), false, 'Preflight remains busy during Worker processing');
   const job = h.channels[0].port1.sent[0].value;
   assert.equal(job.frame, captured); assert.equal(job.sourceKey, source.currentSrc);
   assert.equal(job.barGeneration, 0);
@@ -115,6 +122,17 @@ const result = (client, extra = {}) => ({
   assert.equal(h.frames[0].meta.source, source); assert.equal(h.frames[0].meta.mediaTime, 4);
   assert.equal(h.client.readPixels().length, 160 * 90 * 4);
   assert.equal(h.client.pending, null); assert.equal(h.canvas.context.draws.length, 1);
+  assert.equal(h.client.canAcceptFrame(), true, 'Presentation releases preflight backpressure');
+
+  const noDataset = harness({ dataset: false });
+  noDataset.ready(); assert.equal(noDataset.client.canAcceptFrame(), true);
+  noDataset.client.dispose(); assert.equal(noDataset.client.canAcceptFrame(), false, 'Dataset is optional');
+  const failedState = harness({ captureThrows: true }); failedState.ready();
+  assert.equal(failedState.client.draw(source, rectangle, viewport, true), false);
+  assert.equal(failedState.canvas.dataset.workerState, 'failed');
+  assert.equal(failedState.client.canAcceptFrame(), false, 'Failed transport rejects further work');
+  failedState.client.dispose();
+  assert.equal(failedState.canvas.dataset.workerState, 'disposed');
 
   h.client.draw(source, rectangle, viewport, true);
   const oldGeneration = h.client.generation;
@@ -219,10 +237,15 @@ const result = (client, extra = {}) => ({
   assert.equal(suspendedStartup.timers.size, 1); assert.equal(suspendedStartup.timers.has(oldStartupTimer), false);
   assert.equal([...suspendedStartup.timers.values()][0].delay, 4000, 'Startup resumes with a fresh full deadline');
   suspendedStartup.client.setSuspended(true); suspendedStartup.ready();
+  assert.equal(suspendedStartup.canvas.dataset.workerState, 'ready', 'Suspension does not misreport startup state');
+  assert.equal(suspendedStartup.client.canAcceptFrame(), false, 'Hidden ready transport rejects preflight');
   assert.equal(suspendedStartup.client.state, 'ready'); assert.equal(suspendedStartup.timers.size, 0);
   assert.equal(suspendedStartup.client.draw(source, rectangle, viewport, true), false, 'Ready while suspended still does not capture');
   suspendedStartup.client.setSuspended(false); assert.equal(suspendedStartup.timers.size, 0);
+  assert.equal(suspendedStartup.client.canAcceptFrame(), true, 'Visible idle transport accepts preflight again');
   suspendedStartup.client.dispose(); suspendedStartup.client.setSuspended(false);
+  assert.equal(suspendedStartup.client.canAcceptFrame(), false, 'Disposed transport cannot become available on resume');
+  assert.equal(suspendedStartup.canvas.dataset.workerState, 'disposed');
   assert.equal(suspendedStartup.timers.size, 0, 'Disposed transport never rearms watchdogs');
 
   const suspendedJob = harness(); suspendedJob.ready();
