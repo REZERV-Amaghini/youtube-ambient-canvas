@@ -1,5 +1,17 @@
 # 検証結果 — 0.2.17 development / 2026-10-01
 
+## 0.2.17 store submission compatibility
+
+- Removed `gecko_android` before AMO submission. AMO's upload UI locked Android
+  compatibility ON when this metadata was present, despite the desktop-only
+  scope. No Android playback/UX verification has been performed. Desktop Firefox
+  minimum 140 and the no-data-collection declaration are unchanged.
+- Compatibility follows [Mozilla's version compatibility guidance](https://extensionworkshop.com/documentation/publish/version-compatibility/).
+- Rebuilt packages and re-ran Firefox lint: 0 errors, 1 warning, 0 notices.
+  The warning concerns Android 140 not supporting the data-consent declaration;
+  Android is excluded from this submission. AMO shows Firefox checked and Android
+  unchecked and editable after removing the metadata.
+
 ## 0.2.17 comment-load competition and frame pacing
 
 - Removed the unconditional whole-page surface scan from every-second discovery

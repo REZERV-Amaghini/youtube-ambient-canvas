@@ -1,12 +1,12 @@
-# 公開手順 — 0.2.17 development
+# 公開手順 — 0.2.17
 
-以下は開発版の生成物です。実際の拡張機能での品質確認は `QUALITY-GATES.md` に記載しています。
-公開配布版0.2.2のストア提出・Releaseとは分けて扱います。
+以下は0.2.17の提出用生成物です。実際の拡張機能での品質確認は `QUALITY-GATES.md` に記載しています。
+ストアへの提出と審査承認・公開は別です。既存の公開版は更新の審査中も維持します。
 
 |提出物|用途|
 |---|---|
-|`dist/youtube-ambient-canvas-chrome-0.2.17.zip`|Chrome開発版|
-|`dist/youtube-ambient-canvas-firefox-0.2.17.zip`|Firefox開発版|
+|`dist/youtube-ambient-canvas-chrome-0.2.17.zip`|Chrome提出用／開発版|
+|`dist/youtube-ambient-canvas-firefox-0.2.17.zip`|Firefox提出用／開発版|
 |`dist/youtube-ambient-canvas-source-0.2.17.zip`|公開ソース／AMOのソース資料|
 |`dist/youtube-ambient-canvas-store-assets-0.2.17.zip`|説明文・アイコン・画像|
 |`dist/SHA256SUMS.txt`|チェックサム|
@@ -40,9 +40,10 @@ Chrome版からFirefox固有項目を除き、Firefox版は収集なしを宣言
 
 Firefox 140以降を対象に、[データ同意仕様](https://extensionworkshop.com/documentation/develop/firefox-builtin-data-consent/)
 に従って`required: ["none"]`を宣言しています。
-今回の対応・検証範囲はデスクトップです。開発版ではデータ同意項目に必要な
-`gecko_android.strict_min_version: 142.0` も宣言しています。このメタデータは
-Androidでの再生確認を示しません。AMOの互換性選択ではAndroidを対象外にします。
+今回の対応・検証範囲はデスクトップです。未検証のAndroidを対応扱いにしないため、
+`gecko_android` は宣言しません。AMOの互換性選択でもAndroidを対象外にします。
+この宣言があるとAndroidの選択欄は固定されるため、選択画面だけでは解除できません。
+[Mozillaの互換性仕様](https://extensionworkshop.com/documentation/publish/version-compatibility/)に従います。
 [パッケージ仕様](https://extensionworkshop.com/documentation/publish/package-your-extension/)も参照。
 
 ## GitHub
