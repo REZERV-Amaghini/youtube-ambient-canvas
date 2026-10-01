@@ -74,6 +74,14 @@ html.yac-active tp-yt-app-drawer#guide :is(#guide-wrapper,#guide-content) {
   background-color: transparent !important;
   background-image: none !important;
 }
+/* Enhancer keeps a dark toolbar even in light mode. Preserve its geometry,
+   icon fills, hover/active states and tooltips; soften only the bar's surface. */
+html.yac-active .efyt-control-bar {
+  background-color: rgba(28, 28, 28, .72) !important;
+  background-image: none !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  backdrop-filter: blur(12px) !important;
+}
 
 html.yac-active ytd-app > #content,
 html.yac-active #page-manager,

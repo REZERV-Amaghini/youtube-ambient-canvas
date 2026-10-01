@@ -18,6 +18,21 @@ html,body{margin:0;color:white;background:#0f0f0f;font:14px system-ui}ytd-app{di
 <script>
 const browser={storage:{local:{get:async()=>({ambient:JSON.parse(localStorage.getItem('ambient')||'null')}),set:async({ambient})=>localStorage.setItem('ambient',JSON.stringify(ambient))}}};
 const sample=document.createElement('canvas');sample.width=640;sample.height=360;
+if(new URLSearchParams(location.search).has('enhancer')){
+  const toolbarStyle=document.createElement('style');
+  toolbarStyle.textContent=`
+    .efyt-control-bar{display:flex;width:max-content;background:#181818;border-radius:18px;padding:0 6px;margin:8px auto}
+    .efyt-control-bar button{position:relative;width:36px;height:36px;padding:6px;background:transparent;border:0;border-radius:0;cursor:pointer}
+    .efyt-control-bar svg{width:24px;height:24px;fill:#cfcfcf}
+    .efyt-control-bar button:hover svg{fill:#fff}.efyt-control-bar button[aria-pressed="true"] svg{fill:#ff4081}
+    .efyt-control-bar button:hover::after{content:attr(data-tooltip);position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);padding:6px 8px;border-radius:4px;background:#181818;color:white;white-space:nowrap}
+  `;
+  document.head.append(toolbarStyle);
+  const toolbar=document.createElement('div');toolbar.className='efyt-control-bar centered';
+  toolbar.innerHTML='<button id="fixture-efyt-loop" aria-label="Demo loop" aria-pressed="false" data-tooltip="Demo loop"><svg viewBox="0 0 24 24"><path d="M4 6h13V3l5 4-5 4V8H4zm16 12H7v3l-5-4 5-4v3h13z"/></svg></button><button aria-label="Demo picture" data-tooltip="Demo picture"><svg viewBox="0 0 24 24"><path d="M2 4h20v16H2zm2 2v12h16V6zm1 10 4-5 3 3 3-4 4 6z"/></svg></button><button aria-label="Demo expand" data-tooltip="Demo expand"><svg viewBox="0 0 24 24"><path d="M2 2h8v2H4v6H2zm12 0h8v8h-2V4h-6zM2 14h2v6h6v2H2zm18 0h2v8h-8v-2h6z"/></svg></button><button aria-label="Demo options" data-tooltip="Demo options"><svg viewBox="0 0 24 24"><path d="M3 5h18v2H3zm0 6h18v2H3zm0 6h18v2H3z"/></svg></button>';
+  toolbar.querySelector('button').onclick=e=>{const b=e.currentTarget;b.setAttribute('aria-pressed',String(b.getAttribute('aria-pressed')!=='true'));};
+  document.querySelector('#movie_player').after(toolbar);
+}
 if(new URLSearchParams(location.search).has('surfaces')){
   document.documentElement.toggleAttribute('dark',!new URLSearchParams(location.search).has('light'));
   const surfaceStyle=document.createElement('style');

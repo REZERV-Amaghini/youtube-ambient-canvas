@@ -1,4 +1,14 @@
-# 検証結果 — 0.2.8 development / 2026-10-01
+# 検証結果 — 0.2.9 development / 2026-10-01
+
+## 0.2.9 translucent Enhancer control bar
+
+- Live YouTube inspection with Enhancer 3.0.19 identified `.efyt-control-bar.centered`, an opaque `rgb(24,24,24)` surface with an 18px radius. Its icon buttons are separate transparent children.
+- Only the bar surface changes while ambient is active: 72% neutral dark background and 12px backdrop blur. Native geometry, position, icon/button styling and tooltip behavior are untouched. The toolbar remains excluded from the layout-only inline guard.
+- Verified the self-authored toolbar fixture under the complete local DeepDark theme: translucent bar, unchanged 18px radius / 36px button targets / 24px icons, clickable state toggle, active icon color and hover tooltip.
+- Verified OFF restores the opaque background and removes blur while preserving the button's active state. Ambient settings stay open; ON restores the translucent surface.
+- Chrome/Firefox development packages are built from the same source. Updated installed-extension appearance on actual YouTube/Firefox remains pending a reload; store publication remains on 0.2.2.
+
+## Previous 0.2.8 verification
 
 ## 0.2.8 portalled menus and dark translucent guide
 
