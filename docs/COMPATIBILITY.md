@@ -1,4 +1,4 @@
-# Theme compatibility - 0.2.19 development revision
+# Theme compatibility - 0.2.20 development revision
 
 Some YouTube theme extensions apply high-specificity `!important` backgrounds.
 With Enhancer for YouTube's dark theme, these rules can cover the ambient canvas
@@ -49,7 +49,9 @@ The fixture is self-authored. Local Chromium verification used the complete
 Material/Pink CSS included in Enhancer for YouTube 2.0.136, with its GPL notices
 preserved in the local test copy. The theme is not redistributed with Ambient
 Canvas. Actual Firefox playback with the updated extension remains to be
-confirmed. The usual distribution stays on 0.2.2 while compatibility is tested.
+confirmed. GitHub release packages stay on 0.2.2 while compatibility is tested.
+Version 0.2.17 was submitted to both stores; their current publication state
+has not been rechecked. Development 0.2.20 is not submitted.
 
 ## Theater margins
 
@@ -71,12 +73,28 @@ theme's own rules draw transparent layout surfaces and translucent control
 faces, without repeatedly replacing button styles after they are created.
 The existing layout-only inline guard remains for other opaque backgrounds.
 
-Native YouTube button fills, text colors, radii, padding and interaction states
-are preserved as in 0.2.2. A 12px backdrop blur softens the area behind their
-existing faces. DeepDark control fills have 14% white opacity; active-filter
-color remains controlled by the theme. The 0.2.5 synthetic selection outline
-and forced light text are removed. The Enhancer toolbar retains its geometry and icon styling.
+Version 0.2.6 restored native button fills, text colors, radii, padding and
+interaction states, with 12px backdrop blur; its DeepDark control fills used
+14% white opacity. The 0.2.5 synthetic selection outline and forced light text
+were removed. The Enhancer toolbar retains its geometry and icon styling.
+Version 0.2.16 subsequently introduced the shared 22/34/44% dark control palette.
 No YouTube or Enhancer JavaScript functions are replaced.
+
+Development 0.2.20 keeps the common 22/34/44% face alpha and adds a shared
+`--yac-control-backdrop` tone adjustment for small button, chip and search faces.
+Dark themes dim the backdrop; light themes compress it into a light range for
+native dark text. Enhancer always uses the dark adjustment because its native
+toolbar icons remain light. The normal Text variant uses the same face, and
+keyboard focus on the chip's actual parent button and search buttons receives
+the 34% interaction surface. Selected faces remain 44%; native feedback still
+overlays that base face. Search placeholders use primary control text at full
+opacity. Typed text, native SVG fills, disabled opacity and geometry are retained.
+Reading surfaces and large menu/drawer filters do not use this tone adjustment.
+The local `/control-check` fixture and screenshot sampler record actual browser
+background pixels separately from resolved foreground colors; they do not
+establish native YouTube initialization or installed-extension compatibility.
+All 126 active primary-text checks passed, while two color-background arrow
+patches remain inconclusive. See `VALIDATION.md` for the complete scope and limits.
 
 ## Replay cards and embedded chat menus
 

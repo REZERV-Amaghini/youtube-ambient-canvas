@@ -15,7 +15,9 @@ Firefox AMO版：公開後、この欄にストアの直接リンクを追加し
 Chromeは展開して「パッケージ化されていない拡張機能」として読み込みます。
 Firefoxの永続インストールにはAMOの署名が必要です。
 
-公開配布版は0.2.2です。Enhancer for YouTubeなどのテーマ拡張との互換修正は開発中です。
+GitHub Releasesの配布パッケージは0.2.2です。開発ソースとローカルのChrome／Firefox用
+ビルドは0.2.20で、Enhancer for YouTubeなどとの互換修正を検証中です。
+両ストアには0.2.17を提出済みです。現在の審査結果・公開状態は再確認していません。
 
 ## 機能
 
@@ -32,6 +34,8 @@ Firefoxの永続インストールにはAMOの署名が必要です。
   暗い半透明の共通配色に統一。色・通常／ホバー／選択時の濃さ・ぼかしは
   `ambient.css` 冒頭の `--yac-control-*` 変数で一括調整できます。
   初期の濃さは通常22%・ホバー34%・選択中44%です。
+  開発版0.2.20では、その濃さを保持し、ボタンの背後の明るさを文字色に合わせて補正します。
+  `--yac-control-backdrop`で補正を一括調整。Enhancerは明るいアイコンに合わせた暗い補正を使います。
   検索欄の枠を保持し、入力中は枠を強調します。
   設定パネルはYouTubeの設定に近い半透明のダーク背景。
 - 対称な黒帯の自動除外と、黒帯を背景に置き換えるスイッチ。
@@ -127,11 +131,13 @@ smooth scroll blending, black-bar detection and replacement, and customizable
 blur, opacity, saturation and background frame rate (24–60 FPS, default 30).
 The background automatically dims as the video scrolls away. Translucent settings
 open inside the player, with Japanese/English language selection. Embedded chat
-backgrounds are transparent while ambient is enabled. No tracking or remote code.
+reading surfaces are translucent while ambient is enabled. No tracking or remote code.
 MIT licensed.
 
 Development 0.2.12 adds an optional rapid-flash warning, enabled by default. A
 dark modal appears after about three seconds of detected rapid flashing while
 playback and ambient continue. You can reduce strength to 15% or disable further
 warnings; Advanced settings can re-enable them. Detection and reduced opacity
-do not guarantee safety. Public distribution remains on 0.2.2.
+do not guarantee safety. GitHub release packages remain on 0.2.2; current development
+sources and local builds are 0.2.20. Version 0.2.17 was submitted to both stores;
+their current review/publication state has not been rechecked.

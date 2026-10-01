@@ -17,7 +17,8 @@ SOURCE_FILES = ["manifest.json", "README.md", "PRIVACY.md", "CONTRIBUTING.md", "
                 "tests/server.cjs", "tests/check-renderer.js", "tests/check-flash-monitor.cjs", "tests/check-black-bars.cjs",
                 "tests/check-worker.cjs", "tests/check-gpu.cjs", "tests/check-settings.cjs", "tests/check-ambient.cjs", "tests/check-projection.cjs",
                 "tests/check-surfaces.cjs", "tests/check-frame-pacing.cjs", "tests/check-scroll-blur.cjs",
-                "tests/firefox-check.html", "tests/chat-fixture.html", "tests/gpu-fixture.html", "tests/check-gpu-browser.js"]
+                "tests/firefox-check.html", "tests/chat-fixture.html", "tests/gpu-fixture.html", "tests/check-gpu-browser.js",
+                "tests/control-fixture.html", "tests/check-control-pixels.py"]
 
 
 def archive(name, entries):

@@ -1,12 +1,15 @@
-# Development quality status — 0.2.19 / 2026-10-02
+# Development quality status — 0.2.20 / 2026-10-02
 
-Versions 0.2.18 and 0.2.19 have recorded numerical/controller test results and local
+Versions 0.2.18–0.2.20 have recorded numerical/controller test results and local
 in-app browser fixture verification. Version 0.2.19 passes the 32-case primary-text
-reading-contrast matrix for light/dark chat and playlist surfaces. Neither is verified as an installed
+reading-contrast matrix for light/dark chat and playlist surfaces. Version 0.2.20
+passes all 126 active primary-text checks in its control fixture; two color-background
+arrow samples remain inconclusive, so its complete pixel matrix is not a PASS.
+None is verified as an installed
 extension on the current Chrome, Firefox or in-app YouTube page.
 
 Version 0.2.17 was submitted to Chrome Web Store and AMO and was awaiting review
-at the last recorded check on 2026-10-01. Versions 0.2.18 and 0.2.19 have not been
+at the last recorded check on 2026-10-01. Versions 0.2.18–0.2.20 have not been
 submitted. Current public visibility and review outcomes have not been checked
 again. The historical AMO submission screen showed the old 0.2.2 version disabled
 by Mozilla; this is not evidence that the new version was approved or published.
@@ -14,7 +17,7 @@ by Mozilla; this is not evidence that the new version was approved or published.
 |Requirement|Recorded evidence|Remaining verification|
 |---|---|---|
 |Background OFF keeps settings available and restores native surfaces|Actual controller with deterministic DOM, main and asynchronous Worker callback paths; delayed saved-OFF test|Native player controls and reload on both browsers|
-|Shared dark button palette with usable states|0.2.19 inherits common control RGB/opacity/blur for native faces, chips, search and Enhancer toolbar; native SVG accents and geometry preserved|The reading-face contrast results do not cover general action buttons; Enhancer presets, light/dark text, hover/selected/disabled states and bright/dark playback extremes still need checks|
+|Shared dark button palette with usable states|0.2.20 retains common RGB and 22/34/44% alpha, adjusts small-control backdrops for theme text, and fixes chip-parent/search keyboard focus. Local browser: 16 static captures, 222/224 measured faces, 126 active primary-text checks passed (minimum 4.652435:1); measured ordinary icon fill minimum 4.292110:1. Native SVG/geometry/disabled/OFF invariants passed|Color-background arrow patches were nonuniform and rejected; full pixel matrix remains incomplete. Semantic pink/disabled and arbitrary custom colors are not certified. Actual Enhancer presets, Chrome/Firefox text/hover/selected states and playback extremes still need checks|
 |Search-field background and outline remain visible|0.2.13 adds light/dark faces, modern/legacy selectors and focus borders; the legacy selector outranks DeepDark's mode-specific rule; `?search` fixture|Actual Chrome/Firefox focus, suggestions, clear/search actions, OFF restoration and bright/dark backgrounds|
 |Dark translucent sidebar, menus, playlist and chat panels|0.2.19 local browser: 32 primary-text contrast cases across both themes over white/black backdrops, chat/replay/options/top-fans, playlist normal/focus, same iframe document theme changes and OFF restoration; original SVG/card colors and playing row remain native|Actual late-opened YouTube surfaces and native theater transitions remain unverified; selected playing rows, accent/badge text and unrelated action-button contrast are outside this matrix|
 |Native chat dropdown/menu icons remain visible|The extension adds no replacement icons and does not rewrite their native DOM; the local fixture retains its existing SVG nodes|Persistent empty native icon slots after theater mode remain unresolved; preserving fixture icons does not prove a fix for YouTube's initialization/iframe-recreation root cause|
@@ -27,13 +30,15 @@ by Mozilla; this is not evidence that the new version was approved or published.
 |Seek, layout transitions and disposal preserve state/resources|Zero geometry waits, seeking guard, clip ownership, suspended timeouts, stale frame disposal and subscription teardown tests|Native iframe recreation, page navigation, hidden-tab suspension and long sessions|
 
 `npm run check` and `npm test` cover syntax and ten numerical/controller suites.
-The recorded 0.2.19 results passed. No numerical test displays flashing imagery or
+The recorded 0.2.20 numerical/controller results passed. No numerical test displays flashing imagery or
 accesses YouTube. DOM tests use test doubles; they do not establish rendered
 appearance or browser decoding. The separate local browser checks establish
 fixture behavior only, not native YouTube initialization or installed-extension
 playback. Recorded GPU results and the chat screenshot are in
 `artifacts/gpu-0.2.18/gpu-result.json` and `artifacts/gpu-0.2.18/chat-shades.jpg`;
-scope and limits are recorded in `VALIDATION.md`.
+scope and limits are recorded in `VALIDATION.md`. Control pixel evidence is in
+`artifacts/controls-0.2.20/result.json`; its two inconclusive color-arrow samples
+remain recorded as failed measurements, not corrected by a CSS color formula.
 
 The normal browser tool rejected YouTube access after the user's explicit grant,
 citing a saved access setting. Localhost fixture access succeeded for the

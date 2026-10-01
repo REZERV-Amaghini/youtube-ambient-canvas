@@ -1,5 +1,5 @@
 {
-  "name": "youtube-ambient-canvas", "version": "0.2.19", "private": true,
+  "name": "youtube-ambient-canvas", "version": "0.2.20", "private": true,
   "description": "YouTube-only ambient background browser extension", "license": "MIT",
   "scripts": {
     "check": "node --check settings-store.js && node --check black-bar-detector.js && node --check renderer.js && node --check flash-monitor.js && node --check worker-client.js && node --check worker-host.js && node --check ambient-worker.js && node --check ambient.js && node --check tests/server.cjs && node --check tests/check-black-bars.cjs && node --check tests/check-worker.cjs && node --check tests/check-flash-monitor.cjs && node --check tests/check-renderer.js && node --check tests/check-projection.cjs && node --check tests/check-settings.cjs && node --check tests/check-ambient.cjs && node --check tests/check-surfaces.cjs && node --check tests/check-frame-pacing.cjs && node --check gpu-renderer.js && node --check tests/check-gpu.cjs && node --check tests/check-gpu-browser.js && node --check tests/check-scroll-blur.cjs",

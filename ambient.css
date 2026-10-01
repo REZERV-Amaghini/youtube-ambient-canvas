@@ -17,6 +17,10 @@ html.yac-active {
   --yac-control-hover-opacity: .34;
   --yac-control-selected-opacity: .44;
   --yac-control-blur: 12px;
+  /* Keep the translucent paint; adjust only the backdrop under small controls.
+     Native white/black primary text needs a dark/light lens respectively. */
+  --yac-control-dark-backdrop: blur(var(--yac-control-blur)) brightness(.4);
+  --yac-control-backdrop: blur(var(--yac-control-blur)) contrast(.1) brightness(1.8);
   /* Text-heavy surfaces need a stronger face than short action buttons.
      64% retains primary text contrast over both white and black frames. */
   --yac-reading-rgb: 255, 255, 255;
@@ -40,6 +44,7 @@ html.yac-active[dark],
 html.yac-active:has(link#efyt-dark-theme) {
   --yac-page-base: #080b12;
   --yac-reading-rgb: var(--yac-control-rgb);
+  --yac-control-backdrop: var(--yac-control-dark-backdrop);
   --yac-secondary-surface: rgba(28, 28, 28, .9);
   --yac-hover-surface: rgba(255, 255, 255, .14);
   --yac-control-text: var(--main-text, var(--yt-spec-text-primary, #f1f1f1));
@@ -63,20 +68,23 @@ html.yac-active :is(ytd-watch-flexy,ytd-watch-grid,ytd-masthead) {
 }
 /* Paint actual component faces, not every button or structural wrapper. Native
    dimensions, icon accents, focus outlines and disabled opacity stay intact. */
-html.yac-active :is(ytd-masthead,ytd-watch-flexy,ytd-watch-grid,ytd-popup-container,tp-yt-app-drawer) :is(.ytSpecButtonShapeNextHost,.yt-spec-button-shape-next):is(.ytSpecButtonShapeNextTonal,.ytSpecButtonShapeNextOutline,.ytSpecButtonShapeNextFilled,.yt-spec-button-shape-next--tonal,.yt-spec-button-shape-next--outline,.yt-spec-button-shape-next--filled),
+html.yac-active :is(ytd-masthead,ytd-watch-flexy,ytd-watch-grid,ytd-popup-container,tp-yt-app-drawer) :is(.ytSpecButtonShapeNextHost,.yt-spec-button-shape-next):is(.ytSpecButtonShapeNextTonal,.ytSpecButtonShapeNextOutline,.ytSpecButtonShapeNextFilled,.ytSpecButtonShapeNextText,.yt-spec-button-shape-next--tonal,.yt-spec-button-shape-next--outline,.yt-spec-button-shape-next--filled,.yt-spec-button-shape-next--text),
 html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-chip-cloud-renderer :is(.ytChipShapeActive,.ytChipShapeInactive,.YtChipShapeActive,.YtChipShapeInactive),
 html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-chip-cloud-renderer #chip-container {
   background-color: var(--yac-control-surface) !important;
   background-image: none !important;
-  -webkit-backdrop-filter: blur(var(--yac-control-blur)) !important;
-  backdrop-filter: blur(var(--yac-control-blur)) !important;
+  -webkit-backdrop-filter: var(--yac-control-backdrop) !important;
+  backdrop-filter: var(--yac-control-backdrop) !important;
 }
 html.yac-active :is(ytd-masthead,ytd-watch-flexy,ytd-watch-grid,ytd-popup-container,tp-yt-app-drawer) :is(.ytSpecButtonShapeNextHost,.yt-spec-button-shape-next):is(.ytSpecButtonShapeNextTonal,.ytSpecButtonShapeNextOutline,.ytSpecButtonShapeNextFilled,.ytSpecButtonShapeNextText,.yt-spec-button-shape-next--tonal,.yt-spec-button-shape-next--outline,.yt-spec-button-shape-next--filled,.yt-spec-button-shape-next--text):is(:hover,:focus-visible),
 html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-chip-cloud-renderer :is(.ytChipShapeActive,.ytChipShapeInactive,.YtChipShapeActive,.YtChipShapeInactive):is(:hover,:focus-within),
+html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-chip-cloud-renderer :where(.ytChipShapeButtonReset:focus-visible,.YtChipShapeButtonReset:focus-visible) :is(.ytChipShapeActive,.ytChipShapeInactive,.YtChipShapeActive,.YtChipShapeInactive),
 html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-chip-cloud-renderer #chip-container:is(:hover,:focus-within) {
   background-color: var(--yac-control-hover-surface) !important;
+  -webkit-backdrop-filter: var(--yac-control-backdrop) !important;
+  backdrop-filter: var(--yac-control-backdrop) !important;
 }
-html.yac-active :is(ytd-masthead,ytd-watch-flexy,ytd-watch-grid,ytd-popup-container,tp-yt-app-drawer) :is(.ytSpecButtonShapeNextHost,.yt-spec-button-shape-next):is(.ytSpecButtonShapeNextTonal,.ytSpecButtonShapeNextOutline,.ytSpecButtonShapeNextFilled,.yt-spec-button-shape-next--tonal,.yt-spec-button-shape-next--outline,.yt-spec-button-shape-next--filled):is([aria-pressed="true"],[aria-selected="true"]),
+html.yac-active :is(ytd-masthead,ytd-watch-flexy,ytd-watch-grid,ytd-popup-container,tp-yt-app-drawer) :is(.ytSpecButtonShapeNextHost,.yt-spec-button-shape-next):is(.ytSpecButtonShapeNextTonal,.ytSpecButtonShapeNextOutline,.ytSpecButtonShapeNextFilled,.ytSpecButtonShapeNextText,.yt-spec-button-shape-next--tonal,.yt-spec-button-shape-next--outline,.yt-spec-button-shape-next--filled,.yt-spec-button-shape-next--text):is([aria-pressed="true"],[aria-selected="true"]),
 html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-chip-cloud-renderer :is(.ytChipShapeActive,.YtChipShapeActive),
 html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-chip-cloud-renderer :is(.ytChipShapeActive,.YtChipShapeActive):is(:hover,:focus-within),
 html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-chip-cloud-renderer yt-chip-cloud-chip-renderer[selected] #chip-container {
@@ -91,8 +99,8 @@ html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-chip-cloud-renderer yt-ch
 }
 html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-chip-cloud-renderer :is(#left-arrow-button,#right-arrow-button) button {
   background-color: var(--yac-chip-arrow-surface) !important;
-  -webkit-backdrop-filter: blur(var(--yac-control-blur)) !important;
-  backdrop-filter: blur(var(--yac-control-blur)) !important;
+  -webkit-backdrop-filter: var(--yac-control-backdrop) !important;
+  backdrop-filter: var(--yac-control-backdrop) !important;
 }
 html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-chip-cloud-renderer :is(#left-arrow-button,#right-arrow-button) button:is(:hover,:focus-visible) {
   background-color: var(--yac-control-hover-surface) !important;
@@ -147,11 +155,13 @@ html.yac-active tp-yt-app-drawer#guide :is(#guide-wrapper,#guide-content) {
 /* Search and the Enhancer toolbar share the native tonal button surface.
    Preserve the toolbar geometry, icon fills and interaction states. */
 html.yac-active .efyt-control-bar {
+  /* Enhancer's native toolbar icons remain light in either page theme. */
+  --yac-control-backdrop: var(--yac-control-dark-backdrop);
   background-color: var(--yac-control-surface) !important;
   background-image: none !important;
   box-shadow: none !important;
-  -webkit-backdrop-filter: blur(var(--yac-control-blur)) !important;
-  backdrop-filter: blur(var(--yac-control-blur)) !important;
+  -webkit-backdrop-filter: var(--yac-control-backdrop) !important;
+  backdrop-filter: var(--yac-control-backdrop) !important;
 }
 html.yac-active .efyt-control-bar button svg {
   filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .6)) !important;
@@ -237,19 +247,19 @@ html.yac-active ytd-masthead ytd-searchbox #container.ytd-searchbox {
   background-color: var(--yac-control-surface) !important;
   background-image: none !important;
   border-color: var(--yac-search-border) !important;
-  -webkit-backdrop-filter: blur(var(--yac-control-blur)) !important;
-  backdrop-filter: blur(var(--yac-control-blur)) !important;
+  -webkit-backdrop-filter: var(--yac-control-backdrop) !important;
+  backdrop-filter: var(--yac-control-backdrop) !important;
 }
 html.yac-active ytd-masthead :is(yt-searchbox,ytd-searchbox) :is(.ytSearchboxComponentSearchButton,.YtSearchboxComponentSearchButton),
 html.yac-active ytd-masthead ytd-searchbox #search-icon-legacy {
   background-color: var(--yac-control-surface) !important;
   background-image: none !important;
   border-color: var(--yac-search-border) !important;
-  -webkit-backdrop-filter: blur(var(--yac-control-blur)) !important;
-  backdrop-filter: blur(var(--yac-control-blur)) !important;
+  -webkit-backdrop-filter: var(--yac-control-backdrop) !important;
+  backdrop-filter: var(--yac-control-backdrop) !important;
 }
-html.yac-active ytd-masthead :is(yt-searchbox,ytd-searchbox) :is(.ytSearchboxComponentSearchButton,.YtSearchboxComponentSearchButton):hover,
-html.yac-active ytd-masthead ytd-searchbox #search-icon-legacy:hover {
+html.yac-active ytd-masthead :is(yt-searchbox,ytd-searchbox) :is(.ytSearchboxComponentSearchButton,.YtSearchboxComponentSearchButton):is(:hover,:focus-visible),
+html.yac-active ytd-masthead ytd-searchbox #search-icon-legacy:is(:hover,:focus-visible) {
   background-color: var(--yac-control-hover-surface) !important;
 }
 html.yac-active ytd-masthead :is(yt-searchbox,ytd-searchbox) :is(.ytSearchboxComponentInputBox,.YtSearchboxComponentInputBox):focus-within,
@@ -261,6 +271,10 @@ html.yac-active ytd-masthead ytd-searchbox[has-focus] #container.ytd-searchbox {
 html.yac-active ytd-masthead :is(yt-searchbox,ytd-searchbox) input,
 html.yac-active ytd-masthead ytd-searchbox #search-input {
   background-color: transparent !important;
+}
+html.yac-active ytd-masthead :is(yt-searchbox,ytd-searchbox) input::placeholder {
+  color: var(--yac-control-text);
+  opacity: 1;
 }
 #movie_player #yac-settings-button {
   position: relative;

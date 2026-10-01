@@ -1,4 +1,56 @@
-# 検証結果 — 0.2.19 development / 2026-10-02
+# 検証結果 — 0.2.20 development / 2026-10-02
+
+## 0.2.20 small-control backdrop tone
+
+- The common 22/34/44% face alpha is retained. Small action/search/chip faces
+  share `--yac-control-backdrop`: blur plus a dark brightness adjustment or a
+  light contrast/brightness adjustment. Enhancer always uses the dark backdrop
+  because its native toolbar icons remain light in the fixture in both themes.
+  Only the backdrop is filtered; foreground text, icon fill, native feedback,
+  disabled opacity and geometry retain their own styles. Text variant faces
+  participate in the same normal/hover/selected palette.
+- Search placeholders use the theme's primary control text color at full
+  opacity. The reading surfaces, chat iframe and large menu/drawer filters are
+  unchanged. Keyboard focus on the chip's actual parent button and on modern/
+  legacy search buttons now uses the interaction surface; selected chip focus
+  retains the selected face. No per-frame DOM scans or palette writes were added.
+- This uses the existing CSS filter pipeline, as described by [MDN](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/backdrop-filter)
+  and the [Filter Effects specification](https://www.w3.org/TR/filter-effects-1/).
+  Performance and installed-browser behavior require measurement; filter
+  support and calculated color transforms alone do not prove rendered contrast.
+- The actual local in-app browser captured 16 static cases: both themes over
+  white/black/color backgrounds, real Tab focus on normal/selected controls,
+  chips and modern/legacy search buttons, and native OFF restoration. Fourteen
+  captures passed; two color-background captures have inconclusive arrow-face
+  samples due to nonuniform JPEG pixels. The sampler exits with failure for
+  these incomplete captures rather than substituting calculated CSS colors.
+  It measured 222 of 224 faces. All 126 active primary-text checks passed;
+  the lowest was 4.652435:1. Measured native icon-fill ratios reached a minimum
+  of 4.292110:1. These are fixture results for the default palette, not a claim
+  about arbitrary custom text colors, every native component or badge contrast.
+- `tests/check-control-pixels.py` reads actual screenshot background patches
+  of at least 9x9 image pixels and combines each with resolved foreground alpha.
+  It tolerates moderate JPEG variation (channel deviation 12, range 24), rejects
+  larger nonuniform samples, and uses the lowest contrast across every sampled
+  pixel for 4.5 primary / 3 ordinary icon-fill thresholds. It also records median
+  ratios and the worst pixel. Semantic pink and disabled states are report-only;
+  icon ratios use resolved SVG fill, not glyph pixels or shadow pixels. The
+  preserved original SVG identity, pink fill, disabled opacity, geometry and
+  OFF restoration passed in this fixture. This does not prove nonempty native
+  YouTube icons or fix their initialization.
+- Proof and metadata are in `artifacts/controls-0.2.20/` (ignored/excluded from
+  packages). Run `npm run demo`, visit its `/control-check` route, capture both
+  screenshot and `#fixture-control-result.dataset.measurements`, then run
+  `python tests/check-control-pixels.py captures.json --output result.json`.
+  The development-only sampler requires Pillow; extension/build code has no new
+  dependency. All ten numerical/controller suites passed before the CSS-only
+  focus corrections; the scroll-blur suite was also rechecked after them.
+  Actual YouTube, installed Chrome/Firefox and end-to-end performance remain
+  unverified under the current saved browser access restriction.
+- The 0.2.20 Chrome/Firefox builds matched the source files and expected minimal
+  permissions/resources. Firefox lint (existing web-ext 9.4.0) reported zero
+  errors/notices and the existing Android-min-version consent-key warning;
+  this project targets desktop Firefox and adds no Android target.
 
 ## 0.2.19 theme-sensitive reading surfaces
 
