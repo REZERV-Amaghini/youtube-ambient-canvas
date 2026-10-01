@@ -1,4 +1,15 @@
-# 検証結果 — 0.2.7 development / 2026-10-01
+# 検証結果 — 0.2.8 development / 2026-10-01
+
+## 0.2.8 portalled menus and dark translucent guide
+
+- Inspected actual YouTube with Enhancer 3.0.19: modern three-dot menus use `yt-sheet-view-model` / `yt-contextual-sheet-layout`; notifications use `ytd-multi-page-menu-renderer` with an opaque simple header. These are children of the popup container outside the watch-page subtree.
+- The guide has three stacked opaque surfaces: drawer contentContainer, guide-wrapper and guide-content. Only the drawer now supplies a 78% dark surface with 16px backdrop blur; its two structural inner surfaces are transparent. The drawer scrim, selected entries, hover feedback and native geometry are unchanged.
+- Modern contextual menus, legacy report menus and notification panels get one 86% surface with 16px backdrop blur. Legacy listbox and notification header backgrounds are cleared without clearing row feedback or button faces.
+- Verified late-opened surfaces in the Chromium fixture with the complete local DeepDark stylesheet, plus standard dark and light fixtures. Light mode uses translucent white surfaces to preserve native dark text; dark mode and the observed Enhancer theme link select dark surfaces.
+- Verified DeepDark sidebar hover and selected fills remain, filled native buttons keep their original fill/text colors, and OFF restores all original panel backgrounds and removes the added blur. OFF continues to leave ambient settings open.
+- Installed-extension verification on actual YouTube/Firefox requires reloading the development package. Live inspection establishes the selectors, not proof of the updated installed extension. Store publication remains on 0.2.2.
+
+## Previous 0.2.7 verification
 
 ## 0.2.7 keep settings open when ambient is disabled
 

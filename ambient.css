@@ -37,6 +37,44 @@ html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-chip-cloud-renderer :is(#
   backdrop-filter: blur(12px) !important;
 }
 
+/* Portalled menus and the guide are outside the watch-page layout. Give each
+   one translucent surface; clearing every descendant would erase row feedback. */
+html.yac-active {
+  --yac-menu-surface: rgba(255, 255, 255, .86);
+  --yac-guide-surface: rgba(255, 255, 255, .78);
+}
+html.yac-active[dark],
+html.yac-active:has(link#efyt-dark-theme) {
+  --yac-menu-surface: rgba(28, 28, 28, .86);
+  --yac-guide-surface: rgba(18, 18, 18, .78);
+}
+html.yac-active ytd-popup-container :is(ytd-menu-popup-renderer,ytd-multi-page-menu-renderer,yt-sheet-view-model.ytSheetViewModelContextual) {
+  --main-background: transparent !important;
+  --second-background: var(--yac-menu-surface) !important;
+}
+html.yac-active ytd-popup-container :is(ytd-menu-popup-renderer,ytd-multi-page-menu-renderer),
+html.yac-active ytd-popup-container yt-sheet-view-model.ytSheetViewModelContextual > yt-contextual-sheet-layout {
+  background-color: var(--yac-menu-surface) !important;
+  background-image: none !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  backdrop-filter: blur(16px) !important;
+}
+html.yac-active ytd-popup-container ytd-menu-popup-renderer :is(tp-yt-paper-listbox,paper-listbox),
+html.yac-active ytd-popup-container ytd-multi-page-menu-renderer ytd-simple-menu-header-renderer {
+  background-color: transparent !important;
+  background-image: none !important;
+}
+html.yac-active tp-yt-app-drawer#guide #contentContainer {
+  background-color: var(--yac-guide-surface) !important;
+  background-image: none !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  backdrop-filter: blur(16px) !important;
+}
+html.yac-active tp-yt-app-drawer#guide :is(#guide-wrapper,#guide-content) {
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
 html.yac-active ytd-app > #content,
 html.yac-active #page-manager,
 html.yac-active ytd-watch-flexy,

@@ -18,10 +18,47 @@ html,body{margin:0;color:white;background:#0f0f0f;font:14px system-ui}ytd-app{di
 <script>
 const browser={storage:{local:{get:async()=>({ambient:JSON.parse(localStorage.getItem('ambient')||'null')}),set:async({ambient})=>localStorage.setItem('ambient',JSON.stringify(ambient))}}};
 const sample=document.createElement('canvas');sample.width=640;sample.height=360;
+if(new URLSearchParams(location.search).has('surfaces')){
+  document.documentElement.toggleAttribute('dark',!new URLSearchParams(location.search).has('light'));
+  const surfaceStyle=document.createElement('style');
+  surfaceStyle.textContent=`
+    tp-yt-app-drawer#guide{position:fixed;left:0;top:56px;bottom:0;width:210px;z-index:110}
+    #guide #contentContainer,#guide-wrapper,#guide-content{height:100%;background:#0f0f0f}
+    #guide-wrapper,#guide-content{background:#181818}
+    ytd-guide-renderer,ytd-guide-section-renderer,ytd-guide-entry-renderer{display:block}
+    ytd-guide-renderer{padding:16px 12px}ytd-guide-entry-renderer{padding:12px;border-radius:8px}
+    ytd-guide-entry-renderer[active],ytd-guide-entry-renderer:hover{background:#ffffff24}
+    ytd-popup-container .fixture-popup{display:block;position:fixed;z-index:120;border-radius:12px;overflow:hidden;box-shadow:0 8px 32px #0005}
+    yt-sheet-view-model,yt-contextual-sheet-layout,yt-list-view-model,yt-list-item-view-model,ytd-menu-popup-renderer,tp-yt-paper-listbox,ytd-multi-page-menu-renderer,ytd-simple-menu-header-renderer,ytd-notification-renderer{display:block}
+    #fixture-modern-menu{left:234px;top:100px;width:240px}yt-contextual-sheet-layout{background:#282828;padding:8px 0}
+    yt-list-item-view-model{padding:12px 18px}yt-list-item-view-model:hover{background:#ffffff24}
+    #fixture-notifications{right:24px;top:100px;width:280px;background:#181818}
+    ytd-simple-menu-header-renderer{padding:16px;border-bottom:1px solid #ffffff30;background:#232323}
+    ytd-notification-renderer{padding:16px;min-height:60px}ytd-notification-renderer:hover{background:#ffffff24}
+    #fixture-report-menu{right:24px;top:404px;width:180px;background:#282828}
+    tp-yt-paper-listbox{background:#282828;padding:8px}tp-yt-paper-listbox button{width:100%;text-align:left;background:transparent}
+    tp-yt-paper-listbox button:hover{background:#ffffff24}
+    html:not([dark]) :is(ytd-guide-renderer,ytd-popup-container){color:#0f0f0f}
+    html:not([dark]) #guide :is(#contentContainer,#guide-wrapper,#guide-content),html:not([dark]) :is(yt-contextual-sheet-layout,#fixture-notifications,#fixture-report-menu,tp-yt-paper-listbox,ytd-simple-menu-header-renderer){background:#fff}
+    html:not([dark]) ytd-popup-container button{color:#0f0f0f}
+  `;
+  document.head.append(surfaceStyle);
+  const guide=document.createElement('tp-yt-app-drawer');guide.id='guide';
+  guide.innerHTML='<div id="contentContainer" class="style-scope tp-yt-app-drawer"><div id="guide-wrapper" class="style-scope ytd-app"><div id="guide-content" class="style-scope ytd-app"><ytd-guide-renderer><ytd-guide-section-renderer><ytd-guide-entry-renderer active>Home</ytd-guide-entry-renderer><ytd-guide-entry-renderer>Shorts</ytd-guide-entry-renderer><ytd-guide-entry-renderer>Subscriptions</ytd-guide-entry-renderer><hr><ytd-guide-entry-renderer>History</ytd-guide-entry-renderer><ytd-guide-entry-renderer>Playlists</ytd-guide-entry-renderer></ytd-guide-section-renderer></ytd-guide-renderer></div></div></div>';
+  document.querySelector('ytd-app > #content').append(guide);
+  const openSurfaces=document.createElement('button');openSurfaces.id='fixture-open-surfaces';openSurfaces.textContent='Open menus';
+  openSurfaces.onclick=()=>{
+    if(document.querySelector('#fixture-popups'))return;
+    const popups=document.createElement('ytd-popup-container');popups.id='fixture-popups';
+    popups.innerHTML='<yt-sheet-view-model id="fixture-modern-menu" class="fixture-popup ytSheetViewModelHost ytSheetViewModelContextual"><yt-contextual-sheet-layout class="ytContextualSheetLayoutHost"><div class="ytContextualSheetLayoutContentContainer"><yt-list-view-model><yt-list-item-view-model>Add to queue</yt-list-item-view-model><yt-list-item-view-model>Save to Watch later</yt-list-item-view-model><yt-list-item-view-model>Save to playlist</yt-list-item-view-model><yt-list-item-view-model>Share</yt-list-item-view-model><yt-list-item-view-model>Report</yt-list-item-view-model></yt-list-view-model></div></yt-contextual-sheet-layout></yt-sheet-view-model><ytd-multi-page-menu-renderer id="fixture-notifications" class="fixture-popup"><div id="header"><ytd-simple-menu-header-renderer>Notifications</ytd-simple-menu-header-renderer></div><div id="sections"><ytd-notification-renderer>Example notification<br><small>Self-authored demonstration</small></ytd-notification-renderer><ytd-notification-renderer>Another example<br><small>No account content is used</small></ytd-notification-renderer></div></ytd-multi-page-menu-renderer><ytd-menu-popup-renderer id="fixture-report-menu" class="fixture-popup"><tp-yt-paper-listbox><button>Report</button></tp-yt-paper-listbox></ytd-menu-popup-renderer>';
+    document.querySelector('ytd-app').append(popups);
+  };
+  document.querySelector('#background').append(openSurfaces);
+}
 if(new URLSearchParams(location.search).has('theme')||new URLSearchParams(location.search).has('controls')){
   if(new URLSearchParams(location.search).get('theme')==='deepdark'){
     const fullTheme=document.createElement('link');
-    fullTheme.rel='stylesheet';fullTheme.href='/test-theme.css';document.head.append(fullTheme);
+    fullTheme.id='efyt-dark-theme';fullTheme.rel='stylesheet';fullTheme.href='/test-theme.css';document.head.append(fullTheme);
   }
   // Model a theme extension's more specific page backgrounds without its code.
   const theme=document.createElement('style');
@@ -78,7 +115,7 @@ if(new URLSearchParams(location.search).has('chat')){
 }
 const g=sample.getContext('2d');let tick=0;
 if(new URLSearchParams(location.search).has('store')){
-  document.querySelector('#background').textContent='YouTube Ambient Canvas · demonstration';
+  document.querySelector('#background').firstChild.textContent='YouTube Ambient Canvas · demonstration';
   document.querySelector('h2').textContent='Ambient colors · original demo video';
 }
 function frame(){g.fillStyle='#121b32';g.fillRect(0,0,640,360);g.fillStyle='#ad68ff';g.fillRect(100+Math.sin(tick++/20)*40,80,320,200);g.fillStyle='#ff3b62';g.fillRect(0,0,640,10);g.fillStyle='#35ff9f';g.fillRect(630,0,10,360);g.fillStyle='#396aff';g.fillRect(0,350,640,10);g.fillStyle='#ffcf4c';g.fillRect(0,0,10,360);if(new URLSearchParams(location.search).has('bars')){g.fillStyle='black';g.fillRect(0,0,640,40);g.fillRect(0,320,640,40);g.fillStyle='#ad68ff';g.fillRect(0,40,640,8);g.fillRect(0,312,640,8);}}

@@ -1,4 +1,4 @@
-# Theme compatibility - 0.2.7 development revision
+# Theme compatibility - 0.2.8 development revision
 
 Some YouTube theme extensions apply high-specificity `!important` backgrounds.
 With Enhancer for YouTube's dark theme, these rules can cover the ambient canvas
@@ -68,6 +68,28 @@ existing faces. DeepDark control fills have 14% white opacity; active-filter
 color remains controlled by the theme. The 0.2.5 synthetic selection outline
 and forced light text are removed. The Enhancer toolbar keeps its original fill.
 No YouTube or Enhancer JavaScript functions are replaced.
+
+## Menus, notifications and guide
+
+YouTube renders contextual menus and notifications in `ytd-popup-container`,
+outside the watch-page subtree. Version 0.2.8 covers the observed modern
+contextual sheet, legacy menu renderer and multi-page notification renderer.
+Each gets one 86% neutral surface and 16px backdrop blur. Structural inner
+listbox/header backgrounds are transparent; menu rows and their feedback are
+preserved. These rules do not enter the layout-only inline background guard.
+
+The guide drawer gets a darker 78% surface with 16px blur. Its guide-wrapper and
+guide-content no longer add stacked opaque backgrounds. The scrim, selected
+entries, buttons and hover effects retain their native/theme styling.
+Light YouTube themes use translucent white surfaces to retain readable native
+dark text. The `dark` document attribute or observed Enhancer dark-theme link
+selects dark surfaces. All rules are gated by `yac-active`, so OFF/fullscreen
+restore the original CSS without recording or replacing inline menu styles.
+
+Use `?surfaces&controls` for standard dark verification, add `&light` for light
+mode, or use `?surfaces&theme=deepdark` with the optional local theme file.
+Open menus after ambient starts, then disable ambient in its settings. The
+fixture uses invented menu/notification content, never account data.
 
 ## Settings layout
 
