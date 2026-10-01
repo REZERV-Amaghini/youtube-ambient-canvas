@@ -16,7 +16,10 @@ html,body{margin:0;color:white;background:#0f0f0f;font:14px system-ui}ytd-app{di
 <div id="below"><h2>動画タイトルとボタンを保持</h2><button>共有</button><button>保存</button><div id="description">説明欄の背景</div><ytd-comments id="comments">コメント欄の背景</ytd-comments></div>
 </div></div><div id="secondary"><div class="thumb"></div>関連動画の文字<div class="thumb"></div></div></div></ytd-watch-flexy></div></div></ytd-app>
 <script>
-const browser={storage:{local:{get:async()=>({ambient:JSON.parse(localStorage.getItem('ambient')||'null')}),set:async({ambient})=>localStorage.setItem('ambient',JSON.stringify(ambient))}}};
+const browser={
+  runtime:new URLSearchParams(location.search).has('main')?{}:{getURL:filename=>new URL(filename,location.href).href},
+  storage:{local:{get:async()=>({ambient:JSON.parse(localStorage.getItem('ambient')||'null')}),set:async({ambient})=>localStorage.setItem('ambient',JSON.stringify(ambient))}}
+};
 const sample=document.createElement('canvas');sample.width=640;sample.height=360;
 if(new URLSearchParams(location.search).has('enhancer')){
   const toolbarStyle=document.createElement('style');
@@ -138,7 +141,45 @@ if(new URLSearchParams(location.search).has('theme')||new URLSearchParams(locati
   updateTheme.onclick=()=>document.querySelector('#secondary').style.setProperty('background-color','#304050','important');
   document.querySelector('#background').append(updateTheme);
 }
+if(new URLSearchParams(location.search).has('playlist')){
+  const light=new URLSearchParams(location.search).has('light');
+  document.documentElement.toggleAttribute('dark',!light);
+  const playlistStyle=document.createElement('style');
+  playlistStyle.textContent=`
+    #fixture-playlist{display:block;border:1px solid #ffffff30;border-radius:12px;overflow:hidden;margin-bottom:16px;color:${light?'#0f0f0f':'white'}}
+    #fixture-playlist :is(#container,.header,.playlist-items){display:block;background:${light?'#fff':'#282828'}}
+    #fixture-playlist .header{padding:16px;display:flex;align-items:center;gap:12px}
+    #fixture-playlist .header h3{margin:0;flex:1;font-size:16px}
+    #fixture-playlist ytd-playlist-panel-video-renderer{display:block;background:${light?'#fff':'#282828'}}
+    #fixture-playlist ytd-playlist-panel-video-renderer[selected]{background:${light?'#00000014':'#ffffff24'}}
+    #fixture-playlist ytd-playlist-panel-video-renderer:hover{background:${light?'#00000014':'#ffffff24'}}
+    #fixture-playlist a{display:flex;gap:8px;padding:12px;align-items:center;color:inherit;text-decoration:none}
+    #fixture-playlist a:focus-visible{outline:2px solid ${light?'#065fd4':'#8ab4f8'};outline-offset:-3px}
+    #fixture-playlist .fixture-playlist-thumb{width:72px;height:40px;flex-shrink:0;border-radius:6px;background:linear-gradient(135deg,#59bdcd,#8f64db,#dc889b)}
+    #fixture-playlist .fixture-playlist-copy{min-width:0;line-height:1.4}
+    #fixture-playlist .fixture-playlist-copy small{display:block;color:#ff4081}
+    #fixture-playlist #index{width:10px;flex-shrink:0}
+    #fixture-playlist .header button{color:inherit;background:${light?'#00000014':'#ffffff24'}}
+  `;
+  document.head.append(playlistStyle);
+  const playlist=document.createElement('ytd-playlist-panel-renderer');playlist.id='fixture-playlist';
+  playlist.innerHTML='<div id="container" class="style-scope ytd-playlist-panel-renderer"><div id="header" class="header style-scope ytd-playlist-panel-renderer"><h3>Demo mix playlist</h3><button aria-label="Demo playlist options">\u22ef</button></div><div id="items" class="playlist-items style-scope ytd-playlist-panel-renderer"><ytd-playlist-panel-video-renderer use-color-palette><a href="#demo-track-a"><span id="index">1</span><div class="fixture-playlist-thumb"></div><div class="fixture-playlist-copy">Original demo A<small>Demo artist A</small></div></a></ytd-playlist-panel-video-renderer><ytd-playlist-panel-video-renderer selected use-color-palette><a href="#demo-track-b" aria-current="true"><span id="index">\u25b6</span><div class="fixture-playlist-thumb"></div><div class="fixture-playlist-copy">Original demo B<small>Demo artist B</small></div></a></ytd-playlist-panel-video-renderer><ytd-playlist-panel-video-renderer use-color-palette><a href="#demo-track-c"><span id="index">3</span><div class="fixture-playlist-thumb"></div><div class="fixture-playlist-copy">Original demo C<small>Demo artist C</small></div></a></ytd-playlist-panel-video-renderer></div></div>';
+  // Native-like state changes verify that the playing face is never overridden.
+  playlist.querySelectorAll('a').forEach(link=>link.onclick=event=>{
+    event.preventDefault();
+    const chosen=link.closest('ytd-playlist-panel-video-renderer');
+    playlist.querySelectorAll('ytd-playlist-panel-video-renderer').forEach(row=>{
+      const selected=row===chosen;row.toggleAttribute('selected',selected);
+      row.querySelector('a').setAttribute('aria-current',String(selected));
+    });
+  });
+  document.querySelector('#secondary').prepend(playlist);
+}
 if(new URLSearchParams(location.search).has('chat')){
+  const replay=document.createElement('yt-video-metadata-carousel-view-model');
+  replay.style.cssText='display:block;background:#282828;border-radius:12px;padding:16px;margin:12px 0';
+  replay.textContent='Chat replay · View comments from the original stream';
+  document.querySelector('#primary-inner').append(replay);
   const chat=document.createElement('ytd-live-chat-frame');
   const frame=document.createElement('iframe');frame.id='chatframe';frame.src='/live_chat';
   frame.title='Live chat fixture';frame.style.cssText='width:100%;height:240px;border:1px solid #ffffff30';
@@ -173,4 +214,20 @@ const fullBleedPlayer=document.createElement('div');fullBleedPlayer.id='player-f
 watch.prepend(theaterContainer);
 document.querySelector('.ytp-size-button').onclick=()=>{const theater=!watch.hasAttribute('theater');watch.toggleAttribute('theater',theater);if(theater)fullBleedPlayer.append(moviePlayer);else originalPlayerParent.prepend(moviePlayer);window.dispatchEvent(new Event('resize'));};
 document.querySelector('.ytp-fullscreen-button').onclick=()=>{if(document.fullscreenElement)document.exitFullscreen();else document.querySelector('#movie_player').requestFullscreen();};
-</script><script src="/renderer.js"></script><script>const ambientScript=document.createElement('script');ambientScript.src=new URLSearchParams(location.search).has('baseline')?'/baseline-ambient.js':'/ambient.js';document.body.append(ambientScript);</script></body></html>
+</script><script src="/black-bar-detector.js"></script><script src="/renderer.js"></script><script src="/flash-monitor.js"></script><script src="/worker-client.js"></script><script>
+// Test the real dialog without displaying flashing imagery. Numeric detector
+// tests cover detection separately; this fixture simulates its positive result.
+if(new URLSearchParams(location.search).has('warning-demo')){
+  const Detector=YacFlashMonitor;
+  YacFlashMonitor=class extends Detector {
+    constructor(){
+      super();this.fixtureTrigger=false;
+      const trigger=document.createElement('button');trigger.id='fixture-warning-trigger';trigger.textContent='Simulate flash warning';
+      trigger.onclick=()=>{this.fixtureTrigger=true;};
+      document.querySelector('#background').append(trigger);
+    }
+    sample(...args){if(this.fixtureTrigger){this.fixtureTrigger=false;return true;}return super.sample(...args);}
+  };
+}
+const ambientScript=document.createElement('script');ambientScript.src=new URLSearchParams(location.search).has('baseline')?'/baseline-ambient.js':'/ambient.js';document.body.append(ambientScript);
+</script></body></html>

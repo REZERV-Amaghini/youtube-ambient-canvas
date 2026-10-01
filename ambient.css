@@ -42,11 +42,13 @@ html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-chip-cloud-renderer :is(#
 html.yac-active {
   --yac-menu-surface: rgba(255, 255, 255, .86);
   --yac-guide-surface: rgba(255, 255, 255, .78);
+  --yac-card-surface: rgba(255, 255, 255, .46);
 }
 html.yac-active[dark],
 html.yac-active:has(link#efyt-dark-theme) {
   --yac-menu-surface: rgba(28, 28, 28, .86);
   --yac-guide-surface: rgba(18, 18, 18, .78);
+  --yac-card-surface: rgba(28, 28, 28, .46);
 }
 html.yac-active ytd-popup-container :is(ytd-menu-popup-renderer,ytd-multi-page-menu-renderer,yt-sheet-view-model.ytSheetViewModelContextual) {
   --main-background: transparent !important;
@@ -106,7 +108,6 @@ html.yac-active ytd-watch-flexy ytd-comments,
 html.yac-active ytd-watch-flexy ytd-watch-metadata,
 html.yac-active ytd-watch-flexy ytd-playlist-panel-renderer,
 html.yac-active ytd-watch-flexy ytd-playlist-panel-renderer #container,
-html.yac-active ytd-watch-flexy ytd-playlist-panel-renderer #header,
 html.yac-active ytd-watch-flexy ytd-playlist-panel-renderer #items,
 html.yac-active ytd-watch-flexy ytd-item-section-renderer,
 html.yac-active ytd-watch-flexy ytd-rich-grid-renderer,
@@ -118,10 +119,35 @@ html.yac-active ytd-masthead #background {
   box-shadow: none !important;
 }
 
+/* Theme presets paint the playlist header, list and every row separately.
+   Keep one face per non-playing row instead of stacking opaque dark layers.
+   The selected row and its controls retain their native playing state. */
+html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) ytd-playlist-panel-renderer :is(#items,.playlist-items) {
+  background-color: transparent !important;
+  background-image: none !important;
+}
+html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) ytd-playlist-panel-renderer :is(#header,.header),
+html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) ytd-playlist-panel-video-renderer:not([selected]) {
+  background-color: var(--yac-card-surface) !important;
+  background-image: none !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  backdrop-filter: blur(12px) !important;
+}
+html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) ytd-playlist-panel-video-renderer:not([selected]):is(:hover,:focus-within) {
+  background-color: var(--hover-background, rgba(255, 255, 255, .14)) !important;
+}
+
 html.yac-active #cinematics { display: none !important; }
 html.yac-active ytd-watch-flexy ytd-live-chat-frame,
 html.yac-active ytd-watch-flexy ytd-live-chat-frame #chatframe {
   background: transparent !important;
+}
+/* Metadata carousel cards (including the replay prompt) keep a readable face. */
+html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-video-metadata-carousel-view-model {
+  background-color: var(--yac-card-surface) !important;
+  background-image: none !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  backdrop-filter: blur(12px) !important;
 }
 #movie_player.yac-settings-open .ytp-chrome-bottom {
   opacity: 1 !important;

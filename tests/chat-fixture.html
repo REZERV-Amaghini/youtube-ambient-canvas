@@ -1,3 +1,37 @@
-<!doctype html><html><head><meta charset="utf-8"><title>Chat background fixture</title>
-<style>html,body{margin:0;color:white;background:#0f0f0f;font:13px system-ui}yt-live-chat-app,yt-live-chat-renderer,yt-live-chat-header-renderer,yt-live-chat-item-list-renderer{display:block;background:#0f0f0f}yt-live-chat-header-renderer,yt-live-chat-text-message-renderer,yt-live-chat-message-input-renderer,yt-live-chat-paid-message-renderer{display:block;padding:12px}yt-live-chat-paid-message-renderer{background:#663399}yt-live-chat-message-input-renderer{background:#222}</style></head>
-<body><yt-live-chat-app><yt-live-chat-renderer><yt-live-chat-header-renderer>Live chat · original demo</yt-live-chat-header-renderer><div id="chat"><yt-live-chat-item-list-renderer><div id="item-scroller"><div id="items"><yt-live-chat-text-message-renderer>Sample message</yt-live-chat-text-message-renderer><yt-live-chat-paid-message-renderer>Highlighted card</yt-live-chat-paid-message-renderer><yt-live-chat-viewer-engagement-message-renderer><div id="card" style="background:#3e3e3e;padding:12px">Welcome card</div></yt-live-chat-viewer-engagement-message-renderer></div></div></yt-live-chat-item-list-renderer><yt-live-chat-message-input-renderer><div id="input-container" style="background:#ffffff1a">Chat input</div></yt-live-chat-message-input-renderer></div></yt-live-chat-renderer></yt-live-chat-app></body></html>
+<!doctype html><html dark><head><meta charset="utf-8"><title>Chat background fixture</title>
+<style>
+html,body{margin:0;color:#eee;background:#0f0f0f;font:13px system-ui}
+yt-live-chat-app,yt-live-chat-renderer,yt-live-chat-header-renderer,yt-live-chat-item-list-renderer{display:block;background:#0f0f0f}
+yt-live-chat-header-renderer{display:flex;gap:4px;align-items:center;padding:8px;border-bottom:1px solid #ffffff30}
+button{color:inherit;font:inherit;cursor:pointer;background:#ffffff14;border:0;border-radius:20px;padding:8px}
+#label{display:flex;align-items:center;margin-right:auto}#label-icon{width:24px;height:24px;display:block}
+.ytSpecButtonShapeNextIcon{width:24px;height:24px}.yt-icon-shape{display:block;width:100%;height:100%}.yt-icon-shape svg{width:100%;height:100%;fill:currentColor}
+yt-live-chat-text-message-renderer,yt-live-chat-message-input-renderer,yt-live-chat-paid-message-renderer{display:block;padding:12px}
+yt-live-chat-paid-message-renderer{background:#663399}yt-live-chat-message-input-renderer{background:#222}
+ytd-menu-popup-renderer{position:absolute;z-index:10;right:8px;top:52px;background:#282828;border-radius:12px;padding:8px;box-shadow:0 8px 32px #0005}
+tp-yt-paper-listbox{display:block;background:#282828}tp-yt-paper-listbox button{display:block;width:100%;text-align:left;border-radius:8px;background:transparent}
+tp-yt-paper-listbox button:hover{background:#ffffff20}
+ytd-engagement-panel-section-list-renderer{display:block;position:absolute;inset:0;background:#282828;z-index:5}
+ytd-engagement-panel-section-list-renderer #header,ytd-engagement-panel-section-list-renderer #content{background:#282828;padding:12px}
+[hidden]{display:none!important}
+</style></head><body>
+<yt-live-chat-app><yt-live-chat-renderer>
+<yt-live-chat-header-renderer>
+<button id="label">Top chat replay <span id="label-icon"><span class="yt-icon-shape"><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6-1.5-1.5L12 12 7.5 7.5z"/></svg></span></span></button>
+<div id="viewer-leaderboard-entry-point"><button aria-label="Top fans"><div class="ytSpecButtonShapeNextIcon" style="color:#9b6aff"><span class="yt-icon-shape"><svg viewBox="0 0 24 24"><path d="m2 7 6 4 4-8 4 8 6-4-3 13H5z"/></svg></span></div></button></div>
+<yt-live-chat-button id="live-chat-header-context-menu"><button aria-label="More chat options"><div class="ytSpecButtonShapeNextIcon"><span class="yt-icon-shape"><svg viewBox="0 0 24 24"><circle cx="12" cy="6" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="18" r="2"/></svg></span></div></button></yt-live-chat-button>
+<div id="close-button"><button aria-label="Close chat"><div class="ytSpecButtonShapeNextIcon"><span class="yt-icon-shape"><svg viewBox="0 0 24 24"><path d="m6 4 6 6 6-6 2 2-6 6 6 6-2 2-6-6-6 6-2-2 6-6-6-6z"/></svg></span></div></button></div>
+</yt-live-chat-header-renderer>
+<div id="chat"><yt-live-chat-item-list-renderer><div id="item-scroller"><div id="items">
+<yt-live-chat-text-message-renderer>Sample message - self-authored demo</yt-live-chat-text-message-renderer>
+<yt-live-chat-paid-message-renderer>Highlighted card</yt-live-chat-paid-message-renderer>
+<yt-live-chat-viewer-engagement-message-renderer><div id="card" style="background:#3e3e3e;padding:12px">Welcome card</div></yt-live-chat-viewer-engagement-message-renderer>
+</div></div></yt-live-chat-item-list-renderer><yt-live-chat-message-input-renderer><div id="input-container" style="background:#ffffff1a">Chat input</div></yt-live-chat-message-input-renderer></div>
+<div id="content-pages"><ytd-engagement-panel-section-list-renderer hidden><div id="header"><button id="fixture-fans-back">Back</button> Top fans</div><div id="content"><p>Demo viewer A - 100 XP</p><p>Demo viewer B - 80 XP</p><span style="background:#7b3edb;padding:4px;border-radius:10px">#1 badge</span></div></ytd-engagement-panel-section-list-renderer></div>
+</yt-live-chat-renderer><ytd-menu-popup-renderer hidden><tp-yt-paper-listbox><button>Timestamps</button><button>Send feedback</button></tp-yt-paper-listbox></ytd-menu-popup-renderer></yt-live-chat-app>
+<script>
+const menu=document.querySelector('ytd-menu-popup-renderer'),fans=document.querySelector('ytd-engagement-panel-section-list-renderer');
+document.querySelector('#live-chat-header-context-menu button').onclick=()=>{menu.hidden=!menu.hidden;};
+document.querySelector('#viewer-leaderboard-entry-point button').onclick=()=>{fans.hidden=false;menu.hidden=true;};
+document.querySelector('#fixture-fans-back').onclick=()=>{fans.hidden=true;};
+</script></body></html>

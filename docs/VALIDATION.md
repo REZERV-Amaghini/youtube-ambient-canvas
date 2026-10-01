@@ -1,4 +1,54 @@
-# 検証結果 — 0.2.10 development / 2026-10-01
+# 検証結果 — 0.2.11 development / 2026-10-01
+
+## 0.2.11 Worker and black-bar integration
+
+- Background color processing and rendering now run in a dedicated bundled
+  Worker, reached through a packaged extension-origin iframe and MessageChannel.
+  Video capture/presentation and native UI transparency stay on the page. One
+  job is in flight; busy frames are dropped instead of queued. Startup/render
+  timeouts and unsupported capture return to the synchronous canvas renderer.
+- Detection uses 320×180 pixels; color rendering and flash-warning samples stay
+  at 160×90. The detector requires flat dark bands, symmetric pairs, visible
+  inner boundaries and broad interior content. Four observations establish
+  bands; smaller verified bands protect newly visible picture pixels promptly,
+  while expansion/refinement is debounced. Display crop and color sampling crop
+  are separate. No video resize is performed.
+- `test:bars` passes for noisy/limited-range black, vertical/horizontal/mixed
+  bands, small subtitles/logos, dark/gradient/central-logo holdouts, jitter,
+  disappearing bands, source changes/seeks, and 160/320 coordinate consistency.
+  Numeric Node benchmarking measures the detector alone, excluding capture,
+  canvas readback, rendering and GPU composition; it is not an end-to-end FPS claim.
+- `test:worker` passes for bridge origin/token checks, single-job backpressure,
+  stale result rejection, bitmap closing, settings invalidation without losing
+  bar history, source/seek reset, failures/timeouts, teardown and bounded output.
+- Review found and corrected old capture coordinates clipping the picture during
+  scrolling. Physical crop now uses current video bounds. Resize immediately
+  removes old pixel clip values. Visual-setting updates invalidate stale frames
+  while keeping confirmed bar history.
+- The new playlist header and non-selected rows use a 46% surface with 12px blur;
+  the native selected row is unchanged and duplicate parent fills are removed.
+- The current integrated version has not been visually verified in a browser.
+  The in-app browser's saved access preference blocks the localhost fixture.
+  Actual Chrome/Firefox extension iframe/Worker startup, performance, native
+  playlist appearance and the earlier chat-header icon issue remain unverified.
+  Earlier fixture results below predate this Worker integration. Public/store
+  distribution remains 0.2.2.
+- Firefox desktop remains at manifest minimum 140; an explicit Android minimum
+  142 matches support for the existing no-data-collection declaration. This is
+  manifest compatibility metadata, not verified Android playback support.
+  [Mozilla reference](https://extensionworkshop.com/documentation/develop/firefox-builtin-data-consent/).
+
+## 0.2.11 rapid-flash warning and chat surfaces
+
+- Added a default-on warning preference in Advanced settings. The coarse detector samples the renderer's existing in-memory pixels for sustained opposing luminance/red transitions over about three seconds. No new permission, network request, recording or third-party code is added.
+- Numeric-only tests pass at 24/30/60 FPS for rapid luminance and red changes. Short bursts, slow transitions, static frames, small changes and small flashing areas do not trigger this heuristic. Quiet intervals, source changes, seeks, missing pixels and timing gaps reset detection. Tests display no flashing imagery.
+- Verified Japanese and English modal text in Chromium using a self-authored fixture trigger without flashing imagery. Native showModal supplies top-layer placement and a 48% dark backdrop. Video time advances while the warning is open; ambient remains enabled and its strength is unchanged until the user chooses the 15% action.
+- Verified close/Escape preserve playback and strength, 15% persists after reload, and Don't show again remains disabled after reload. Advanced settings can re-enable the warning. Detection and reduced opacity do not guarantee safety; small regions/patterns, protected pixels and unsampled flashing can be missed.
+- Live inspection identified yt-video-metadata-carousel-view-model for the replay prompt and embedded-chat ytd-menu-popup-renderer / ytd-engagement-panel-section-list-renderer for the menu/top-fans surfaces. Self-authored fixture checks confirm 46% / 12px blur for the carousel and one 86% / 16px blur for chat panels. OFF restores opaque original surfaces and keeps settings open; native fixture SVGs remain intact.
+- The user reports persistent missing chat-header icons after theater mode in the right in-app browser. Live inspection also found empty native SVG slots and iframe detach/recreation during mode changes; some later observations show YouTube repopulating the icons. This is unresolved. The attempted substitute-icon workaround was removed at the user's request.
+- Actual installed YouTube/Firefox verification of the new warning and chat-surface rules remains pending reload. Public/store distribution remains on 0.2.2.
+
+## Previous 0.2.10 verification
 
 ## 0.2.10 lighter Enhancer control bar
 

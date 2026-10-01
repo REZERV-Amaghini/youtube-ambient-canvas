@@ -24,7 +24,7 @@
   const letterboxPass=JSON.stringify(letterbox)==='[144,74,255]';
   const crop=r.crop;
   s.fillStyle='black';s.fillRect(0,0,160,90);
-  for(let i=0;i<4;i++)r.draw(source,rect,vp,true);
+  for(let i=0;i<8;i++)r.draw(source,rect,vp,true);
   const darkFramePass=r.crop.width===160&&r.crop.height===90;
   s.fillStyle='#904aff';s.fillRect(0,0,160,90);
   s.fillStyle='black';s.fillRect(0,0,30,90);s.fillRect(130,0,30,90);

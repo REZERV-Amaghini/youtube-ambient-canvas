@@ -6,13 +6,19 @@
   document.getElementById('yac-controls')?.remove();
   document.getElementById('yac-background')?.remove();
   const extension = typeof browser !== 'undefined' ? browser : globalThis.chrome;
-  const settings = { enabled: true, radial: true, avoidBars: true, fillBars: true, strength: 65, blur: 90, saturation: 145, inset: 0, fps: 30, language: 'ja' };
+  const settings = { enabled: true, radial: true, avoidBars: true, fillBars: true, flashWarning: true, strength: 65, blur: 90, saturation: 145, inset: 0, fps: 30, language: 'ja' };
+  const booleanKeys = ['enabled', 'radial', 'avoidBars', 'fillBars', 'flashWarning'];
   const translations = {
     ja: {
       title: 'アンビエント設定', close: 'アンビエント設定を閉じる', language: '言語 / Language',
       enabled: 'アンビエント背景', radial: '放射状モード', avoidBars: '黒帯を自動で除外', fillBars: '黒帯を背景に置き換える',
       strength: '濃さ', blur: 'ぼかし', saturation: '彩度', inset: '採色範囲（内側）', fps: '背景のFPS',
       appearance: '見た目', advanced: '詳細設定',
+      flashWarning: '高速点滅の警告', flashWarningDescription: '高速点滅が約3秒続くと警告します。二度と表示しない設定も、ここで戻せます。',
+      flashTitle: '高速点滅を繰り返しているようです。',
+      flashBody: '光の点滅は、光に敏感な方の体調に影響することがあります。必要に応じて、アンビエントの濃さを下げてください。',
+      flashNote: '検出は完全ではありません。3秒未満の点滅や、濃さ15%でも安全を保証するものではありません。',
+      flashNever: '二度と表示しない', flashReduce: '濃さを下げる（15%）', flashClose: '閉じる',
       radialDescription: '映像の縁から色を広げ、スクロールすると背景全体へ切り替わります。',
       avoidBarsDescription: '黒帯を避けて、映像の色を拾います。', fillBarsDescription: '動画の表示サイズを保ち、黒帯の領域にも背景を表示します。',
       insetDescription: '値を上げると、映像の内側から色を拾います。', fpsDescription: '24〜60 FPS。高いほど滑らかになりますが、負荷も増えます。',
@@ -25,6 +31,11 @@
       enabled: 'Ambient background', radial: 'Radial mode', avoidBars: 'Detect and exclude black bars', fillBars: 'Replace black bars with ambient',
       strength: 'Strength', blur: 'Blur', saturation: 'Saturation', inset: 'Sample inset', fps: 'Background FPS',
       appearance: 'Appearance', advanced: 'Advanced settings',
+      flashWarning: 'Rapid-flash warning', flashWarningDescription: 'Warns after about 3 seconds of rapid flashing. Turn this back on here after choosing not to show it again.',
+      flashTitle: 'Rapid flashing appears to be repeating.',
+      flashBody: 'Flashing light can affect people who are sensitive to it. Consider reducing the ambient strength.',
+      flashNote: 'Detection is incomplete. Flashes shorter than 3 seconds and 15% strength are not guaranteed to be safe.',
+      flashNever: "Don't show again", flashReduce: 'Reduce strength to 15%', flashClose: 'Close',
       radialDescription: 'Extends the video edges, then blends into a full-frame background as you scroll.',
       avoidBarsDescription: 'Samples video colors instead of black bars.', fillBarsDescription: 'Shows ambient in the black-bar area without resizing the picture.',
       insetDescription: 'Higher values sample further inside the picture.', fpsDescription: '24–60 FPS. Higher values look smoother and use more resources.',
@@ -36,7 +47,8 @@
   const canvas = document.createElement('canvas');
   canvas.id = 'yac-background';
   canvas.setAttribute('aria-hidden', 'true');
-  const renderer = new YacRenderer(canvas);
+  let renderer;
+  let inputRevision = 0;
   const barCanvas = document.createElement('canvas');
   barCanvas.id = 'yac-bar-background';
   barCanvas.setAttribute('aria-hidden', 'true');
@@ -51,6 +63,8 @@
   let blend = 0, lastBlendTime = performance.now();
   let frameRequest = 0, lastDrawFrame = 0, disposed = false;
   let chatDocument = null, chatFrame = null;
+  const flashMonitor = new YacFlashMonitor();
+  let flashSettingsLoaded = false, flashWarningOpen = false, warnedVideoKey = '', warningFocus = null;
   const chatStyleId = 'yac-chat-style';
   // Theme extensions can give page surfaces more specific !important backgrounds.
   // Override only the surrounding surfaces while active, then restore their styles.
@@ -66,7 +80,7 @@
     ':is(ytd-watch-flexy,ytd-watch-grid)[theater] :is(#player,#player-full-bleed-container,#player-container,#player-container-outer,#player-container-inner,#ytd-player,.player-container-background)',
     ':is(ytd-watch-flexy,ytd-watch-grid)[theater] #movie_player:not(.ytp-fullscreen):not(.ytp-miniplayer-ui)',
     ':is(ytd-watch-flexy,ytd-watch-grid)[theater] #movie_player:not(.ytp-fullscreen):not(.ytp-miniplayer-ui) :is(.html5-video-container,video.html5-main-video)',
-    ':is(ytd-watch-flexy,ytd-watch-grid) ytd-playlist-panel-renderer :is(#container,#header,#items)'
+    ':is(ytd-watch-flexy,ytd-watch-grid) ytd-playlist-panel-renderer :is(#container,#items)'
   ].join(',');
   const savedSurfaces = new Map();
   function restoreSurface(element, properties) {
@@ -104,7 +118,17 @@
     'html.yac-chat-active{--yt-live-chat-background-color:transparent;--yt-live-chat-action-panel-background-color:transparent}',
     'html.yac-chat-active,html.yac-chat-active body,html.yac-chat-active yt-live-chat-app,html.yac-chat-active yt-live-chat-renderer,html.yac-chat-active yt-live-chat-header-renderer,html.yac-chat-active yt-live-chat-item-list-renderer,html.yac-chat-active yt-live-chat-ticker-renderer,html.yac-chat-active yt-live-chat-renderer #chat,html.yac-chat-active yt-live-chat-renderer #contents,html.yac-chat-active yt-live-chat-renderer #items,html.yac-chat-active yt-live-chat-renderer #item-scroller,html.yac-chat-active yt-live-chat-renderer #panel-pages{background-color:transparent!important;background-image:none!important}',
     'html.yac-chat-active yt-live-chat-viewer-engagement-message-renderer #card,html.yac-chat-active yt-live-chat-message-input-renderer,html.yac-chat-active yt-live-chat-message-input-renderer #input-container{background:transparent!important;box-shadow:none!important}',
-    'html.yac-chat-active yt-live-chat-text-message-renderer{text-shadow:0 1px 3px #000b}'
+    'html.yac-chat-active yt-live-chat-text-message-renderer{text-shadow:0 1px 3px #000b}',
+    `html.yac-chat-active{--yac-chat-menu:rgba(255,255,255,.86)}
+    html.yac-chat-active[dark]{--yac-chat-menu:rgba(28,28,28,.86)}
+    html.yac-chat-active :is(ytd-menu-popup-renderer,ytd-engagement-panel-section-list-renderer){
+      background-color:var(--yac-chat-menu)!important;background-image:none!important;
+      -webkit-backdrop-filter:blur(16px)!important;backdrop-filter:blur(16px)!important;
+    }
+    html.yac-chat-active ytd-menu-popup-renderer :is(tp-yt-paper-listbox,paper-listbox),
+    html.yac-chat-active ytd-engagement-panel-section-list-renderer :is(#content,#header,ytd-engagement-panel-title-header-renderer){
+      background-color:transparent!important;background-image:none!important;
+    }`
   ].join('\n');
   const removers = [];
   function listen(target, type, callback, options) {
@@ -203,7 +227,7 @@
     fields.language.append(option);
   }
   languageLabel.append(fieldLabels.language, fields.language);
-  for (const [key, title] of [['enabled', 'アンビエント背景'], ['radial', '放射状モード'], ['avoidBars', '黒帯を自動で除外'], ['fillBars', '黒帯を背景に置き換える']]) {
+  for (const [key, title] of [['enabled', 'アンビエント背景'], ['radial', '放射状モード'], ['avoidBars', '黒帯を自動で除外'], ['fillBars', '黒帯を背景に置き換える'], ['flashWarning', '高速点滅の警告']]) {
     const label = document.createElement('label');
     label.className = 'toggle';
     fields[key] = document.createElement('input');
@@ -307,6 +331,68 @@
   });
   listen(panel, 'keyup', event => event.stopPropagation());
   const nativeSettingsButtons = new WeakSet();
+  const warningHost = document.createElement('div');
+  warningHost.id = 'yac-flash-warning';
+  const warningRoot = warningHost.attachShadow({ mode: 'open' });
+  const warningStyle = document.createElement('style');
+  warningStyle.textContent = [
+    ':host{all:initial}*{box-sizing:border-box}dialog{position:fixed;inset:0;margin:auto;width:480px;max-width:calc(100vw - 32px);max-height:calc(100vh - 32px);overflow:auto;padding:24px;background:#1c1c1c;color:#f1f1f1;border:1px solid #ffffff24;border-radius:16px;box-shadow:0 12px 48px #0008;font:14px/1.6 "YouTube Noto",Roboto,Arial,Helvetica,sans-serif;color-scheme:dark}',
+    'dialog::backdrop{background:rgba(0,0,0,.48)}h2{margin:0 0 12px;font-size:18px;line-height:1.5;font-weight:500}p{margin:0 0 12px}.note{font-size:12px;color:#bdbdbd}',
+    'label{display:flex;align-items:center;gap:10px;padding:16px 0;border-top:1px solid #ffffff1a;cursor:pointer}input{margin:0;width:18px;height:18px;accent-color:white;flex-shrink:0}.actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}',
+    'button{min-height:40px;padding:8px 16px;border:1px solid #ffffff24;border-radius:8px;background:#ffffff0f;color:#eee;font:inherit;cursor:pointer}button:hover{background:#ffffff24}.primary{background:#f1f1f1;color:#0f0f0f;border-color:transparent}.primary:hover{background:white}:focus-visible{outline:2px solid white;outline-offset:3px}'
+  ].join('\n');
+  const warningDialog = document.createElement('dialog');
+  warningDialog.setAttribute('role', 'alertdialog');
+  warningDialog.setAttribute('aria-labelledby', 'yac-flash-title');
+  warningDialog.setAttribute('aria-describedby', 'yac-flash-body yac-flash-note');
+  const warningTitle = document.createElement('h2');warningTitle.id = 'yac-flash-title';
+  const warningBody = document.createElement('p');warningBody.id = 'yac-flash-body';
+  const warningNote = document.createElement('p');warningNote.id = 'yac-flash-note';warningNote.className = 'note';
+  const neverLabel = document.createElement('label');
+  const neverCheckbox = document.createElement('input');neverCheckbox.type = 'checkbox';
+  const neverText = document.createTextNode('');neverLabel.append(neverCheckbox, neverText);
+  const warningActions = document.createElement('div');warningActions.className = 'actions';
+  const warningClose = document.createElement('button');warningClose.type = 'button';
+  const warningReduce = document.createElement('button');warningReduce.type = 'button';warningReduce.className = 'primary';warningReduce.autofocus = true;
+  warningActions.append(warningClose, warningReduce);
+  warningDialog.append(warningTitle, warningBody, warningNote, neverLabel, warningActions);
+  warningRoot.append(warningStyle, warningDialog);
+  document.documentElement.append(warningHost);
+  function localizeWarning() {
+    const text = translations[settings.language];
+    warningDialog.lang = settings.language;
+    warningTitle.textContent = text.flashTitle;warningBody.textContent = text.flashBody;warningNote.textContent = text.flashNote;
+    neverText.textContent = text.flashNever;warningClose.textContent = text.flashClose;warningReduce.textContent = text.flashReduce;
+    neverCheckbox.checked = !settings.flashWarning;
+  }
+  function closeFlashWarning(returnFocus = true) {
+    if (!flashWarningOpen) return;
+    flashWarningOpen = false;warningDialog.close();flashMonitor.reset();
+    if (returnFocus) (warningFocus?.isConnected ? warningFocus : button).focus({ preventScroll: true });
+    warningFocus = null;
+  }
+  function showFlashWarning(key) {
+    if (!settings.flashWarning || flashWarningOpen || warnedVideoKey === key) return;
+    warnedVideoKey = key;
+    warningFocus = document.activeElement;
+    while (warningFocus?.shadowRoot?.activeElement) warningFocus = warningFocus.shadowRoot.activeElement;
+    localizeWarning();warningDialog.showModal();flashWarningOpen = true;warningReduce.focus();
+    // Notification only: do not pause video, disable ambient, or change strength.
+  }
+  listen(neverCheckbox, 'change', () => {
+    settings.flashWarning = !neverCheckbox.checked;
+    apply();
+    extension.storage.local.set({ ambient: settings }).catch(console.warn);
+  });
+  listen(warningReduce, 'click', () => {
+    settings.strength = 15;apply();
+    extension.storage.local.set({ ambient: settings }).catch(console.warn);
+    closeFlashWarning();draw();
+  });
+  listen(warningClose, 'click', () => closeFlashWarning());
+  listen(warningDialog, 'cancel', event => { event.preventDefault();closeFlashWarning(); });
+  listen(warningDialog, 'keydown', event => event.stopPropagation());
+  listen(warningDialog, 'keyup', event => event.stopPropagation());
   function updateAppearance() {
     const attenuation = 1 - .55 * blend;
     canvas.style.opacity = (settings.strength / 100 * attenuation).toFixed(4);
@@ -314,11 +400,12 @@
   }
   function apply() {
     localize();
+    localizeWarning();
     updateAppearance();
     canvas.style.filter = 'blur(' + settings.blur + 'px) saturate(' + settings.saturation / 100 + ')';
     barCanvas.style.filter = canvas.style.filter;
     button.classList.toggle('yac-enabled', settings.enabled);
-    for (const key of ['enabled', 'radial', 'avoidBars', 'fillBars']) {
+    for (const key of booleanKeys) {
       fields[key].checked = settings[key];
       fields[key].setAttribute('aria-checked', String(settings[key]));
     }
@@ -331,11 +418,14 @@
     }
     lastTime = -1;
     lastDrawFrame = 0;
+    invalidateFrame(false);
+    if (!settings.fillBars || !settings.enabled) restoreBars();
   }
   for (const key of Object.keys(fields)) {
     listen(fields[key], 'input', () => {
       settings[key] = key === 'language' ? fields[key].value :
-        ['enabled', 'radial', 'avoidBars', 'fillBars'].includes(key) ? fields[key].checked : Number(fields[key].value);
+        booleanKeys.includes(key) ? fields[key].checked : Number(fields[key].value);
+      if (key === 'flashWarning') { flashMonitor.reset();warnedVideoKey = ''; }
       apply();
       draw();
     });
@@ -350,6 +440,8 @@
     panel.style.maxHeight = Math.max(1, player.clientHeight - bottom - 8) + 'px';
   }
   const panelResizeObserver = new ResizeObserver(() => {
+    restoreBars();
+    invalidateFrame(false);
     positionPanel();
     syncPageSurfaces(document.documentElement.classList.contains('yac-active'));
   });
@@ -399,7 +491,11 @@
       if (player) panelResizeObserver.observe(player);
     }
     const nextVideo = player?.querySelector('video.html5-main-video') || null;
-    if (video !== nextVideo) restoreBars();
+    if (video !== nextVideo) {
+      restoreBars();
+      invalidateFrame();
+      if (nextVideo) listen(nextVideo, 'seeking', () => { invalidateFrame();restoreBars();flashMonitor.reset(); });
+    }
     video = nextVideo;
     const gear = player?.querySelector('.ytp-right-controls .ytp-settings-button');
     if (gear && !nativeSettingsButtons.has(gear)) {
@@ -438,7 +534,7 @@
     video.style.setProperty('clip-path', 'inset(' + [top, right, bottom, left].map(v => v.toFixed(2) + 'px').join(' ') + ')', 'important');
     player.classList.add('yac-fill-bars');
     const p = player.getBoundingClientRect(), pad = renderer.padding;
-    const width = 400, height = Math.max(80, Math.round(width * (p.height + pad * 2) / (p.width + pad * 2)));
+    const width = 400, height = Math.min(2048, Math.max(80, Math.round(width * (p.height + pad * 2) / (p.width + pad * 2))));
     if (barCanvas.width !== width || barCanvas.height !== height) { barCanvas.width = width; barCanvas.height = height; }
     const sx = canvas.width / (innerWidth + pad * 2), sy = canvas.height / (innerHeight + pad * 2);
     barContext.drawImage(canvas, p.left * sx, p.top * sy, (p.width + pad * 2) * sx, (p.height + pad * 2) * sy, 0, 0, width, height);
@@ -455,12 +551,55 @@
     }
     return rect;
   }
+  function invalidateFrame(resetBars = true) {
+    inputRevision++;
+    if (resetBars) renderer?.reset?.();
+    else renderer?.invalidate?.();
+    lastTime = -1;
+  }
+  function sourceKey() {
+    return (new URLSearchParams(location.search).get('v') || '') + '|' + (video?.currentSrc || '');
+  }
+  function acceptFrame(meta) {
+    return !disposed && settings.enabled && location.pathname === '/watch' && !document.hidden &&
+      !document.fullscreenElement && video === meta.source && !video.seeking &&
+      sourceKey() === meta.sourceKey && inputRevision === meta.options.revision;
+  }
+  function presentFrame(result, meta) {
+    const warningKey = new URLSearchParams(location.search).get('v') || video.currentSrc || 'current-video';
+    if (flashSettingsLoaded && settings.flashWarning && !flashWarningOpen && !video.paused && warnedVideoKey !== warningKey) {
+      if (flashMonitor.sample(renderer.readPixels(), meta.options.sampleTime, meta.mediaTime, meta.sourceKey, result.videoCrop)) showFlashWarning(warningKey);
+    } else flashMonitor.reset();
+    canvas.dataset.blend = meta.options.blend.toFixed(3);
+    // The Worker captured this frame before scrolling or a layout change.
+    // Clip the current video box, never combine an old rectangle with new bounds.
+    replaceBars(result, getRectangle());
+    lastVideo = meta.source; lastTime = meta.mediaTime; lastGeometry = meta.options.geometry;
+    setStatus(settings.avoidBars && !result.readable ? 'noBars' :
+      result.cropped ? 'cropped' : settings.radial ? 'radialHint' : 'fullFrameHint');
+  }
+  function useMainRenderer(reason) {
+    renderer?.dispose?.();
+    if (disposed) return;
+    renderer = new YacRenderer(canvas);
+    canvas.dataset.renderMode = 'main';
+    if (reason) console.warn('Ambient worker unavailable; using canvas renderer:', reason);
+    invalidateFrame();
+  }
+  const hostUrl = extension?.runtime?.getURL?.('worker-host.html');
+  if (hostUrl && typeof YacWorkerRenderer === 'function') {
+    renderer = new YacWorkerRenderer(canvas, { hostUrl, acceptFrame, onFrame: presentFrame, onFailure: useMainRenderer });
+    canvas.dataset.renderMode = 'worker';
+  } else useMainRenderer();
   function draw() {
-    const ready = settings.enabled && location.pathname === '/watch' && !document.hidden &&
+    const active = settings.enabled && location.pathname === '/watch' && !document.fullscreenElement && !!video;
+    // Native UI styling stays independent of Worker startup, busy jobs and fallback.
+    setAmbientActive(active);
+    const ready = active && !document.hidden &&
       !document.fullscreenElement && canvas.isConnected && video && video.readyState >= 2;
     if (!ready) {
+      flashMonitor.reset();
       restoreBars();
-      setAmbientActive(false);
       setStatus(!settings.enabled ? 'off' : document.fullscreenElement ? 'fullscreen' : 'waiting');
       return;
     }
@@ -476,23 +615,21 @@
     if (video === lastVideo && video.currentTime === lastTime && geometry === lastGeometry &&
       (!settings.avoidBars || !renderer.readable || renderer.stableFrames >= 4)) return;
     try {
-      const result = renderer.draw(video, rect, { width: innerWidth, height: innerHeight }, settings.radial, { ...settings, blend });
-      canvas.dataset.blend = blend.toFixed(3);
-      replaceBars(result, rect);
-      lastVideo = video; lastTime = video.currentTime; lastGeometry = geometry;
-      setAmbientActive(true);
-      setStatus(settings.avoidBars && !result.readable ? 'noBars' :
-        result.cropped ? 'cropped' : settings.radial ? 'radialHint' : 'fullFrameHint');
+      const options = { ...settings, blend, sourceKey: sourceKey(), sampleTime: now, mediaTime: video.currentTime, geometry, revision: inputRevision,
+        readPixels: flashSettingsLoaded && settings.flashWarning && !video.paused };
+      const mediaTime = video.currentTime;
+      const result = renderer.draw(video, rect, { width: innerWidth, height: innerHeight }, settings.radial, options);
+      if (typeof result === 'boolean') return;
+      presentFrame(result, { source: video, rectangle: rect, options, sourceKey: options.sourceKey, mediaTime });
     } catch (error) {
       restoreBars();
-      setAmbientActive(false);
       setStatus('failed');
     }
   }
-  listen(document, 'yt-navigate-finish', () => { discover(); lastTime = -1; draw(); });
-  listen(document, 'visibilitychange', () => { lastTime = -1; draw(); });
-  listen(document, 'fullscreenchange', () => { discover(); lastTime = -1; draw(); });
-  listen(window, 'resize', () => { positionPanel(); draw(); });
+  listen(document, 'yt-navigate-finish', () => { closeFlashWarning(false);flashMonitor.reset();invalidateFrame();discover(); draw(); });
+  listen(document, 'visibilitychange', () => { invalidateFrame(); draw(); });
+  listen(document, 'fullscreenchange', () => { invalidateFrame();discover(); draw(); });
+  listen(window, 'resize', () => { restoreBars();invalidateFrame(false);positionPanel(); draw(); });
   const discoverTimer = setInterval(discover, 1000);
   function animate(now) {
     if (disposed) return;
@@ -508,6 +645,8 @@
   }
   listen(document, 'yac-dispose', () => {
     disposed = true;
+    renderer?.dispose?.();
+    closeFlashWarning(false);warningHost.remove();
     clearInterval(discoverTimer); cancelAnimationFrame(frameRequest);
     panelResizeObserver.disconnect();
     chatFrame?.removeEventListener('load', syncChat);
@@ -525,12 +664,12 @@
     if (disposed) return;
     if (saved) {
       if (['ja', 'en'].includes(saved.language)) settings.language = saved.language;
-      for (const key of ['enabled', 'radial', 'avoidBars', 'fillBars']) if (typeof saved[key] === 'boolean') settings[key] = saved[key];
+      for (const key of booleanKeys) if (typeof saved[key] === 'boolean') settings[key] = saved[key];
       for (const [key, min, max] of [['strength', 15, 100], ['blur', 0, 160], ['saturation', 0, 250], ['inset', 0, 40], ['fps', 24, 60]]) {
         if (Number.isFinite(saved[key])) settings[key] = Math.min(max, Math.max(min, saved[key]));
       }
       settings.fps = Math.round(settings.fps);
     }
-    apply(); draw();
-  }).catch(console.warn);
+    flashSettingsLoaded = true;apply(); draw();
+  }).catch(error => { flashSettingsLoaded = true;console.warn(error);draw(); });
 })();

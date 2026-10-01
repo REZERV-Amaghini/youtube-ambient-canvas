@@ -1,8 +1,11 @@
 {
-  "name": "youtube-ambient-canvas", "version": "0.2.10", "private": true,
+  "name": "youtube-ambient-canvas", "version": "0.2.11", "private": true,
   "description": "YouTube-only ambient background browser extension", "license": "MIT",
   "scripts": {
-    "check": "node --check renderer.js && node --check ambient.js && node --check tests/server.cjs",
+    "check": "node --check black-bar-detector.js && node --check renderer.js && node --check flash-monitor.js && node --check worker-client.js && node --check worker-host.js && node --check ambient-worker.js && node --check ambient.js && node --check tests/server.cjs && node --check tests/check-black-bars.cjs && node --check tests/check-worker.cjs && node --check tests/check-flash-monitor.cjs && node --check tests/check-renderer.js",
+    "test:flash": "node tests/check-flash-monitor.cjs",
+    "test:bars": "node tests/check-black-bars.cjs",
+    "test:worker": "node tests/check-worker.cjs",
     "demo": "node tests/server.cjs", "build": "python scripts/build.py"
   },
   "engines": { "node": ">=18" }

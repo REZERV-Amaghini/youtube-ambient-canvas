@@ -1,4 +1,4 @@
-# Theme compatibility - 0.2.10 development revision
+# Theme compatibility - 0.2.11 development revision
 
 Some YouTube theme extensions apply high-specificity `!important` backgrounds.
 With Enhancer for YouTube's dark theme, these rules can cover the ambient canvas
@@ -24,6 +24,14 @@ The extension still runs only on `https://www.youtube.com/*` and saves local
 preferences with `storage`.
 
 ## Reproduce the conflict
+
+Development 0.2.11 leaves the currently playing playlist row's native selected
+background unchanged. Other playlist rows and the header use one 46% surface
+with 12px blur; the outer list remains transparent so theme backgrounds do not
+stack. The header is excluded from the inline transparency guard. Hover/focus
+and native thumbnails/text remain present. Fixtures: `?playlist&controls`,
+`?playlist&light`, or `?playlist&theme=deepdark`. Current browser verification
+of these new playlist rules is pending.
 
 Run `npm run demo`, then open the printed localhost URL with `?theme` appended.
 The fixture adds stronger stylesheet rules and inline important backgrounds.
@@ -68,6 +76,21 @@ existing faces. DeepDark control fills have 14% white opacity; active-filter
 color remains controlled by the theme. The 0.2.5 synthetic selection outline
 and forced light text are removed. The Enhancer toolbar retains its geometry and icon styling.
 No YouTube or Enhancer JavaScript functions are replaced.
+
+## Replay cards and embedded chat menus
+
+Development 0.2.11 gives the metadata carousel, including the replay prompt, a
+46% neutral surface with 12px backdrop blur. Embedded chat's native popup menu
+and top-fans panel use one 86% surface with 16px blur. Known structural header
+and content backgrounds are cleared, while native buttons and colored badges
+retain their styling. Dark chat uses dark surfaces; light chat uses white.
+OFF restores the original backgrounds and removes the added blur.
+
+Theater-mode chat header icons remain under investigation in the in-app browser.
+Observed affected header slots have no native SVG content; changing opacity
+cannot restore missing DOM. No replacement icons are supplied. Mode changes
+were observed to detach and recreate the chat iframe; the responsible call and
+persistent failure have not yet been identified.
 
 ## Enhancer control bar
 

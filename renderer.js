@@ -7,18 +7,34 @@
       const hidden = Math.min(1, Math.max(0, (0.5 - visible / Math.max(1, rectangle.height)) * 2));
       return hidden * hidden * (3 - 2 * hidden);
     }
-    constructor(canvas) {
+    constructor(canvas, createCanvas = (width, height) => {
+      if (typeof document === 'undefined') return new OffscreenCanvas(width, height);
+      const frame = document.createElement('canvas');
+      frame.width = width; frame.height = height;
+      return frame;
+    }) {
       this.canvas = canvas;
       this.context = canvas.getContext('2d', { alpha: false });
-      this.frame = document.createElement('canvas');
+      this.frame = createCanvas(160, 90);
       this.frame.width = 160;
       this.frame.height = 90;
       this.sample = this.frame.getContext('2d', { alpha: false, willReadFrequently: true });
+      this.barFrame = createCanvas(320, 180);
+      this.barSample = this.barFrame.getContext('2d', { alpha: false, willReadFrequently: true });
+      this.barDetector = new YacBlackBarDetector({ width: 320, height: 180 });
       this.padding = 180;
       this.crop = { x: 0, y: 0, width: 160, height: 90 };
       this.pendingCrop = '';
       this.stableFrames = 0;
       this.readable = true;
+    }
+    reset() {
+      // Clear readback taint when the media element or source changes.
+      this.frame.width = 160; this.barFrame.width = 320;
+      this.readable = true;
+      this.barDetector.reset();
+      this.crop = { x: 0, y: 0, width: 160, height: 90 };
+      this.stableFrames = 0; this.pixels = null;
     }
     readPixels() {
       if (!this.readable) return null;
@@ -27,77 +43,60 @@
       catch (error) { this.readable = false; }
       return this.pixels;
     }
-    detectBars() {
+    detectBars(source, mediaTime) {
       const full = { x: 0, y: 0, width: 160, height: 90 };
-      const data = this.readPixels();
-      if (!data) return full;
-      const black = (x, y) => {
-        const i = (y * 160 + x) * 4;
-        return Math.max(data[i], data[i + 1], data[i + 2]) <= 20;
-      };
-      const row = y => {
-        let count = 0;
-        for (let x = 0; x < 160; x++) if (black(x, y)) count++;
-        return count >= 157;
-      };
-      const column = x => {
-        let count = 0;
-        for (let y = 0; y < 90; y++) if (black(x, y)) count++;
-        return count >= 89;
-      };
-      let top = 0, bottom = 0, left = 0, right = 0;
-      while (top < 36 && row(top)) top++;
-      while (bottom < 36 && row(89 - bottom)) bottom++;
-      while (left < 64 && column(left)) left++;
-      while (right < 64 && column(159 - right)) right++;
-      const paired = (a, b) => a >= 2 && b >= 2 && Math.abs(a - b) <= Math.max(2, (a + b) * .075);
-      if (!paired(top, bottom)) top = bottom = 0;
-      if (!paired(left, right)) left = right = 0;
-      let crop = { x: left, y: top, width: 160 - left - right, height: 90 - top - bottom };
-      // Require visible content inside symmetric bars. An all-black frame,
-      // or a dark edge on only one side, is not evidence of letterboxing.
-      let bright = 0, count = 0;
-      for (let y = crop.y; y < crop.y + crop.height; y += 3) {
-        for (let x = crop.x; x < crop.x + crop.width; x += 3) {
-          count++;
-          const i = (y * 160 + x) * 4;
-          if (Math.max(data[i], data[i + 1], data[i + 2]) > 40) bright++;
-        }
+      if (!this.readable) return full;
+      try {
+        this.barSample.drawImage(source, 0, 0, 320, 180);
+        const data = this.barSample.getImageData(0, 0, 320, 180).data;
+        const crop = this.barDetector.sample(data, { sourceKey: this.sourceKey, mediaTime });
+        this.crop = { x: crop.x / 2, y: crop.y / 2, width: crop.width / 2, height: crop.height / 2 };
+        // Paused footage gets enough observations for the detector's refinement.
+        this.stableFrames = this.barDetector.confidence.endsWith('full') ? 4 : Math.min(4, Math.max(0, this.barDetector.exactFrames - 4));
+      } catch (error) {
+        this.readable = false; this.barDetector.reset(); this.crop = full;
       }
-      if (bright / count < .15) crop = full;
-      const key = [crop.x, crop.y, crop.width, crop.height].join(',');
-      if (key === this.pendingCrop) this.stableFrames++;
-      else { this.pendingCrop = key; this.stableFrames = 1; }
-      if (this.stableFrames >= 4) this.crop = crop;
       return this.crop;
     }
     draw(source, rectangle, viewport, radial, options = {}) {
-      const sourceKey = source.currentSrc || source.src || '';
-      if (this.source !== source || this.sourceKey !== sourceKey) {
+      const explicitKey = typeof options.sourceKey === 'string';
+      const sourceKey = explicitKey ? options.sourceKey : source.currentSrc || source.src || '';
+      // Worker captures arrive as a new bitmap each frame. Their stable key
+      // identifies the video, so bar detection can settle across captures.
+      if ((!explicitKey && this.source !== source) || this.sourceKey !== sourceKey) {
         this.source = source; this.sourceKey = sourceKey;
         // Resizing clears any origin taint left by a previous video.
         this.frame.width = 160;
+        this.barFrame.width = 320;
         this.readable = true; this.stableFrames = 0; this.pendingCrop = '';
         this.crop = { x: 0, y: 0, width: 160, height: 90 };
+        this.barDetector.reset();
       }
       const pad = this.padding;
       const sw = viewport.width + pad * 2;
       const sh = viewport.height + pad * 2;
       const width = 400;
-      const height = Math.max(80, Math.round(width * sh / sw));
+      const height = Math.min(2048, Math.max(80, Math.round(width * sh / sw)));
       if (this.canvas.width !== width || this.canvas.height !== height) {
         this.canvas.width = width;
         this.canvas.height = height;
       }
       this.sample.drawImage(source, 0, 0, 160, 90);
       this.pixels = null;
-      const automatic = options.avoidBars === false ? { x: 0, y: 0, width: 160, height: 90 } : this.detectBars();
+      const automatic = options.avoidBars === false ? { x: 0, y: 0, width: 160, height: 90 } :
+        this.detectBars(source, Number.isFinite(options.mediaTime) ? options.mediaTime : source.currentTime);
+      // A conservative display boundary can sit inside a noisy band. Sampling
+      // starts one color pixel further in only along axes with confirmed bars.
+      const horizontal = automatic.height < 90 ? Math.min(1, automatic.height / 8) : 0;
+      const vertical = automatic.width < 160 ? Math.min(1, automatic.width / 8) : 0;
+      const sampling = { x: automatic.x + vertical, y: automatic.y + horizontal,
+        width: automatic.width - vertical * 2, height: automatic.height - horizontal * 2 };
       const inset = Math.min(.4, Math.max(0, Number(options.inset) / 100 || 0));
       const crop = {
-        x: automatic.x + automatic.width * inset,
-        y: automatic.y + automatic.height * inset,
-        width: automatic.width * (1 - inset * 2),
-        height: automatic.height * (1 - inset * 2)
+        x: sampling.x + sampling.width * inset,
+        y: sampling.y + sampling.height * inset,
+        width: sampling.width * (1 - inset * 2),
+        height: sampling.height * (1 - inset * 2)
       };
       rectangle = {
         left: rectangle.left + rectangle.width * crop.x / 160,
