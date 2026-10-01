@@ -1,4 +1,4 @@
-# Store listing — 0.2.6
+# Store listing — 0.2.7
 
 Name: YouTube Ambient Canvas
 

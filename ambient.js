@@ -336,7 +336,6 @@
     listen(fields[key], 'input', () => {
       settings[key] = key === 'language' ? fields[key].value :
         ['enabled', 'radial', 'avoidBars', 'fillBars'].includes(key) ? fields[key].checked : Number(fields[key].value);
-      if (key === 'enabled' && !settings.enabled) setOpen(false, true);
       apply();
       draw();
     });

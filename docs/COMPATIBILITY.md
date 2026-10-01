@@ -1,4 +1,4 @@
-# Theme compatibility - 0.2.6 development revision
+# Theme compatibility - 0.2.7 development revision
 
 Some YouTube theme extensions apply high-specificity `!important` backgrounds.
 With Enhancer for YouTube's dark theme, these rules can cover the ambient canvas
@@ -81,7 +81,8 @@ adjustments, and a scrollable body keeps the close button available in small pla
 
 Range inputs have a 24px pointer area, native keyboard controls and value text
 with units. Escape returns focus to the settings button. Turning ambient off
-still closes the dialog as requested, and restores focus. Opening the native
+keeps the dialog and current focus available, so it can be re-enabled immediately.
+Other settings can still be adjusted and saved while the background is off. Opening the native
 YouTube settings closes the ambient dialog; opening ambient closes native settings.
 Black-bar replacement remains independent of automatic black-bar detection.
 

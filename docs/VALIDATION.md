@@ -1,4 +1,13 @@
-# 検証結果 — 0.2.6 development / 2026-10-01
+# 検証結果 — 0.2.7 development / 2026-10-01
+
+## 0.2.7 keep settings open when ambient is disabled
+
+- Removed the enabled-input handler's automatic dialog closure. OFF now changes the background state without dismissing settings or moving focus.
+- Verified in the Chromium fixture with DeepDark: OFF keeps the dialog visible, the switch focused and the off-state message visible. Adjusting blur while OFF is saved and retained after reload.
+- Verified ON restores ambient in the same open dialog using the adjusted blur value. The close button and Escape still close the dialog and return focus to its player button.
+- Installed-extension verification on actual YouTube/Firefox remains pending a reload of 0.2.7.
+
+## Previous 0.2.6 verification
 
 ## 0.2.6 control-surface regression correction
 
