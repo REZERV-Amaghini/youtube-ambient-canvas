@@ -79,11 +79,14 @@ No YouTube or Enhancer JavaScript functions are replaced.
 
 ## Replay cards and embedded chat menus
 
-Development 0.2.11 gives the metadata carousel, including the replay prompt, a
-46% neutral surface with 12px backdrop blur. Embedded chat's native popup menu
-and top-fans panel use one 86% surface with 16px blur. Known structural header
-and content backgrounds are cleared, while native buttons and colored badges
-retain their styling. Dark chat uses dark surfaces; light chat uses white.
+The metadata carousel, including the replay prompt, has a 46% neutral surface
+with 12px backdrop blur. Development 0.2.18 gives the chat iframe itself the
+shared selected-control face (44% dark opacity, 12px blur), independent of the
+host's display mode. Its header uses the normal-control face; menus and top-fans
+use the selected face. Shared RGB/opacity/blur variables are copied at discovery,
+load and activation because CSS variables do not cross iframe documents.
+Structural content backgrounds are cleared, while native buttons, member/paid
+cards, engagement cards and colored badges retain their styling.
 OFF restores the original backgrounds and removes the added blur.
 
 Theater-mode chat header icons remain under investigation in the in-app browser.

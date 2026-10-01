@@ -1,9 +1,9 @@
 /* Packaged extension code only; this worker has no DOM or extension API. */
 'use strict';
-importScripts('black-bar-detector.js', 'renderer.js');
+importScripts('black-bar-detector.js', 'renderer.js', 'gpu-renderer.js');
 
 const canvas = new OffscreenCanvas(400, 400);
-const renderer = new YacRenderer(canvas);
+const renderer = new YacGpuRenderer(new YacRenderer(canvas), new OffscreenCanvas(400, 400));
 const validSize = value => Number.isFinite(value) && value > 0 && value <= 32768;
 const validRect = rectangle => rectangle &&
   ['left', 'top', 'width', 'height'].every(key => Number.isFinite(rectangle[key])) &&
@@ -38,13 +38,13 @@ self.onmessage = event => {
     const pixels = sampleOnly || options.readPixels === true ? renderer.readPixels()?.slice() || null : null;
     // Pixel readback may discover protected/tainted media after inspection.
     result.readable = result.readable && renderer.readable;
-    const bitmap = sampleOnly ? null : canvas.transferToImageBitmap();
+    const bitmap = sampleOnly ? null : renderer.canvas.transferToImageBitmap();
     output = bitmap;
     const transfers = bitmap ? [bitmap] : [];
     if (pixels) transfers.push(pixels.buffer);
     self.postMessage({
       type: 'frame', requestId: job.requestId, generation: job.generation,
-      sampleOnly, bitmap, pixels, ...result, stableFrames: renderer.stableFrames
+      sampleOnly, bitmap, pixels, ...result, stableFrames: renderer.stableFrames, backend: renderer.backend
     }, transfers);
     output = null;
   } catch (error) {
@@ -55,4 +55,4 @@ self.onmessage = event => {
     frame?.close?.();
   }
 };
-self.postMessage({ type: 'ready' });
+self.postMessage({ type: 'ready', backend: renderer.backend });

@@ -90,16 +90,16 @@
     }
     draw(source, rectangle, viewport, radial, options = {}) {
       const result = this.inspect(source, rectangle, viewport, options);
-      const automatic = result.samplingCrop;
+      return this.project(rectangle, viewport, radial, options, result);
+    }
+    // Share geometry with the GPU backend so cropping and scroll blend agree.
+    projectionLayout(rectangle, viewport, radial, options = {}) {
+      const automatic = this.crop;
       const pad = this.padding;
       const sw = viewport.width + pad * 2;
       const sh = viewport.height + pad * 2;
       const width = 400;
       const height = Math.min(2048, Math.max(80, Math.round(width * sh / sw)));
-      if (this.canvas.width !== width || this.canvas.height !== height) {
-        this.canvas.width = width;
-        this.canvas.height = height;
-      }
       // A conservative display boundary can sit inside a noisy band. Sampling
       // starts one color pixel further in only along axes with confirmed bars.
       const horizontal = automatic.height < 90 ? Math.min(1, automatic.height / 8) : 0;
@@ -119,8 +119,21 @@
         width: rectangle.width * crop.width / 160,
         height: rectangle.height * crop.height / 90
       };
-      const ctx = this.context;
       const blend = Math.max(0, Math.min(1, Number(options.blend) || 0));
+      return { width, height, crop, rectangle, blend,
+        flat: !radial || blend >= 1 || rectangle.width < 1 || rectangle.height < 1 };
+    }
+    project(rectangle, viewport, radial, options, result) {
+      const { width, height, crop, rectangle: projected, blend, flat } =
+        this.projectionLayout(rectangle, viewport, radial, options);
+      rectangle = projected;
+      const pad = this.padding;
+      const sw = viewport.width + pad * 2, sh = viewport.height + pad * 2;
+      if (this.canvas.width !== width || this.canvas.height !== height) {
+        this.canvas.width = width;
+        this.canvas.height = height;
+      }
+      const ctx = this.context;
       const blendWholeFrame = () => {
         if (!blend) return;
         ctx.globalAlpha = blend;
@@ -129,7 +142,7 @@
         ctx.globalAlpha = 1;
       };
       ctx.imageSmoothingEnabled = true;
-      if (!radial || blend >= 1 || rectangle.width < 1 || rectangle.height < 1) {
+      if (flat) {
         this.projection = null;
         ctx.drawImage(this.frame, crop.x, crop.y, crop.width, crop.height, 0, 0, width, height);
         return result;

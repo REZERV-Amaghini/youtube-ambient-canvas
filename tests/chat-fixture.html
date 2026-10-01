@@ -8,6 +8,7 @@ button{color:inherit;font:inherit;cursor:pointer;background:#ffffff14;border:0;b
 .ytSpecButtonShapeNextIcon{width:24px;height:24px}.yt-icon-shape{display:block;width:100%;height:100%}.yt-icon-shape svg{width:100%;height:100%;fill:currentColor}
 yt-live-chat-text-message-renderer,yt-live-chat-message-input-renderer,yt-live-chat-paid-message-renderer{display:block;padding:12px}
 yt-live-chat-paid-message-renderer{background:#663399}yt-live-chat-message-input-renderer{background:#222}
+yt-live-chat-membership-item-renderer{display:block;background:#0ba75e;padding:12px}
 ytd-menu-popup-renderer{position:absolute;z-index:10;right:8px;top:52px;background:#282828;border-radius:12px;padding:8px;box-shadow:0 8px 32px #0005}
 tp-yt-paper-listbox{display:block;background:#282828}tp-yt-paper-listbox button{display:block;width:100%;text-align:left;border-radius:8px;background:transparent}
 tp-yt-paper-listbox button:hover{background:#ffffff20}
@@ -25,13 +26,55 @@ ytd-engagement-panel-section-list-renderer #header,ytd-engagement-panel-section-
 <div id="chat"><yt-live-chat-item-list-renderer><div id="item-scroller"><div id="items">
 <yt-live-chat-text-message-renderer>Sample message - self-authored demo</yt-live-chat-text-message-renderer>
 <yt-live-chat-paid-message-renderer>Highlighted card</yt-live-chat-paid-message-renderer>
+<yt-live-chat-membership-item-renderer>Membership card</yt-live-chat-membership-item-renderer>
 <yt-live-chat-viewer-engagement-message-renderer><div id="card" style="background:#3e3e3e;padding:12px">Welcome card</div></yt-live-chat-viewer-engagement-message-renderer>
 </div></div></yt-live-chat-item-list-renderer><yt-live-chat-message-input-renderer><div id="input-container" style="background:#ffffff1a">Chat input</div></yt-live-chat-message-input-renderer></div>
 <div id="content-pages"><ytd-engagement-panel-section-list-renderer hidden><div id="header"><button id="fixture-fans-back">Back</button> Top fans</div><div id="content"><p>Demo viewer A - 100 XP</p><p>Demo viewer B - 80 XP</p><span style="background:#7b3edb;padding:4px;border-radius:10px">#1 badge</span></div></ytd-engagement-panel-section-list-renderer></div>
-</yt-live-chat-renderer><ytd-menu-popup-renderer hidden><tp-yt-paper-listbox><button>Timestamps</button><button>Send feedback</button></tp-yt-paper-listbox></ytd-menu-popup-renderer></yt-live-chat-app>
+</yt-live-chat-renderer><ytd-menu-popup-renderer id="fixture-options-menu" hidden><tp-yt-paper-listbox><button>Timestamps</button><button>Send feedback</button></tp-yt-paper-listbox></ytd-menu-popup-renderer><ytd-menu-popup-renderer id="fixture-replay-menu" hidden><tp-yt-paper-listbox><button aria-selected="true">Top chat replay</button><button aria-selected="false">Chat replay</button></tp-yt-paper-listbox></ytd-menu-popup-renderer></yt-live-chat-app>
 <script>
-const menu=document.querySelector('ytd-menu-popup-renderer'),fans=document.querySelector('ytd-engagement-panel-section-list-renderer');
-document.querySelector('#live-chat-header-context-menu button').onclick=()=>{menu.hidden=!menu.hidden;};
-document.querySelector('#viewer-leaderboard-entry-point button').onclick=()=>{fans.hidden=false;menu.hidden=true;};
+const menu=document.querySelector('#fixture-options-menu'),replayMenu=document.querySelector('#fixture-replay-menu'),fans=document.querySelector('ytd-engagement-panel-section-list-renderer');
+document.querySelector('#label').onclick=()=>{replayMenu.hidden=!replayMenu.hidden;menu.hidden=true;};
+document.querySelector('#live-chat-header-context-menu button').onclick=()=>{menu.hidden=!menu.hidden;replayMenu.hidden=true;};
+document.querySelector('#viewer-leaderboard-entry-point button').onclick=()=>{fans.hidden=false;menu.hidden=true;replayMenu.hidden=true;};
 document.querySelector('#fixture-fans-back').onclick=()=>{fans.hidden=true;};
+replayMenu.querySelectorAll('button').forEach(button=>button.onclick=()=>{
+  replayMenu.querySelectorAll('button').forEach(item=>item.setAttribute('aria-selected',String(item===button)));
+  document.querySelector('#label').firstChild.textContent=button.textContent+' ';replayMenu.hidden=true;
+});
+// These browser checks read the actual CSS cascade and the original SVG nodes.
+// No screenshots of account data or externally supplied messages are involved.
+const originalIcons=[...document.querySelectorAll('yt-live-chat-header-renderer svg')];
+const runChecks=document.createElement('button');runChecks.id='fixture-check-chat-shades';runChecks.textContent='Check chat shades';
+const result=document.createElement('output');result.id='fixture-chat-result';result.style.display='block';document.body.append(runChecks,result);
+runChecks.onclick=()=>{
+  const failures=[],active=document.documentElement.classList.contains('yac-chat-active');
+  const check=(value,message)=>{if(!value)failures.push(message);};
+  const paint=element=>getComputedStyle(element).backgroundColor;
+  const transparent=value=>value==='rgba(0, 0, 0, 0)'||value==='transparent';
+  const expectedSurface=name=>{
+    const probe=document.createElement('span');probe.style.backgroundColor=`var(${name})`;document.body.append(probe);
+    const value=paint(probe);probe.remove();return value;
+  };
+  check(originalIcons.every(icon=>icon.isConnected&&icon.getBoundingClientRect().width>0&&getComputedStyle(icon).visibility!=='hidden'),'original header icons stay visible');
+  check(paint(document.querySelector('yt-live-chat-paid-message-renderer'))==='rgb(102, 51, 153)','paid card retains semantic color');
+  check(paint(document.querySelector('yt-live-chat-membership-item-renderer'))==='rgb(11, 167, 94)','membership card retains semantic color');
+  check(paint(document.querySelector('yt-live-chat-viewer-engagement-message-renderer #card'))==='rgb(62, 62, 62)','engagement card is not blanket-cleared');
+  const header=document.querySelector('yt-live-chat-header-renderer');
+  if(active){
+    check(transparent(paint(document.body))&&transparent(paint(document.querySelector('yt-live-chat-renderer'))),'chat wrappers avoid stacking opaque layers');
+    check(!transparent(expectedSurface('--yac-control-surface'))&&paint(header)===expectedSurface('--yac-control-surface'),'header uses shared control shade');
+    check(paint(menu)===expectedSurface('--yac-control-selected-surface')&&paint(replayMenu)===paint(menu),'both dropdowns use shared readable shade');
+    check(paint(fans)===paint(menu),'top fans panel uses shared readable shade');
+    check(getComputedStyle(menu).backdropFilter===getComputedStyle(header).backdropFilter,'menus and header share blur');
+    if(frameElement){
+      const outer=frameElement,parentStyle=parent.getComputedStyle(outer);
+      check(!transparent(parentStyle.backgroundColor),'outer chat has a reading shade over bright ambient');
+      check(parentStyle.backdropFilter===getComputedStyle(menu).backdropFilter,'outer shade shares blur');
+    }
+  }else{
+    check(paint(header)==='rgb(15, 15, 15)'&&paint(menu)==='rgb(40, 40, 40)','OFF restores native chat surfaces');
+  }
+  result.textContent=failures.length?'FAIL: '+failures.join('; '):`PASS: ${active?'shared chat shades':'native OFF surfaces'}, original icons and semantic card colors`;
+  result.dataset.status=failures.length?'fail':'pass';
+};
 </script></body></html>

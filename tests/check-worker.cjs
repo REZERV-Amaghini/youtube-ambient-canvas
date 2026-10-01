@@ -33,7 +33,7 @@ class Canvas {
       putImageData: value => { this.data = value.data; }
     };
   }
-  getContext() { return this.context; }
+  getContext(type) { return type === '2d' ? this.context : null; }
   transferToImageBitmap() { this.transfers = (this.transfers || 0) + 1; return new Bitmap(this.width, this.height, this.data); }
 }
 const run = (context, name) => vm.runInContext(fs.readFileSync(path.join(root, name), 'utf8'), context, { filename: name });
@@ -392,6 +392,7 @@ const result = (client, extra = {}) => ({
   });
   run(workerContext, 'ambient-worker.js');
   assert.equal(workerReplies[0].value.type, 'ready');
+  assert.equal(workerReplies[0].value.backend, '2d', 'Unavailable WebGL retains the existing CPU renderer');
   for (let i = 0; i < 4; i++) {
     const frame = new Bitmap(320, 180, capturedPixels);
     workerContext.self.onmessage({ data: {
@@ -401,11 +402,21 @@ const result = (client, extra = {}) => ({
     assert.equal(frame.closed, 1, 'Worker releases each incoming image after rendering');
   }
   const workerResult = workerReplies.at(-1);
+  assert.equal(workerResult.value.backend, '2d');
   assert.equal(workerResult.value.videoCrop.height, 70);
   assert.equal(workerResult.value.pixels.length, 160 * 90 * 4);
   assert.equal(workerResult.transfers.length, 2, 'Bitmap and copied sample buffer are transferred');
   assert.equal(workerResult.value.sampleOnly, false);
   assert.equal(workerResult.value.samplingCrop.height, 70);
+  const noReadbackFrame = new Bitmap(320, 180, capturedPixels);
+  workerContext.self.onmessage({ data: { type: 'render', requestId: 40, generation: 0, barGeneration: 0,
+    frame: noReadbackFrame, rectangle, viewport, radial: false, sourceKey: 'same-video', mediaTime: 4 / 30,
+    options: { readPixels: false } } });
+  const noReadback = workerReplies.at(-1);
+  assert.equal(noReadback.value.type, 'frame'); assert.equal(noReadback.value.backend, '2d');
+  assert.equal(noReadback.value.pixels, null, 'Projection does not return an unrequested sample buffer');
+  assert.equal(noReadback.transfers.length, 1, 'Rendering without warning sampling transfers only the bitmap');
+  assert.equal(noReadback.transfers[0], noReadback.value.bitmap); assert.equal(noReadbackFrame.closed, 1);
   const outputCanvas = vm.runInContext('canvas', workerContext);
   const beforeInspection = { width: outputCanvas.width, height: outputCanvas.height,
     draws: outputCanvas.context.draws.length, transfers: outputCanvas.transfers };
@@ -415,6 +426,7 @@ const result = (client, extra = {}) => ({
     sourceKey: 'same-video', mediaTime: 4 / 30, options: { sampleOnly: true, readPixels: false } } });
   const inspection = workerReplies.at(-1);
   assert.equal(inspection.value.type, 'frame'); assert.equal(inspection.value.sampleOnly, true);
+  assert.equal(inspection.value.backend, '2d');
   assert.equal(inspection.value.bitmap, null); assert.equal(inspection.value.pixels.length, 160 * 90 * 4);
   assert.equal(inspection.value.samplingCrop.height, 70); assert.equal(inspectFrame.closed, 1);
   assert.equal(inspection.transfers.length, 1); assert.equal(inspection.transfers[0], inspection.value.pixels.buffer);

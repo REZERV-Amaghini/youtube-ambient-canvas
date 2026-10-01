@@ -11,7 +11,7 @@
 
 html.yac-active {
   /* Shared control palette. Alpha is paint opacity: lower means more transparent.
-     Change these values to style page buttons, chips, search and the toolbar. */
+     Change these values to style buttons, chips, search, toolbar and chat. */
   --yac-control-rgb: 18, 20, 25;
   --yac-control-opacity: .22;
   --yac-control-hover-opacity: .34;
@@ -198,8 +198,15 @@ html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) ytd-playlist-panel-video-ren
 }
 
 html.yac-active #cinematics { display: none !important; }
-html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) ytd-live-chat-frame,
+/* The chat iframe keeps transparent wrappers over one shared dark face. Use the
+   selected-control shade for sustained reading over bright ambient frames. */
 html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) ytd-live-chat-frame #chatframe {
+  background-color: var(--yac-control-selected-surface) !important;
+  background-image: none !important;
+  -webkit-backdrop-filter: blur(var(--yac-control-blur)) !important;
+  backdrop-filter: blur(var(--yac-control-blur)) !important;
+}
+html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) ytd-live-chat-frame {
   background: transparent !important;
 }
 /* Metadata carousel cards (including the replay prompt) keep a readable face. */

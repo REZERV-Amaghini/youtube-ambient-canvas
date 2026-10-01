@@ -6,7 +6,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 
-function harness(workerMode = false, { videoFrameCallbacks = false, idleCallbacks = true } = {}) {
+function harness(workerMode = false, { videoFrameCallbacks = false, idleCallbacks = true, scrollBlend = () => 0 } = {}) {
   const nodes = [], raf = new Map(), intervals = new Map(), renders = [], inspections = [];
   const idle = new Map(), timeouts = new Map(), observers = [], videoFrames = new Map(), resizeObservers = [];
   const stats = { surfaceScans: 0, rectReads: 0, computedStyleReads: 0, monitorSamples: 0 };
@@ -174,7 +174,7 @@ function harness(workerMode = false, { videoFrameCallbacks = false, idleCallback
   }
   const pixels = new Uint8ClampedArray(160 * 90 * 4);
   class Renderer {
-    static scrollBlend() { return 0; }
+    static scrollBlend(rectangle, viewport) { return scrollBlend(rectangle, viewport); }
     constructor() { this.padding = 180; this.readable = true; this.stableFrames = 4; renderer = this; }
     reset() {} invalidate() {} dispose() { this.disposed = true; }
     result() { return { readable: true, cropped: true, videoCrop: { x: 0, y: 10, width: 160, height: 70 }, samplingCrop: { x: 0, y: 10, width: 160, height: 70 } }; }

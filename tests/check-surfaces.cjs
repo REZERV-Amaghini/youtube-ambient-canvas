@@ -5,12 +5,19 @@ const { harness } = require('./check-ambient.cjs');
 async function main() {
  for (const idleCallbacks of [true, false]) {
   const h = harness(true, { idleCallbacks });
+  const chat = h.document.createElement('ytd-live-chat-frame');
+  const chatFrame = h.document.createElement('iframe'); chatFrame.id = 'chatframe';
+  chat.style.setProperty('background-color', 'rgb(35, 36, 39)');
+  chatFrame.style.setProperty('border-color', 'rgb(65, 66, 69)');
+  chat.append(chatFrame); h.watch.append(chat);
   h.below.style.setProperty('background-color', 'rgb(30, 30, 30)', 'important');
   await h.load({ enabled: true, flashWarning: false });
   const scans = () => h.stats.surfaceScans;
   assert.equal(h.below.style.getPropertyValue('background-color'), 'transparent', 'ON guards a real watch surface');
   assert.equal(h.comments.style.getPropertyValue('background-color'), 'transparent', 'comments shell remains transparent');
   assert.equal(h.get('yac-background').style.opacity, '0.6500', 'ambient strength remains unchanged');
+  assert.equal(chat.style.getPropertyValue('background-color'), 'rgb(35, 36, 39)', 'the inline surface guard leaves the CSS chat shade intact');
+  assert.equal(chatFrame.style.getPropertyValue('border-color'), 'rgb(65, 66, 69)', 'native iframe border is retained');
   let before = scans();
   for (let i = 0; i < 5; i++) { h.advance(1000); h.discover(); }
   assert.equal(scans(), before, 'stable playback performs no recurring whole-page surface scans');
@@ -66,9 +73,11 @@ async function main() {
   h.watch.setAttribute('theater', ''); h.flushMutations();
   assert.equal(h.player.style.getPropertyValue('background-color'), 'transparent', 'theater player surround is guarded');
   assert.equal(h.timeouts.size + h.idle.size, 0, 'theater entry bypasses the delayed job');
+  assert.equal(chat.style.getPropertyValue('background-color'), 'rgb(35, 36, 39)', 'theater entry does not overwrite the chat face with transparency');
   h.watch.removeAttribute('theater'); h.flushMutations();
   assert.equal(h.player.style.getPropertyValue('background-color'), 'rgb(1, 2, 3)', 'leaving theater restores the player surface');
   assert.equal(h.timeouts.size + h.idle.size, 0, 'theater exit restores without waiting');
+  assert.equal(chatFrame.style.getPropertyValue('border-color'), 'rgb(65, 66, 69)', 'theater changes preserve the iframe border');
   before = scans(); wrapper.remove(); h.flushTasks(); h.advance(1000);
   assert.equal(scans(), before + 1, 'removed wrapper refreshes tracked descendants');
   assert.equal(ticket.style.getPropertyValue('background-color'), '', 'removed surface is restored');
@@ -76,6 +85,7 @@ async function main() {
   h.resize(); h.enabled().checked = false; h.event(h.enabled(), 'input'); h.flushTasks();
   before = scans();
   assert.equal(h.below.style.getPropertyValue('background-color'), 'rgb(70, 80, 90)', 'OFF restores immediately despite a queued refresh');
+  assert.equal(chat.style.getPropertyValue('background-color'), 'rgb(35, 36, 39)', 'OFF leaves the native chat face available again');
   h.advance(3000); assert.equal(scans(), before, 'canceled job cannot reapply after OFF');
   h.enabled().checked = true; h.event(h.enabled(), 'input'); h.flushTasks(); h.resize();
   h.event(h.document, 'yac-dispose');

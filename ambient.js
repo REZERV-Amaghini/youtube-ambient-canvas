@@ -199,15 +199,17 @@
   });
   const chatCss = [
     'html.yac-chat-active{--yt-live-chat-background-color:transparent;--yt-live-chat-action-panel-background-color:transparent}',
-    'html.yac-chat-active,html.yac-chat-active body,html.yac-chat-active yt-live-chat-app,html.yac-chat-active yt-live-chat-renderer,html.yac-chat-active yt-live-chat-header-renderer,html.yac-chat-active yt-live-chat-item-list-renderer,html.yac-chat-active yt-live-chat-ticker-renderer,html.yac-chat-active yt-live-chat-renderer #chat,html.yac-chat-active yt-live-chat-renderer #contents,html.yac-chat-active yt-live-chat-renderer #items,html.yac-chat-active yt-live-chat-renderer #item-scroller,html.yac-chat-active yt-live-chat-renderer #panel-pages{background-color:transparent!important;background-image:none!important}',
-    'html.yac-chat-active yt-live-chat-viewer-engagement-message-renderer #card,html.yac-chat-active yt-live-chat-message-input-renderer,html.yac-chat-active yt-live-chat-message-input-renderer #input-container{background:transparent!important;box-shadow:none!important}',
+    'html.yac-chat-active,html.yac-chat-active body,html.yac-chat-active yt-live-chat-app,html.yac-chat-active yt-live-chat-renderer,html.yac-chat-active yt-live-chat-item-list-renderer,html.yac-chat-active yt-live-chat-ticker-renderer,html.yac-chat-active yt-live-chat-renderer #chat,html.yac-chat-active yt-live-chat-renderer #contents,html.yac-chat-active yt-live-chat-renderer #items,html.yac-chat-active yt-live-chat-renderer #item-scroller,html.yac-chat-active yt-live-chat-renderer #panel-pages{background-color:transparent!important;background-image:none!important}',
+    'html.yac-chat-active yt-live-chat-message-input-renderer,html.yac-chat-active yt-live-chat-message-input-renderer #input-container{background:transparent!important;box-shadow:none!important}',
     'html.yac-chat-active yt-live-chat-text-message-renderer{text-shadow:0 1px 3px #fff9}',
     'html.yac-chat-active[dark] yt-live-chat-text-message-renderer{text-shadow:0 1px 3px #000b}',
-    `html.yac-chat-active{--yac-chat-menu:rgba(255,255,255,.86)}
-    html.yac-chat-active[dark]{--yac-chat-menu:rgba(28,28,28,.86)}
+    `html.yac-chat-active yt-live-chat-header-renderer{
+      background-color:var(--yac-control-surface)!important;background-image:none!important;
+      -webkit-backdrop-filter:blur(var(--yac-control-blur))!important;backdrop-filter:blur(var(--yac-control-blur))!important;
+    }
     html.yac-chat-active :is(ytd-menu-popup-renderer,ytd-engagement-panel-section-list-renderer){
-      background-color:var(--yac-chat-menu)!important;background-image:none!important;
-      -webkit-backdrop-filter:blur(16px)!important;backdrop-filter:blur(16px)!important;
+      background-color:var(--yac-control-selected-surface)!important;background-image:none!important;
+      -webkit-backdrop-filter:blur(var(--yac-control-blur))!important;backdrop-filter:blur(var(--yac-control-blur))!important;
     }
     html.yac-chat-active ytd-menu-popup-renderer :is(tp-yt-paper-listbox,paper-listbox),
     html.yac-chat-active ytd-engagement-panel-section-list-renderer :is(#content,#header,ytd-engagement-panel-title-header-renderer){
@@ -489,13 +491,17 @@
     const opacity = (settings.strength / 100 * attenuation).toFixed(4);
     if (canvas.style.opacity !== opacity) canvas.style.opacity = opacity;
     if (barCanvas.style.opacity !== opacity) barCanvas.style.opacity = opacity;
+    // Scrolled full-frame backgrounds retain finer shapes than edge projection.
+    const fullFrameBlur = Math.max(25, settings.blur / 2);
+    const blur = (settings.blur + (fullFrameBlur - settings.blur) * blend).toFixed(2);
+    const filter = 'blur(' + blur + 'px) saturate(' + settings.saturation / 100 + ')';
+    if (canvas.style.filter !== filter) canvas.style.filter = filter;
+    if (barCanvas.style.filter !== filter) barCanvas.style.filter = filter;
   }
   function apply() {
     localize();
     localizeWarning();
     updateAppearance();
-    canvas.style.filter = 'blur(' + settings.blur + 'px) saturate(' + settings.saturation / 100 + ')';
-    barCanvas.style.filter = canvas.style.filter;
     button.classList.toggle('yac-enabled', settings.enabled);
     for (const key of booleanKeys) {
       fields[key].checked = settings[key];
@@ -557,13 +563,37 @@
     } catch { /* A cross-origin frame cannot be styled by this content script. */ }
     if (chatDocument !== nextDocument) { clearChat(); chatDocument = nextDocument; }
     if (!chatDocument?.head) return;
-    if (!chatDocument.getElementById(chatStyleId)) {
-      const chatStyle = chatDocument.createElement('style');
+    let chatStyle = chatDocument.getElementById(chatStyleId);
+    if (!chatStyle) {
+      chatStyle = chatDocument.createElement('style');
       chatStyle.id = chatStyleId;
-      chatStyle.textContent = chatCss;
       chatDocument.head.append(chatStyle);
     }
-    chatDocument.documentElement.classList.toggle('yac-chat-active', document.documentElement.classList.contains('yac-active'));
+    const active = document.documentElement.classList.contains('yac-active');
+    chatDocument.documentElement.classList.toggle('yac-chat-active', active);
+    if (!active) return;
+    // CSS variables do not cross iframe documents. Copy this palette only at
+    // discovery/load/activation, never per rendered frame or per chat message.
+    const palette = getComputedStyle(document.documentElement);
+    const rgb = palette.getPropertyValue('--yac-control-rgb').trim();
+    const channels = rgb.split(',').map(Number);
+    const safeRgb = channels.length === 3 && channels.every(v => Number.isFinite(v) && v >= 0 && v <= 255) ? channels.join(',') : '18,20,25';
+    const alpha = (property, fallback) => {
+      const value = palette.getPropertyValue(property).trim(), number = Number(value);
+      return value && Number.isFinite(number) && number >= 0 && number <= 1 ? number : fallback;
+    };
+    const blur = palette.getPropertyValue('--yac-control-blur').trim();
+    const safeBlur = /^\d+(?:\.\d+)?px$/.test(blur) && parseFloat(blur) <= 64 ? blur : '12px';
+    const text = `html.yac-chat-active{--yac-control-rgb:${safeRgb};
+      --yac-control-opacity:${alpha('--yac-control-opacity', .22)};
+      --yac-control-hover-opacity:${alpha('--yac-control-hover-opacity', .34)};
+      --yac-control-selected-opacity:${alpha('--yac-control-selected-opacity', .44)};
+      --yac-control-blur:${safeBlur};
+      --yac-control-surface:rgba(var(--yac-control-rgb),var(--yac-control-opacity));
+      --yac-control-hover-surface:rgba(var(--yac-control-rgb),var(--yac-control-hover-opacity));
+      --yac-control-selected-surface:rgba(var(--yac-control-rgb),var(--yac-control-selected-opacity))}
+      ${chatCss}`;
+    if (chatStyle.textContent !== text) chatStyle.textContent = text;
   }
   function setAmbientActive(active) {
     const changed = document.documentElement.classList.contains('yac-active') !== active;
@@ -576,6 +606,7 @@
       surfacesDirty = true;
       if (active) refreshPageSurfaces(true);
       else syncPageSurfaces(false);
+      if (active) syncChat();
     }
   }
   function discover() {

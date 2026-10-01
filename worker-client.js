@@ -133,6 +133,7 @@
     receive(value) {
       if (!value || this.state === 'disposed' || this.state === 'failed') { value?.bitmap?.close?.(); return; }
       if (value.type === 'ready' && this.state === 'starting') {
+        if (this.canvas.dataset && ['webgl2', '2d'].includes(value.backend)) this.canvas.dataset.workerBackend = value.backend;
         clearTimeout(this.startupTimer); this.startupTimer = null; this.setState('ready'); return;
       }
       if (value.type === 'failed') { this.fail(value.reason || 'Ambient worker failed'); return; }
@@ -164,6 +165,7 @@
           this.context.drawImage(bitmap, 0, 0);
         }
         this.readable = value.readable;
+        if (this.canvas.dataset && ['webgl2', '2d'].includes(value.backend)) this.canvas.dataset.workerBackend = value.backend;
         this.stableFrames = value.stableFrames;
         this.crop = value.samplingCrop;
         this.videoCrop = value.videoCrop;

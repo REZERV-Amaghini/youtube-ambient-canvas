@@ -1,4 +1,37 @@
-# 検証結果 — 0.2.17 development / 2026-10-01
+# 検証結果 — 0.2.18 development / 2026-10-01
+
+## 0.2.18 GPU projection, chat shade and scroll blur
+
+- WebGL2 projection runs inside the existing packaged Worker. Analysis uses the
+  same 160x90 canvas and 320x180 detector. Shared projection geometry preserves
+  crop, inset and scroll blend. GPU output has no pixel readback or CPU output
+  pixel loop. Startup, shader/texture failures, context loss and upload exceptions
+  fall back permanently to a separate 2D output canvas without inspecting twice
+  or resetting the detector. Transport still owns at most one frame.
+- In the actual in-app browser, 13 static image cases passed GPU/2D comparisons
+  for orientation, radial/flat/blended projection, fractional inset/offscreen
+  positions, resize, extreme aspect ratio and confirmed letter/pillarboxes.
+  Average channel error was 0 except the 35% blend case (0.2412/255); no pixel
+  exceeded 8 channel levels. A packaged Worker rendered a real transferred
+  bitmap with WebGL2 and returned matching crop/pixels. Forced context loss
+  preserved detector state and returned matching 2D output.
+- One warmed static batch of 80 inspection/projection jobs took 52.5ms with 2D
+  and 2.6ms with WebGL2, including GPU completion. It excluded video capture,
+  transfer, bar/flash readback, CSS blur and YouTube. This does not establish an
+  installed-extension or end-to-end YouTube speedup.
+- Chat paints one shared selected-control shade on the actual iframe box, with
+  transparent document wrappers. Its header and menus use the same palette.
+  Actual browser fixture checks preserve native SVG icons and member/paid/card
+  colors and verify OFF restoration and theater interaction.
+- Full-frame scroll blur is `max(25px, configuredBlur / 2)`, smoothly interpolated
+  with scroll blend. Main and Worker controller tests cover 0/40/90/160 settings,
+  the floor, transition, saved-value preservation and scrolling back.
+- The YouTube URL remained blocked by a saved browser permission setting.
+  Current installed Chrome/Firefox appearance, chat-icon root cause and actual
+  comment-loading/CPU/GPU cost remain unverified. No access workaround was used.
+
+API references: [Offscreen WebGL contexts](https://developer.mozilla.org/en-US/docs/Web/API/OffscreenCanvas/getContext),
+[WebGL readback and allocation guidance](https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/WebGL_best_practices).
 
 ## 0.2.17 store submission compatibility
 
