@@ -3,11 +3,13 @@
 <script>
 const fixtureParameters=new URLSearchParams(location.search);
 document.documentElement.toggleAttribute('dark',!fixtureParameters.has('light'));
+document.documentElement.toggleAttribute('data-compact-player',fixtureParameters.has('compact'));
 </script>
 <style>
 html,body{margin:0;color:white;background:#0f0f0f;font:14px system-ui}html{--fixture-popup-base:#282828;--fixture-control-base:#303030;--fixture-control-text:#fff}ytd-app{display:block;background:#222;min-height:220vh}ytd-masthead{display:block;position:sticky;top:0;z-index:100;height:56px;background:#222;padding-left:24px;line-height:56px}
 #columns{display:flex;gap:24px;padding:24px;max-width:1200px;margin:auto;background:#222}#primary{flex:1;min-width:0}#secondary{width:250px;background:#222}
 #movie_player{position:relative;aspect-ratio:16/9;background:#000;overflow:hidden}.html5-video-container{position:absolute;inset:0}video{width:100%;height:100%;object-fit:contain}
+html[data-compact-player] #movie_player{width:min(320px,100%);height:240px;aspect-ratio:auto}
 .ytp-chrome-bottom{position:absolute;z-index:60;bottom:0;left:12px;right:12px;height:48px;background:#0007}.ytp-right-controls{display:flex;justify-content:flex-end;height:40px}.ytp-right-controls-left,.ytp-right-controls-right{display:flex;height:40px}
 .ytp-button{border:0;color:white;background:transparent;width:48px;height:40px;cursor:pointer}#below,#description{background:#222;padding:16px}button{border-radius:8px;background:var(--fixture-control-base);color:var(--fixture-control-text);padding:8px;border:0}.thumb{height:110px;background:linear-gradient(45deg,#904eff,#ff823d);margin-bottom:12px;border-radius:10px}
 .ytSpecButtonShapeNextFilled{background:#f1f1f1;color:#0f0f0f}
@@ -173,6 +175,9 @@ if(new URLSearchParams(location.search).has('surfaces')){
   const guide=document.createElement('tp-yt-app-drawer');guide.id='guide';
   guide.innerHTML='<div id="contentContainer" class="style-scope tp-yt-app-drawer"><div id="guide-wrapper" class="style-scope ytd-app"><div id="guide-content" class="style-scope ytd-app"><ytd-guide-renderer><ytd-guide-section-renderer><ytd-guide-entry-renderer active>Home</ytd-guide-entry-renderer><ytd-guide-entry-renderer>Shorts</ytd-guide-entry-renderer><ytd-guide-entry-renderer>Subscriptions</ytd-guide-entry-renderer><hr><ytd-guide-entry-renderer>History</ytd-guide-entry-renderer><ytd-guide-entry-renderer>Playlists</ytd-guide-entry-renderer></ytd-guide-section-renderer></ytd-guide-renderer></div></div></div>';
   document.querySelector('ytd-app > #content').append(guide);
+  const toggleGuide=document.createElement('button');toggleGuide.id='fixture-toggle-guide';toggleGuide.textContent='Close sidebar';
+  toggleGuide.onclick=()=>{guide.hidden=!guide.hidden;toggleGuide.textContent=guide.hidden?'Open sidebar':'Close sidebar';};
+  document.querySelector('#background').append(toggleGuide);
   const openSurfaces=document.createElement('button');openSurfaces.id='fixture-open-surfaces';openSurfaces.textContent='Open menus';
   openSurfaces.onclick=()=>{
     if(document.querySelector('#fixture-popups'))return;
@@ -186,6 +191,252 @@ if(new URLSearchParams(location.search).has('surfaces')){
     document.querySelector('ytd-app').append(popups);
   };
   document.querySelector('#background').append(openSurfaces);
+}
+if(fixtureParameters.has('engagement')){
+  // A late, self-authored engagement panel models native wrappers and an
+  // external inline theme. No account content or YouTube script is used.
+  const style=document.createElement('style');style.textContent=`
+    #fixture-transcript,ytd-engagement-panel-title-header-renderer,ytd-transcript-search-panel-renderer,ytd-transcript-search-box-renderer,ytd-transcript-segment-list-renderer{display:block}
+    #fixture-transcript{margin:12px 0;border:1px solid #8886;border-radius:12px;overflow:hidden;background:var(--fixture-popup-base)}
+    #fixture-transcript [data-native-panel-wrapper]{background:var(--fixture-popup-base);padding:12px}
+    #fixture-transcript .input-container{border:1px solid #888;border-radius:8px;background:var(--fixture-control-base);padding:8px}
+    #fixture-transcript input{width:100%;box-sizing:border-box;border:0;outline:0;background:transparent;color:inherit;font:inherit}
+    #fixture-transcript :is(#header,#content){color:var(--fixture-control-text)}
+    #fixture-transcript-results{padding:10px 0;line-height:1.6}
+  `;document.head.append(style);
+  const launch=document.createElement('button');launch.id='fixture-open-transcript';launch.textContent='Open transcript';
+  launch.onclick=()=>{
+    const existing=document.querySelector('#fixture-transcript');if(existing){existing.remove();return;}
+    const panel=document.createElement('ytd-engagement-panel-section-list-renderer');panel.id='fixture-transcript';
+    panel.style.setProperty('background-color','rgb(40, 40, 40)','important');
+    panel.innerHTML='<ytd-engagement-panel-title-header-renderer><div id="header" data-native-panel-wrapper>Transcript <button id="fixture-close-transcript" aria-label="Close transcript">×</button></div></ytd-engagement-panel-title-header-renderer><div id="content" data-native-panel-wrapper><ytd-transcript-search-panel-renderer><ytd-transcript-search-box-renderer><div class="input-container ytd-transcript-search-box-renderer"><input id="fixture-transcript-input" aria-label="Search transcript" placeholder="Search transcript"></div></ytd-transcript-search-box-renderer><ytd-transcript-segment-list-renderer id="fixture-transcript-results">0:01 · A readable transcript panel<br>0:08 · Shared shade controls</ytd-transcript-segment-list-renderer></ytd-transcript-search-panel-renderer></div>';
+    panel.querySelector('.input-container').style.setProperty('background-color','rgb(80, 80, 80)','important');
+    panel.querySelector('#fixture-close-transcript').onclick=()=>panel.remove();
+    document.querySelector('#secondary').prepend(panel);
+  };
+  document.querySelector('#background').append(launch);
+}
+if(fixtureParameters.has('reading-surfaces')){
+  document.documentElement.setAttribute('data-fixture-reading-surfaces','');
+  const style=document.createElement('style');style.textContent=`
+    html[data-fixture-reading-surfaces] ytd-app{position:relative}
+    html[data-fixture-reading-surfaces][data-fixture-backdrop] ytd-app::before{position:absolute}
+    ytd-watch-metadata,ytd-video-primary-info-renderer,ytd-video-secondary-info-renderer,ytd-video-owner-renderer,ytd-comments,ytd-watch-next-secondary-results-renderer,ytd-item-section-renderer,ytd-rich-grid-renderer,ytd-comment-thread-renderer,ytd-comment-view-model{display:block}
+    .fixture-metadata-shell,ytd-comments,#related{margin-top:12px;border-radius:12px;color:var(--fixture-control-text)}
+    .fixture-metadata-shell,ytd-comments,#fixture-result-section{padding:16px}#description{padding:0;margin-top:12px}
+    #fixture-native-title{font-size:20px;margin:0 0 12px}#top-row{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+    #owner{display:flex;align-items:center;gap:10px;margin-bottom:12px}#owner-name a{font-weight:600;text-decoration:none}.fixture-owner-secondary{font-size:12px;margin-top:3px}
+    #fixture-owner-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(45deg,#904eff,#ff823d)}
+    .fixture-reading-heading{font-size:16px;margin:0 0 8px}.fixture-reading-line{margin:8px 0;line-height:1.6}
+    .fixture-reading-secondary{color:#aaa}html:not([dark]) .fixture-reading-secondary{color:#606060}
+    .fixture-reading-link{color:#ff4081}html:not([dark]) .fixture-reading-link{color:#6200ee}
+    #fixture-comment-draft{box-sizing:border-box;width:100%;padding:8px 0;border:0;border-bottom:1px solid #888;background:transparent;color:inherit;font:inherit}
+    #fixture-comment-draft:focus-visible{outline:2px solid #3ea6ff;outline-offset:2px}
+    #fixture-member-badge{display:inline-block;background:#00764b;color:white;border-radius:999px;padding:2px 8px}
+    #related .thumb{margin-top:12px}#fixture-related-body{margin:0}
+  `;document.head.append(style);
+  const description=document.getElementById('description');description.className='style-scope ytd-watch-metadata';
+  description.style.setProperty('background-color','var(--fixture-popup-base)','important');
+  description.innerHTML='<div id="description-inner" class="style-scope ytd-watch-metadata"><h3 class="fixture-reading-heading">Description</h3><p class="fixture-reading-line">Primary description text stays readable.</p><p class="fixture-reading-line fixture-reading-secondary">Secondary text · Self-authored example</p><a class="fixture-reading-link" href="#demo-description-link">Original accent link</a></div>';
+  description.querySelector('#description-inner').style.setProperty('background-color','var(--fixture-control-base)','important');
+  const title=document.createElement('div');title.id='title';title.style.setProperty('background-color','var(--fixture-control-base)','important');
+  const heading=document.querySelector('#below h2');heading.id='fixture-native-title';title.append(heading);
+  const actions=document.createElement('div');actions.id='actions';actions.append(...document.querySelectorAll('#below > button'));
+  const owner=document.createElement('ytd-video-owner-renderer');owner.id='owner';owner.style.setProperty('background-color','var(--fixture-control-base)','important');
+  owner.innerHTML='<div id="fixture-owner-avatar" role="img" aria-label="Demo channel avatar"></div><div><div id="owner-name"><a class="fixture-reading-link" href="#demo-channel">Demo channel</a></div><div class="fixture-reading-secondary fixture-owner-secondary">123K subscribers</div></div>';
+  const topRow=document.createElement('div');topRow.id='top-row';topRow.style.setProperty('background-color','var(--fixture-control-base)','important');topRow.append(owner,actions);
+  const metadataShell=name=>{const shell=document.createElement(name);shell.className='fixture-metadata-shell';shell.style.setProperty('background-color','var(--fixture-popup-base)','important');if(name==='ytd-watch-metadata'){shell.setAttribute('modern-metapanel','');shell.setAttribute('clickable-description','');shell.setAttribute('description-collapsed','');}return shell;};
+  let metadata=metadataShell('ytd-watch-metadata'),primaryMetadata=null;
+  description.replaceWith(metadata);metadata.append(title,topRow,description);
+  const layout=document.createElement('button');layout.id='fixture-reading-layout';layout.textContent='Use legacy description';
+  layout.onclick=()=>{const modern=metadata.localName==='ytd-watch-metadata',next=metadataShell(modern?'ytd-video-secondary-info-renderer':'ytd-watch-metadata');if(modern){primaryMetadata=metadataShell('ytd-video-primary-info-renderer');metadata.before(primaryMetadata);primaryMetadata.append(title,actions);next.append(owner,description);}else{next.append(title,topRow,description);topRow.append(owner,actions);primaryMetadata.remove();primaryMetadata=null;}metadata.replaceWith(next);metadata=next;description.className='style-scope '+metadata.localName;layout.textContent=modern?'Use modern description':'Use legacy description';};document.querySelector('#background').append(layout);
+  const comments=document.getElementById('comments');comments.style.setProperty('background-color','var(--fixture-popup-base)','important');
+  comments.innerHTML='<h3 class="fixture-reading-heading">Comments</h3><input id="fixture-comment-draft" aria-label="Demo comment draft" value="Self-authored draft"><ytd-item-section-renderer id="contents"><ytd-comment-thread-renderer><ytd-comment-view-model><p id="fixture-comment-primary" class="fixture-reading-line">Primary comment text and reply controls remain.</p><p class="fixture-reading-line fixture-reading-secondary">2 days ago · Secondary text</p><a class="fixture-reading-link" href="#demo-comment-link">Native accent reply link</a> <span id="fixture-member-badge">Member</span></ytd-comment-view-model></ytd-comment-thread-renderer></ytd-item-section-renderer>';
+  comments.querySelector('#contents').style.setProperty('background-color','var(--fixture-control-base)','important');
+  const related=document.createElement('div');related.id='related';related.style.setProperty('background-color','var(--fixture-popup-base)','important');
+  related.innerHTML='<ytd-watch-next-secondary-results-renderer id="fixture-related-results"><ytd-item-section-renderer id="fixture-result-section"><ytd-rich-grid-renderer id="fixture-nested-grid"><h3 class="fixture-reading-heading">Related videos</h3><div class="thumb" id="fixture-related-media"></div><div id="fixture-related-body"><p class="fixture-reading-line">Original thumbnail and primary title</p><p class="fixture-reading-line fixture-reading-secondary">Demo creator · Secondary details</p><a class="fixture-reading-link" href="#demo-related-link">Accent details</a></div></ytd-rich-grid-renderer></ytd-item-section-renderer></ytd-watch-next-secondary-results-renderer>';
+  for(const element of related.querySelectorAll('ytd-watch-next-secondary-results-renderer,ytd-item-section-renderer,ytd-rich-grid-renderer'))element.style.setProperty('background-color','var(--fixture-popup-base)','important');
+  document.getElementById('secondary').replaceChildren(related);
+  const previewPlaylist=document.createElement('button');previewPlaylist.id='fixture-reading-playlist';previewPlaylist.textContent='Preview nested playlist';
+  const placement=document.createElement('button');placement.id='fixture-reading-playlist-placement';placement.textContent='Move playlist outside results';placement.disabled=true;
+  const playlistState=document.createElement('output');playlistState.id='fixture-reading-playlist-state';
+  const reportMixedPaint=()=>{const paints={};for(const id of ['related','fixture-related-results','fixture-result-section','fixture-nested-grid'])paints[id]=getComputedStyle(document.getElementById(id)).backgroundColor;const row=related.querySelector('ytd-playlist-panel-video-renderer');if(row)paints.playing=getComputedStyle(row).backgroundColor;playlistState.dataset.paints=JSON.stringify(paints);playlistState.textContent='Synchronous result face: '+paints['fixture-result-section'];};
+  previewPlaylist.onclick=()=>{const existing=related.querySelector('ytd-playlist-panel-renderer');if(existing){existing.remove();previewPlaylist.textContent='Preview nested playlist';placement.disabled=true;}else{const panel=document.createElement('ytd-playlist-panel-renderer');panel.innerHTML='<ytd-playlist-panel-video-renderer selected>Playing demo row</ytd-playlist-panel-video-renderer>';panel.querySelector('[selected]').style.backgroundColor='rgba(255,255,255,.18)';related.querySelector('ytd-watch-next-secondary-results-renderer').append(panel);previewPlaylist.textContent='Remove nested playlist';placement.textContent='Move playlist outside results';placement.disabled=false;}reportMixedPaint();};
+  placement.onclick=()=>{const panel=related.querySelector('ytd-playlist-panel-renderer'),outside=panel.parentElement===related;(outside?related.querySelector('ytd-watch-next-secondary-results-renderer'):related).append(panel);placement.textContent=outside?'Move playlist outside results':'Move playlist inside results';reportMixedPaint();};document.querySelector('#background').append(previewPlaylist,placement,playlistState);
+}
+if(fixtureParameters.has('search-surfaces')){
+  const style=document.createElement('style');style.textContent=`
+    .fixture-search-surface{position:fixed;z-index:120;display:block;border-radius:12px;padding:12px;background:var(--fixture-popup-base)!important;color:var(--fixture-control-text);box-shadow:0 8px 24px #0005}
+    #fixture-suggestions-modern{left:96px;top:100px;width:240px}
+    #fixture-suggestions-legacy{left:376px;top:100px;width:240px;padding:12px}
+    .sbdd_b .sbsb_a{display:block;background:var(--fixture-popup-base)!important}
+    .fixture-suggestion{display:block;width:100%;padding:10px;margin:0;text-align:left;border:0;border-radius:6px;background:transparent;color:inherit;font:inherit;cursor:pointer}
+    .fixture-suggestion[aria-selected="true"],.fixture-suggestion:hover{background:#fff2}
+    .fixture-suggestion:focus-visible,#fixture-mini-guide a:focus-visible{outline:2px solid #3ea6ff;outline-offset:-2px}
+    .fixture-search-history{color:#ff4081}html:not([dark]) .fixture-search-history{color:#6200ee}
+    #fixture-mini-guide{position:fixed;z-index:120;left:8px;top:100px;width:72px;padding:4px;display:block;color:var(--fixture-control-text)}
+    ytd-mini-guide-renderer,a.ytd-mini-guide-entry-renderer{background:var(--fixture-popup-base)!important}
+    #fixture-mini-guide ytd-mini-guide-entry-renderer,#fixture-mini-guide a{display:block}
+    #fixture-mini-guide a{padding:16px 2px;text-align:center;font-size:11px;text-decoration:none;color:inherit;border-radius:8px}
+    #fixture-mini-guide [active] a{color:#ff4081}
+    html:not([dark]) #fixture-mini-guide [active] a{color:#6200ee}
+    #fixture-search-dialogs{position:fixed;right:24px;top:100px;z-index:120;width:260px;color:var(--fixture-control-text)}
+    #fixture-search-dialogs tp-yt-paper-dialog{display:block;margin-bottom:14px;border-radius:12px}
+    tp-yt-paper-dialog{background:var(--fixture-popup-base)!important;box-shadow:0 8px 24px #0005}
+    #fixture-search-dialogs [dialog]{display:block;padding:14px;border-radius:12px}
+    ytd-voice-search-dialog-renderer[dialog],yt-confirm-dialog-renderer[dialog][dialog][dialog]{background:var(--fixture-popup-base)!important}
+    #fixture-search-dialogs h3{margin:0 0 8px;font-size:14px}#fixture-search-dialogs p{margin:8px 0}
+    #fixture-microphone-circle{width:36px;height:36px;display:grid;place-items:center;background:#ff4e45;color:white;border-radius:50%}
+    #fixture-confirm-action{background:#3ea6ff;color:#0f0f0f}
+    .fixture-menu-reference{position:fixed;z-index:119;pointer-events:none;background:transparent}
+    html[data-fixture-backdrop="white"] .fixture-menu-reference{background:white}
+    html[data-fixture-backdrop="black"] .fixture-menu-reference{background:black}
+  `;document.head.append(style);
+  const modern=document.createElement('div');modern.id='fixture-suggestions-modern';modern.className='fixture-search-surface ytSearchboxComponentSuggestionsContainer';modern.setAttribute('role','listbox');modern.setAttribute('aria-label','Modern search suggestions');
+  modern.innerHTML='<button class="fixture-suggestion ytSuggestionComponentSuggestion" role="option" aria-selected="true">Ambient music</button><button class="fixture-suggestion ytSuggestionComponentSuggestion" role="option" aria-selected="false"><span class="fixture-search-history">Recent search</span></button><button class="fixture-suggestion ytSuggestionComponentSuggestion" role="option" aria-selected="false">Live performances</button>';
+  const legacy=document.createElement('div');legacy.id='fixture-suggestions-legacy';legacy.className='fixture-search-surface sbdd_b';
+  legacy.innerHTML='<div class="sbsb_a" role="listbox" aria-label="Legacy search suggestions"><button class="fixture-suggestion sbsb_c gsfs sbsb_d" role="option" aria-selected="true">Ambient music</button><button class="fixture-suggestion sbsb_c gsfs" role="option" aria-selected="false"><span class="fixture-search-history">Recent search</span></button></div>';
+  const mini=document.createElement('ytd-mini-guide-renderer');mini.id='fixture-mini-guide';mini.innerHTML='<ytd-mini-guide-entry-renderer active><a class="ytd-mini-guide-entry-renderer" href="#demo-home" aria-current="page">Home</a></ytd-mini-guide-entry-renderer><ytd-mini-guide-entry-renderer><a class="ytd-mini-guide-entry-renderer" href="#demo-shorts">Shorts</a></ytd-mini-guide-entry-renderer>';
+  const dialogs=document.createElement('ytd-popup-container');dialogs.id='fixture-search-dialogs';dialogs.innerHTML='<tp-yt-paper-dialog><ytd-voice-search-dialog-renderer dialog role="dialog" aria-label="Simulated voice search"><h3>Voice search preview</h3><div id="fixture-microphone-circle" aria-label="Simulated microphone state">●</div><p>No microphone is used.</p><button class="ytSpecButtonShapeNextHost ytSpecButtonShapeNextTonal ytSpecButtonShapeNextMono">Cancel preview</button></ytd-voice-search-dialog-renderer></tp-yt-paper-dialog><tp-yt-paper-dialog><yt-confirm-dialog-renderer dialog role="dialog" aria-label="Simulated confirmation"><h3>Confirmation preview</h3><p>Native action colors remain.</p><button id="fixture-confirm-action" class="ytSpecButtonShapeNextHost ytSpecButtonShapeNextFilled ytSpecButtonShapeNextCallToAction">Demo action</button></yt-confirm-dialog-renderer></tp-yt-paper-dialog>';
+  document.querySelector('ytd-app').append(modern,legacy,mini,dialogs);
+  // Static references sit behind the component faces, above the demo video.
+  // They permit real PNG checks without pausing or flashing the video.
+  for(const face of [modern,legacy,mini,...dialogs.querySelectorAll('[dialog]')]){
+    const rect=face.getBoundingClientRect(),reference=document.createElement('div');reference.className='fixture-menu-reference';reference.setAttribute('aria-hidden','true');
+    Object.assign(reference.style,{left:rect.x+'px',top:rect.y+'px',width:rect.width+'px',height:rect.height+'px'});document.querySelector('ytd-app').append(reference);
+  }
+  const state=document.createElement('output');state.id='fixture-search-selection';state.textContent='Selection preview';document.querySelector('#background').append(state);
+  for(const box of [modern,legacy.querySelector('.sbsb_a')]){
+    const rows=[...box.querySelectorAll('[role="option"]')];
+    const select=row=>{for(const item of rows){const selected=item===row;item.setAttribute('aria-selected',String(selected));if(item.classList.contains('sbsb_c'))item.classList.toggle('sbsb_d',selected);}state.textContent=row.textContent;};
+    for(const row of rows){row.onclick=()=>select(row);row.onkeydown=e=>{if(!['ArrowDown','ArrowUp'].includes(e.key))return;e.preventDefault();const next=rows[(rows.indexOf(row)+(e.key==='ArrowDown'?1:rows.length-1))%rows.length];select(next);next.focus();};}
+  }
+  const casing=document.createElement('button');casing.id='fixture-search-casing';casing.textContent='Use uppercase search classes';casing.onclick=()=>{const upper=modern.classList.contains('ytSearchboxComponentSuggestionsContainer');modern.classList.toggle('ytSearchboxComponentSuggestionsContainer',!upper);modern.classList.toggle('YtSearchboxComponentSuggestionsContainer',upper);for(const row of modern.querySelectorAll('[role="option"]')){row.classList.toggle('ytSuggestionComponentSuggestion',!upper);row.classList.toggle('YtSuggestionComponentSuggestion',upper);}casing.textContent=upper?'Use lowercase search classes':'Use uppercase search classes';};document.querySelector('#background').append(casing);
+}
+if(fixtureParameters.has('overlay-surfaces')){
+  // Self-authored popup structures use component names from cached theme CSS.
+  // They exercise appearance only; no account, report or purchase is submitted.
+  document.documentElement.setAttribute('data-fixture-overlays','');
+  const style=document.createElement('style');style.textContent=`
+    html[data-fixture-overlays] ytd-app{position:relative}
+    html[data-fixture-overlays][data-fixture-backdrop] ytd-app::before{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;background:white}
+    html[data-fixture-overlays][data-fixture-backdrop="black"] ytd-app::before{background:black}
+    html[data-fixture-overlays][data-fixture-backdrop] #yac-background{visibility:hidden!important}
+    html[data-fixture-overlays][data-fixture-backdrop] #movie_player::before{content:'';position:absolute;inset:0;z-index:5;background:white;pointer-events:none}
+    html[data-fixture-overlays][data-fixture-backdrop="black"] #movie_player::before{background:black}
+    #fixture-overlay-host{position:fixed;right:24px;top:94px;z-index:120;width:290px;color:var(--fixture-control-text)}
+    #fixture-overlay-host :is(tp-yt-paper-dialog,paper-dialog){display:block;margin:0;border-radius:12px}
+    #fixture-overlay-host :is([dialog],.yt-spec-dialog-layout){display:block;border-radius:12px}
+    .fixture-overlay-body{padding:16px 16px 44px;line-height:1.6}
+    .fixture-overlay-body h3{margin:0 0 8px;font-size:16px}.fixture-overlay-body p{margin:8px 0}
+    .fixture-overlay-secondary{color:#aaa}html:not([dark]) .fixture-overlay-secondary{color:#606060}
+    .fixture-overlay-accent{color:#ff4081}html:not([dark]) .fixture-overlay-accent{color:#6200ee}
+    .yt-spec-dialog-layout,[dialog][dialog][dialog],paper-dialog,tp-yt-paper-dialog{background-color:var(--fixture-popup-base)!important;box-shadow:0 8px 24px #0005}
+    #fixture-overlay-draft{box-sizing:border-box;width:100%;font:inherit;padding:6px;color:inherit;background:transparent;border:1px solid #888;border-radius:6px}
+    #fixture-overlay-draft:focus-visible,.fixture-overlay-body button:focus-visible{outline:2px solid #3ea6ff;outline-offset:2px}
+    #fixture-overlay-action{margin:8px 0;background:#065fd4;color:white}
+    #fixture-overlay-badge{display:inline-block;background:#00764b;color:white;padding:2px 8px;border-radius:999px}
+    #fixture-overlay-media{width:56px;height:28px;border-radius:6px;background:linear-gradient(45deg,#904eff,#ff823d);margin:8px 0}
+    #fixture-player-menu{position:absolute;top:32px;left:24px;z-index:61;width:270px;padding:12px 0 36px;border-radius:12px;background:#282828;opacity:.9;color:white;box-shadow:0 8px 24px #0005}
+    .ytp-panel-header{padding:0 16px 10px;color:white;font-weight:600}
+    #fixture-player-menu .ytp-menuitem{display:flex;align-items:center;justify-content:space-between;box-sizing:border-box;width:100%;height:42px;padding:0 16px;text-align:left;font:inherit;color:white;background:transparent;border:0;border-radius:0}
+    #fixture-player-menu .ytp-menuitem:is(:hover,[aria-checked="true"]){background:#ffffff1f}
+    #fixture-player-menu .ytp-menuitem[aria-disabled="true"]{opacity:.5}
+    #fixture-player-menu .ytp-menuitem:focus-visible{outline:2px solid #8ab4f8;outline-offset:-3px}
+    #fixture-player-menu .fixture-player-secondary{color:#aaa}
+    #fixture-player-toggle{width:28px;height:14px;border-radius:999px;background:#3ea6ff}
+    #fixture-overlay-controls{background:#222;color:#eee;padding:12px;border-radius:8px;margin-top:12px;line-height:1.6}
+    #fixture-overlay-controls button,#fixture-overlay-kind{color:#eee;background:#404040;margin:3px;padding:6px;border-radius:6px}
+    #fixture-overlay-result{display:block;white-space:pre-wrap}
+  `;document.head.append(style);
+  const popup=document.createElement('ytd-popup-container');popup.id='fixture-overlay-host';
+  const wrapper=document.createElement('tp-yt-paper-dialog');wrapper.id='fixture-overlay-wrapper';
+  const bridge=document.createElement('section');bridge.id='fixture-overlay-bridge';wrapper.append(bridge);popup.append(wrapper);document.querySelector('ytd-app').append(popup);
+  const body=document.createElement('div');body.className='fixture-overlay-body yt-spec-dialog-layout';
+  body.innerHTML='<h3 id="fixture-overlay-title">Share preview</h3><p id="fixture-overlay-primary">Original dialog text remains.</p><p class="fixture-overlay-secondary">Secondary information remains.</p><a class="fixture-overlay-accent" href="#demo-overlay-link">Original accent link</a><div id="fixture-overlay-media" role="img" aria-label="Demo dialog artwork"></div><input id="fixture-overlay-draft" aria-label="Demo dialog draft" value="Self-authored overlay draft"><button id="fixture-overlay-action" class="ytSpecButtonShapeNextHost ytSpecButtonShapeNextFilled ytSpecButtonShapeNextCallToAction">Demo action</button> <span id="fixture-overlay-badge">Member</span><button id="fixture-overlay-cancel" class="ytSpecButtonShapeNextHost ytSpecButtonShapeNextTonal ytSpecButtonShapeNextMono">Cancel preview</button>';
+  const kinds={share:null,form:'ytd-form-popup-renderer',hotkeys:'ytd-hotkey-dialog-renderer',report:'yt-report-form-modal-renderer',survey:'ytd-single-option-survey-renderer',followup:'ytd-survey-follow-up-renderer',checkbox:'ytd-checkbox-survey-renderer',dismissal:'ytd-dismissal-follow-up-renderer',voice:'ytd-voice-search-dialog-renderer',confirm:'yt-confirm-dialog-renderer'};
+  const controls=document.createElement('section');controls.id='fixture-overlay-controls';
+  controls.innerHTML='<strong>Overlay appearance verification</strong><div><label for="fixture-overlay-kind">Dialog preview </label><select id="fixture-overlay-kind"></select></div><div><button id="fixture-overlay-light">Light theme</button><button id="fixture-overlay-dark">Dark theme</button><button id="fixture-overlay-white">Static white backdrop</button><button id="fixture-overlay-black">Static black backdrop</button><button id="fixture-overlay-ambient">Ambient backdrop</button><button id="fixture-overlay-top">Back to page top</button><button id="fixture-overlay-wrapper-kind">Use legacy paper-dialog wrapper</button></div><button id="fixture-check-overlays">Check ON/OFF, zero and original states</button><output id="fixture-overlay-result">Ready. Only appearance and self-authored input are tested.</output>';
+  document.querySelector('#below').append(controls);const select=controls.querySelector('select');
+  for(const kind of Object.keys(kinds)){const option=document.createElement('option');option.value=kind;option.textContent=kind;select.append(option);}
+  const renderKind=()=>{const kind=select.value,renderer=document.createElement(kinds[kind]||'div');renderer.id='fixture-overlay-renderer';renderer.setAttribute('role','dialog');renderer.setAttribute('aria-label','Simulated '+kind+' dialog');if(kinds[kind])renderer.setAttribute('dialog','');else renderer.className='yt-spec-dialog-layout';renderer.append(body);bridge.replaceChildren(renderer);document.getElementById('fixture-overlay-title').textContent=kind+' preview';};
+  select.onchange=renderKind;renderKind();
+  controls.querySelector('#fixture-overlay-wrapper-kind').onclick=event=>{const old=bridge.parentElement,legacy=old.localName==='tp-yt-paper-dialog',next=document.createElement(legacy?'paper-dialog':'tp-yt-paper-dialog');next.id=old.id;next.append(bridge);old.replaceWith(next);event.currentTarget.textContent=legacy?'Use tp-yt-paper-dialog wrapper':'Use legacy paper-dialog wrapper';};
+  controls.querySelector('#fixture-overlay-light').onclick=()=>document.documentElement.removeAttribute('dark');
+  controls.querySelector('#fixture-overlay-dark').onclick=()=>document.documentElement.setAttribute('dark','');
+  controls.querySelector('#fixture-overlay-white').onclick=()=>document.documentElement.setAttribute('data-fixture-backdrop','white');
+  controls.querySelector('#fixture-overlay-black').onclick=()=>document.documentElement.setAttribute('data-fixture-backdrop','black');
+  controls.querySelector('#fixture-overlay-ambient').onclick=()=>document.documentElement.removeAttribute('data-fixture-backdrop');
+  controls.querySelector('#fixture-overlay-top').onclick=()=>window.scrollTo({top:0,behavior:'instant'});
+  const menu=document.createElement('div');menu.id='fixture-player-menu';menu.className='ytp-settings-menu ytp-popup';menu.setAttribute('role','menu');
+  menu.innerHTML='<div class="ytp-panel-header">Native player menu preview</div><button id="fixture-player-toggle-row" class="ytp-menuitem" role="menuitemcheckbox" aria-checked="true"><span>Demo captions</span><span id="fixture-player-toggle" aria-hidden="true"></span></button><button id="fixture-player-rate" class="ytp-menuitem" role="menuitemradio" aria-checked="true"><span>Normal</span><span class="fixture-player-secondary">1×</span></button><button id="fixture-player-rate-fast" class="ytp-menuitem" role="menuitemradio" aria-checked="false"><span>Fast preview</span><span class="fixture-player-secondary">1.25×</span></button><button class="ytp-menuitem" role="menuitem" aria-disabled="true" disabled>Disabled native item</button>';
+  document.getElementById('movie_player').append(menu);
+  const rows=[...menu.querySelectorAll('.ytp-menuitem:not([aria-disabled="true"])')];
+  rows.forEach((row,index)=>{row.onkeydown=event=>{if(!['ArrowDown','ArrowUp'].includes(event.key))return;event.preventDefault();rows[(index+(event.key==='ArrowDown'?1:rows.length-1))%rows.length].focus();};row.onclick=()=>{const radio=row.getAttribute('role')==='menuitemradio',selected=radio||row.getAttribute('aria-checked')!=='true';if(radio)for(const sibling of rows.filter(item=>item.getAttribute('role')==='menuitemradio'))sibling.setAttribute('aria-checked','false');row.setAttribute('aria-checked',String(selected));};});
+}
+if(fixtureParameters.has('hover-surfaces')){
+  // Known cached component classes only. This is not a model of every current
+  // profile card or a test of native YouTube hover/portal initialization.
+  document.documentElement.setAttribute('data-fixture-hover','');
+  const style=document.createElement('style');style.textContent=`
+    html[data-fixture-hover] ytd-app{position:relative}
+    html[data-fixture-hover][data-fixture-backdrop] ytd-app::before{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;background:white}
+    html[data-fixture-hover][data-fixture-backdrop="black"] ytd-app::before{background:black}
+    html[data-fixture-hover][data-fixture-backdrop] #yac-background{visibility:hidden!important}
+    html[data-fixture-hover][data-fixture-backdrop] #movie_player::before{content:'';position:absolute;inset:0;z-index:5;background:white;pointer-events:none}
+    html[data-fixture-hover][data-fixture-backdrop="black"] #movie_player::before{background:black}
+    #fixture-hover-card{position:fixed;right:24px;top:94px;z-index:120;width:290px;color:var(--fixture-control-text);background:var(--fixture-popup-base);box-shadow:0 8px 24px #0005;--hover-background:var(--fixture-popup-base)}
+    .yt-uix-hovercard-card-content,.yt-uix-clickcard-card-content{display:block;padding:16px 16px 44px;box-sizing:border-box;background-color:var(--fixture-popup-base)!important;border:1px solid var(--fixture-popup-base);border-radius:12px;box-shadow:0 8px 24px #0005;line-height:1.6}
+    #fixture-hover-card h3{margin:0 0 8px;font-size:16px}#fixture-hover-card p{margin:8px 0}
+    .fixture-hover-secondary{color:#aaa}html:not([dark]) .fixture-hover-secondary{color:#606060}
+    .fixture-hover-accent{color:#ff4081}html:not([dark]) .fixture-hover-accent{color:#6200ee}
+    .yt-uix-hovercard-card-border,.yt-uix-clickcard-card-border{position:absolute;inset:0;border:1px solid var(--fixture-popup-base);border-radius:12px;pointer-events:none}
+    #fixture-hover-card .yt-uix-card-body-arrow-vertical{position:absolute;left:28px;top:-12px;width:0;height:0;border:6px solid transparent;border-bottom-color:var(--hover-background)}
+    #fixture-hover-card .yt-uix-card-body-arrow-horizontal{position:absolute;left:-12px;top:28px;width:0;height:0;border:6px solid transparent;border-right-color:var(--hover-background)}
+    #fixture-hover-draft{box-sizing:border-box;width:100%;font:inherit;padding:6px;color:inherit;background:transparent;border:1px solid #888;border-radius:6px}
+    #fixture-hover-draft:focus-visible,#fixture-hover-card button:focus-visible{outline:2px solid #3ea6ff;outline-offset:2px}
+    #fixture-hover-action{margin:8px 0;background:#065fd4;color:white}#fixture-hover-badge{display:inline-block;background:#00764b;color:white;padding:2px 8px;border-radius:999px}
+    #fixture-hover-media{width:56px;height:28px;border-radius:6px;background:linear-gradient(45deg,#904eff,#ff823d);margin:8px 0}
+    #fixture-hover-disabled{opacity:.5}
+    #fixture-tooltip-stage{position:absolute;top:32px;left:24px;z-index:61;display:grid;grid-template-columns:repeat(3,150px);gap:20px}
+    .fixture-tooltip-wrapper{position:relative;display:block;color:white}
+    yt-tooltip-renderer,.fixture-tooltip-wrapper #tooltip,.ytp-promotooltip-container{position:relative;display:block;box-sizing:border-box;width:150px;min-height:96px;padding:12px 12px 40px;border-radius:8px;background:#282828;color:white;box-shadow:0 8px 24px #0005}
+    #tooltip.paper-tooltip{color:#ff4081}
+    #fixture-tooltip-stage [hidden]{display:none!important}
+    yt-tooltip-renderer:has(#tooltip){padding:0}
+    yt-tooltip-renderer::before{content:'';position:absolute;top:-12px;left:24px;border:6px solid transparent;border-bottom-color:#282828}
+    .ytp-promotooltip-pointer{position:absolute;left:24px;top:-6px;width:10px;height:10px;box-sizing:border-box;border:5px solid #282828;transform:rotate(45deg)}
+    #fixture-hover-controls{background:#222;color:#eee;padding:12px;border-radius:8px;margin-top:12px;line-height:1.6}
+    #fixture-hover-controls button,#fixture-hover-kind{color:#eee;background:#404040;margin:3px;padding:6px;border-radius:6px}
+    #fixture-hover-result{display:block;white-space:pre-wrap}
+  `;document.head.append(style);
+  const card=document.createElement('div');card.id='fixture-hover-card';
+  const body=document.createElement('div');body.id='fixture-hover-content';
+  body.innerHTML='<h3 id="fixture-hover-title">Profile card preview</h3><p id="fixture-hover-primary">Original card text remains.</p><p class="fixture-hover-secondary">Secondary information remains.</p><a class="fixture-hover-accent" href="#demo-hover-link">Original accent link</a><div id="fixture-hover-media" role="img" aria-label="Demo card artwork"></div><input id="fixture-hover-draft" aria-label="Demo card draft" value="Self-authored card draft"><button id="fixture-hover-action" class="ytSpecButtonShapeNextHost ytSpecButtonShapeNextFilled ytSpecButtonShapeNextCallToAction">Demo action</button> <span id="fixture-hover-badge">Member</span><button id="fixture-hover-neutral" class="ytSpecButtonShapeNextHost ytSpecButtonShapeNextTonal ytSpecButtonShapeNextMono" aria-pressed="false">Neutral preview</button><button id="fixture-hover-disabled" class="ytSpecButtonShapeNextHost ytSpecButtonShapeNextTonal ytSpecButtonShapeNextMono" disabled>Disabled preview</button>';
+  const border=document.createElement('div');border.id='fixture-hover-border';
+  const vertical=document.createElement('div');vertical.className='yt-uix-card-body-arrow-vertical';vertical.setAttribute('aria-hidden','true');
+  const horizontal=document.createElement('div');horizontal.className='yt-uix-card-body-arrow-horizontal';horizontal.setAttribute('aria-hidden','true');
+  card.append(body,border,vertical,horizontal);document.querySelector('ytd-app').append(card);
+  document.getElementById('fixture-hover-neutral').onclick=event=>event.currentTarget.setAttribute('aria-pressed',String(event.currentTarget.getAttribute('aria-pressed')!=='true'));
+  const stage=document.createElement('div');stage.id='fixture-tooltip-stage';
+  stage.innerHTML='<yt-tooltip-renderer id="fixture-tooltip-modern"><span id="fixture-tooltip-modern-label">Modern label</span></yt-tooltip-renderer><tp-yt-paper-tooltip class="fixture-tooltip-wrapper"><div id="tooltip" class="tp-yt-paper-tooltip"><span id="fixture-tooltip-paper-label">Paper label</span></div></tp-yt-paper-tooltip><paper-tooltip class="fixture-tooltip-wrapper"><div id="tooltip" class="paper-tooltip"><span id="fixture-tooltip-legacy-label">Legacy accent</span></div></paper-tooltip><yt-tooltip-renderer id="fixture-tooltip-nested" class="fixture-tooltip-wrapper"><tp-yt-paper-tooltip><div id="tooltip" class="tp-yt-paper-tooltip"><span id="fixture-tooltip-nested-label">Nested label</span></div></tp-yt-paper-tooltip></yt-tooltip-renderer><div class="ytp-promotooltip-container"><span id="fixture-tooltip-promo-label">Player label</span><div class="ytp-promotooltip-pointer" aria-hidden="true"></div></div>';
+  document.getElementById('movie_player').append(stage);
+  const controls=document.createElement('section');controls.id='fixture-hover-controls';
+  controls.innerHTML='<strong>Known card and tooltip appearance verification</strong><div><label for="fixture-hover-kind">Card preview </label><select id="fixture-hover-kind"></select></div><div><button id="fixture-hover-light">Light theme</button><button id="fixture-hover-dark">Dark theme</button><button id="fixture-hover-white">Static white backdrop</button><button id="fixture-hover-black">Static black backdrop</button><button id="fixture-hover-ambient">Ambient backdrop</button><button id="fixture-hover-top">Back to page top</button></div><button id="fixture-check-hover">Check card/tooltip zero, OFF and original states</button><output id="fixture-hover-result">Ready. Cached component shapes only; current native hover behavior remains unverified.</output>';
+  document.getElementById('below').append(controls);const select=controls.querySelector('select');
+  for(const kind of ['hover','click','hover-reverse','click-reverse','hover-flip','click-flip','nested']){const option=document.createElement('option');option.value=kind;option.textContent=kind;select.append(option);}
+  const renderKind=()=>{
+    const kind=select.value,prefix=kind.startsWith('click')?'clickcard':'hovercard';card.className='yt-uix-'+prefix+'-card'+(kind.endsWith('-reverse')?' yt-uix-'+prefix+'-card-reverse':kind.endsWith('-flip')?' yt-uix-'+prefix+'-card-flip':'');
+    const old=card.querySelector('#fixture-hover-inner');if(old){old.replaceWith(...old.childNodes);}
+    body.className='yt-uix-'+prefix+'-card-content';border.className='yt-uix-'+prefix+'-card-border';
+    if(kind==='nested'){const inner=document.createElement('div');inner.id='fixture-hover-inner';inner.className='yt-uix-clickcard-card-content';inner.append(...body.childNodes);body.append(inner);}
+  };select.onchange=renderKind;renderKind();
+  controls.querySelector('#fixture-hover-light').onclick=()=>document.documentElement.removeAttribute('dark');
+  controls.querySelector('#fixture-hover-dark').onclick=()=>document.documentElement.setAttribute('dark','');
+  controls.querySelector('#fixture-hover-white').onclick=()=>document.documentElement.setAttribute('data-fixture-backdrop','white');
+  controls.querySelector('#fixture-hover-black').onclick=()=>document.documentElement.setAttribute('data-fixture-backdrop','black');
+  controls.querySelector('#fixture-hover-ambient').onclick=()=>document.documentElement.removeAttribute('data-fixture-backdrop');
+  controls.querySelector('#fixture-hover-top').onclick=()=>window.scrollTo({top:0,behavior:'instant'});
 }
 if(new URLSearchParams(location.search).has('theme')||new URLSearchParams(location.search).has('controls')){
   if(new URLSearchParams(location.search).get('theme')==='deepdark'){
@@ -303,7 +554,7 @@ if(new URLSearchParams(location.search).has('store')){
     tick++;
   };
 }
-frame();setInterval(frame,1000/60);
+frame();if(!fixtureParameters.has('surface-work'))setInterval(frame,1000/60);
 document.querySelector('video').srcObject=sample.captureStream(60);
 document.querySelector('.ytp-settings-button').onclick=e=>{const b=e.currentTarget;b.setAttribute('aria-expanded',String(b.getAttribute('aria-expanded')!=='true'));};
 const theaterContainer=document.createElement('div');theaterContainer.id='full-bleed-container';
@@ -327,8 +578,193 @@ if(new URLSearchParams(location.search).has('warning-demo')){
     sample(...args){if(this.fixtureTrigger){this.fixtureTrigger=false;return true;}return super.sample(...args);}
   };
 }
+if(fixtureParameters.has('surface-work')){
+  // Static video and native DOM behavior only. Prototype-wrapped selector
+  // counters failed their positive controls in this browser and were removed.
+  const controls=document.createElement('section');controls.id='yac-fixture-surface-work';
+  controls.style.cssText='position:fixed;top:12px;right:12px;z-index:2147483647;width:430px;max-height:70vh;overflow:auto;padding:16px;border-radius:12px;background:#202126;color:#eee;font:13px system-ui';
+  const heading=document.createElement('strong');heading.textContent='Idle surface behavior verification';
+  const run=document.createElement('button');run.textContent='Check active / OFF surface behavior';run.style.cssText='display:block;margin:12px 0;padding:8px;color:#eee;background:#414348;border:0;border-radius:8px';
+  const output=document.createElement('pre');output.id='fixture-surface-work-result';output.style.cssText='white-space:pre-wrap;margin:0';output.textContent='Ready. Native DOM behavior, static video. Query counts and timings are not measured here.';
+  controls.append(heading,run,output);document.body.append(controls);
+  const settle=()=>new Promise(resolve=>setTimeout(()=>requestAnimationFrame(()=>queueMicrotask(resolve)),1100));
+  run.onclick=async()=>{
+    const toggle=document.getElementById('yac-enabled'),below=document.getElementById('below');
+    if(!toggle||!below){output.textContent='FAIL: controller is not ready';return;}
+    const originalEnabled=toggle.checked,added=[];
+    const report={scope:'Local native late-surface paint and restoration; no selector-count, YouTube/comment-latency or wall-time claim',backend:document.getElementById('yac-background')?.dataset.renderMode,cases:[]};
+    run.disabled=true;output.dataset.status='running';output.textContent='Checking…';
+    try{
+      for(const enabled of [true,false]){
+        toggle.checked=enabled;toggle.dispatchEvent(new Event('input',{bubbles:true}));await settle();
+        let ticket;
+        for(let i=0;i<50;i++){
+          const wrapper=document.createElement('div');wrapper.style.display='none';
+          wrapper.append(document.createElement('span'));
+          if(i===0){ticket=document.createElement('ytd-ticket-shelf-renderer');ticket.style.setProperty('background-color','rgb(44, 45, 46)','important');wrapper.append(ticket);}
+          added.push(wrapper);below.append(wrapper);
+        }
+        await settle();
+        const ticketPaint=ticket.style.getPropertyValue('background-color'),expected=enabled?'transparent':'rgb(44, 45, 46)';
+        report.cases.push({enabled,addedWrappers:50,ticketPaint,expected,pass:ticketPaint===expected});
+        for(const wrapper of added.splice(0))wrapper.remove();await settle();
+        if(!enabled){
+          const wrapper=document.createElement('div');wrapper.style.display='none';
+          const late=document.createElement('ytd-ticket-shelf-renderer');late.style.setProperty('background-color','rgb(51, 52, 53)','important');wrapper.append(late);below.append(wrapper);added.push(wrapper);
+          await settle();toggle.checked=true;toggle.dispatchEvent(new Event('input',{bubbles:true}));await settle();
+          report.resume={ticketPaint:late.style.getPropertyValue('background-color'),pass:late.style.getPropertyValue('background-color')==='transparent'};
+        }
+      }
+      report.pass=report.cases.every(result=>result.pass)&&report.resume.pass;
+      output.dataset.status=report.pass?'pass':'fail';
+    }catch(error){report.error=String(error);output.dataset.status='fail';}
+    finally{
+      for(const wrapper of added)wrapper.remove();
+      toggle.checked=originalEnabled;toggle.dispatchEvent(new Event('input',{bubbles:true}));await settle();
+      run.disabled=false;output.textContent=JSON.stringify(report,null,2);
+    }
+  };
+}
 const ambientScript=document.createElement('script');ambientScript.src=new URLSearchParams(location.search).has('baseline')?'/baseline-ambient.js':'/ambient.js';document.body.append(ambientScript);
-if(fixtureParameters.has('chat')||fixtureParameters.has('playlist')){
+if(fixtureParameters.has('hover-surfaces')){
+  document.getElementById('fixture-check-hover').onclick=async event=>{
+    const checkButton=event.currentTarget,report=document.getElementById('fixture-hover-result'),toggle=document.getElementById('yac-enabled'),root=document.getElementById('yac-controls')?.shadowRoot;
+    const master=root?.getElementById('yac-surfaceMultiplier'),navigation=root?.getElementById('yac-navigationDensity');
+    if(!toggle||!master||!navigation){report.textContent='FAIL: settings controller is not ready';report.dataset.status='fail';return;}
+    const failures=[],checks=[],check=(condition,name)=>{checks.push(name);if(!condition)failures.push(name);};
+    const select=document.getElementById('fixture-hover-kind'),originalKind=select.value,originalDark=document.documentElement.hasAttribute('dark'),originalEnabled=toggle.checked;
+    const originalMaster=master.value,originalNavigation=navigation.value,originalFocus=document.activeElement;
+    const card=document.getElementById('fixture-hover-card'),content=document.getElementById('fixture-hover-content'),border=document.getElementById('fixture-hover-border'),draft=document.getElementById('fixture-hover-draft'),draftValue=draft.value;
+    const neutral=document.getElementById('fixture-hover-neutral'),originalPressed=neutral.getAttribute('aria-pressed'),disabled=document.getElementById('fixture-hover-disabled');
+    const media=document.getElementById('fixture-hover-media'),action=document.getElementById('fixture-hover-action'),badge=document.getElementById('fixture-hover-badge');
+    const originalMedia=getComputedStyle(media).backgroundImage,originalAction=getComputedStyle(action).backgroundColor,originalBadge=getComputedStyle(badge).backgroundColor,originalDisabled=getComputedStyle(disabled).opacity;
+    const faces=['modern','paper','legacy','nested','promo'].map(kind=>document.getElementById('fixture-tooltip-'+kind+'-label').parentElement);
+    const nativeColors=faces.map(face=>getComputedStyle(face).color),originalOpacities=faces.map(face=>face.style.opacity),originalHidden=faces.map(face=>face.hidden);
+    const wait=()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+    const input=async(element,value)=>{element.value=String(value);element.dispatchEvent(new Event('input',{bubbles:true}));await wait();};
+    const enabled=async value=>{if(toggle.checked!==value){toggle.checked=value;toggle.dispatchEvent(new Event('input',{bubbles:true}));}await wait();};
+    const alpha=color=>{const rgba=color.match(/[\d.]+/g)?.map(Number);return rgba?.[3]??1;};
+    const probe=(element,name)=>{const node=document.createElement('span');node.style.backgroundColor=`var(${name})`;element.append(node);const color=getComputedStyle(node).backgroundColor;node.remove();return color;};
+    const noShadow=element=>{const shadow=getComputedStyle(element).boxShadow,colors=shadow.match(/rgba?\([^)]*\)/g)||[];return shadow==='none'||colors.length>0&&colors.every(color=>alpha(color)===0);};
+    const kind=value=>{select.value=value;select.dispatchEvent(new Event('change',{bubbles:true}));};
+    const geometry=element=>{const rect=element.getBoundingClientRect(),style=getComputedStyle(element);return [rect.width,rect.height,style.borderTopWidth,style.borderRightWidth,style.borderBottomWidth,style.borderLeftWidth,style.padding,style.borderRadius,style.transform].join('|');};
+    checkButton.disabled=true;
+    try{
+      await input(master,1);await input(navigation,100);
+      for(const dark of [true,false]){
+        document.documentElement.toggleAttribute('dark',dark);const theme=dark?'dark':'light';
+        for(const option of [...select.options]){
+          kind(option.value);await enabled(false);
+          const shapes=[card,content,border,...card.querySelectorAll('[aria-hidden="true"]'),...faces],nativeGeometry=shapes.map(geometry);
+          check(getComputedStyle(content).backgroundColor===probe(content,'--fixture-popup-base'),`${theme}/${option.value}: OFF restores original content paint`);
+          await enabled(true);
+          check(getComputedStyle(content).backgroundColor===probe(content,'--yac-menu-surface')&&alpha(getComputedStyle(card).backgroundColor)===0,`${theme}/${option.value}: content owns one navigation face`);
+          check(shapes.every((element,index)=>geometry(element)===nativeGeometry[index]),`${theme}/${option.value}: native geometry is unchanged`);
+          const inner=document.getElementById('fixture-hover-inner');
+          if(inner)check(alpha(getComputedStyle(inner).backgroundColor)===0&&alpha(getComputedStyle(inner).borderTopColor)===0&&getComputedStyle(inner).backdropFilter==='none'&&noShadow(inner),`${theme}: nested card does not add paint or blur`);
+          check(getComputedStyle(card.querySelector('.yt-uix-card-body-arrow-vertical')).borderBottomColor===probe(content,'--yac-menu-surface')&&getComputedStyle(card.querySelector('.yt-uix-card-body-arrow-horizontal')).borderRightColor===probe(content,'--yac-menu-surface'),`${theme}/${option.value}: original arrow faces follow navigation`);
+        }
+        check(faces.every(face=>getComputedStyle(face).backgroundColor===probe(face,'--yac-tooltip-surface')),`${theme}: known tooltips share the dark face for original light text`);
+        const nested=document.getElementById('fixture-tooltip-nested');
+        check(alpha(getComputedStyle(nested).backgroundColor)===0&&getComputedStyle(nested).backdropFilter==='none'&&noShadow(nested),`${theme}: nested tooltip host has no second face`);
+        check(faces.every((face,index)=>getComputedStyle(face).color===nativeColors[index]),`${theme}: tooltip foregrounds remain native`);
+        await input(master,.5);await input(navigation,40);
+        // Compare actual paints with a resolved CSS probe: Chromium serializes
+        // the declared .172 alpha as .173 after quantization. Keep the exact
+        // multiplier/coefficient check separate from that serialization.
+        check(Number(getComputedStyle(content).getPropertyValue('--yac-navigation-level'))===.2&&Number(getComputedStyle(content).getPropertyValue('--yac-menu-opacity'))===.172&&getComputedStyle(content).backgroundColor===probe(content,'--yac-menu-surface')&&faces.every(face=>getComputedStyle(face).backgroundColor===probe(face,'--yac-tooltip-surface')),`${theme}: 0.5 times 40% applies 20% of the face`);
+        await input(master,0);await input(navigation,100);
+        for(const option of [...select.options]){
+          kind(option.value);
+          check(alpha(getComputedStyle(content).backgroundColor)===0&&alpha(getComputedStyle(content).borderTopColor)===0&&alpha(getComputedStyle(border).borderTopColor)===0&&noShadow(content)&&noShadow(card)&&noShadow(border)&&getComputedStyle(border).backdropFilter==='none',`${theme}/${option.value}: shared zero clears face, borders and shadows`);
+          check(alpha(getComputedStyle(card.querySelector('.yt-uix-card-body-arrow-vertical')).borderBottomColor)===0&&alpha(getComputedStyle(card.querySelector('.yt-uix-card-body-arrow-horizontal')).borderRightColor)===0,`${theme}/${option.value}: zero clears native arrow paint`);
+        }
+        check(faces.every(face=>alpha(getComputedStyle(face).backgroundColor)===0&&noShadow(face)&&getComputedStyle(face).backdropFilter.includes('blur(0px)')&&!getComputedStyle(face).backdropFilter.includes('brightness(0.')),`${theme}: tooltip zero clears face, shadow, blur and dimming`);
+        check(alpha(getComputedStyle(document.getElementById('fixture-tooltip-modern'),'::before').borderBottomColor)===0&&alpha(getComputedStyle(nested,'::before').borderBottomColor)===0&&alpha(getComputedStyle(document.querySelector('.ytp-promotooltip-pointer')).borderTopColor)===0,`${theme}: tooltip pointers reach zero`);
+        neutral.setAttribute('aria-pressed','true');check(alpha(getComputedStyle(neutral).backgroundColor)===0&&getComputedStyle(neutral).backdropFilter==='none',`${theme}: selected neutral control has no shade floor or extra blur`);
+        neutral.focus({preventScroll:true});const zeroOutline=getComputedStyle(neutral).outline;
+        await enabled(false);check(getComputedStyle(neutral).outline===zeroOutline,`${theme}: exact native focus outline survives zero and OFF`);
+        check(faces.every(face=>getComputedStyle(face).backgroundColor==='rgb(40, 40, 40)'),`${theme}: OFF restores native tooltip paints`);
+        await enabled(true);await input(master,1);await input(navigation,0);
+        check(alpha(getComputedStyle(content).backgroundColor)===0&&faces.every(face=>alpha(getComputedStyle(face).backgroundColor)===0),`${theme}: individual navigation zero clears these surfaces independently`);
+        await input(navigation,100);
+        for(const face of faces){face.style.opacity='.55';face.hidden=true;}
+        await input(master,.4);
+        check(faces.every(face=>getComputedStyle(face).opacity==='0.55'&&face.hidden&&getComputedStyle(face).display==='none'),`${theme}: native fade opacity and hidden state survive shade updates`);
+        faces.forEach((face,index)=>{face.style.opacity=originalOpacities[index];face.hidden=originalHidden[index];});
+        check(draft.value===draftValue&&getComputedStyle(media).backgroundImage===originalMedia&&getComputedStyle(action).backgroundColor===originalAction&&getComputedStyle(badge).backgroundColor===originalBadge&&getComputedStyle(disabled).opacity===originalDisabled&&disabled.disabled,`${theme}: draft, media, CTA, badge and disabled state preserved`);
+      }
+    }catch(error){failures.push(error.message);}finally{
+      faces.forEach((face,index)=>{face.style.opacity=originalOpacities[index];face.hidden=originalHidden[index];});
+      document.documentElement.toggleAttribute('dark',originalDark);kind(originalKind);neutral.setAttribute('aria-pressed',originalPressed);
+      await input(master,originalMaster);await input(navigation,originalNavigation);await enabled(originalEnabled);checkButton.disabled=false;originalFocus?.focus?.({preventScroll:true});
+    }
+    report.dataset.status=failures.length?'fail':'pass';report.dataset.results=JSON.stringify({failures,checks});report.textContent=failures.length?'FAIL: '+failures.join('\n'):'PASS: '+checks.length+' known card/tooltip, multiplicative shade, zero, OFF and original-state checks. Current native YouTube hover cards remain separate.';
+  };
+}
+if(fixtureParameters.has('overlay-surfaces')){
+  document.getElementById('fixture-check-overlays').onclick=async event=>{
+    const checkButton=event.currentTarget,report=document.getElementById('fixture-overlay-result'),toggle=document.getElementById('yac-enabled'),root=document.getElementById('yac-controls')?.shadowRoot;
+    const master=root?.getElementById('yac-surfaceMultiplier'),navigation=root?.getElementById('yac-navigationDensity');
+    if(!toggle||!master||!navigation){report.textContent='FAIL: settings controller is not ready';report.dataset.status='fail';return;}
+    const failures=[],checks=[];const check=(condition,name)=>{checks.push(name);if(!condition)failures.push(name);};
+    const select=document.getElementById('fixture-overlay-kind'),originalKind=select.value,originalDark=document.documentElement.hasAttribute('dark'),originalEnabled=toggle.checked;
+    const originalMaster=master.value,originalNavigation=navigation.value,draft=document.getElementById('fixture-overlay-draft'),draftValue=draft.value;
+    const media=document.getElementById('fixture-overlay-media'),mediaPaint=getComputedStyle(media).backgroundImage,action=document.getElementById('fixture-overlay-action'),badge=document.getElementById('fixture-overlay-badge');
+    const actionPaint=getComputedStyle(action).backgroundColor,badgePaint=getComputedStyle(badge).backgroundColor,menu=document.getElementById('fixture-player-menu'),menuOpacity=getComputedStyle(menu).opacity;
+    const rows=[...menu.querySelectorAll('.ytp-menuitem')],rowStates=rows.map(row=>row.getAttribute('aria-checked')),disabledOpacity=getComputedStyle(rows.at(-1)).opacity;
+    const originalFocus=document.activeElement,wait=()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+    const input=async(element,value)=>{element.value=String(value);element.dispatchEvent(new Event('input',{bubbles:true}));await wait();};
+    const enabled=async value=>{if(toggle.checked!==value){toggle.checked=value;toggle.dispatchEvent(new Event('input',{bubbles:true}));}await wait();};
+    const alpha=color=>{const rgba=color.match(/[\d.]+/g)?.map(Number);return rgba?.[3]??1;};
+    const probe=(element,name)=>{const node=document.createElement('span');node.style.backgroundColor=`var(${name})`;element.append(node);const color=getComputedStyle(node).backgroundColor;node.remove();return color;};
+    checkButton.disabled=true;
+    try{
+      await enabled(true);await input(master,1);await input(navigation,100);
+      for(const dark of [true,false]){
+        document.documentElement.toggleAttribute('dark',dark);const theme=dark?'dark':'light';
+        for(const option of [...select.options]){
+          select.value=option.value;select.dispatchEvent(new Event('change',{bubbles:true}));const face=document.getElementById('fixture-overlay-renderer');
+          check(getComputedStyle(face).backgroundColor===probe(face,'--yac-menu-surface'),`${theme}/${option.value}: one navigation face`);
+          check(alpha(getComputedStyle(document.getElementById('fixture-overlay-wrapper')).backgroundColor)===0,`${theme}/${option.value}: wrapper paint is clear`);
+          check(alpha(getComputedStyle(face.querySelector('.fixture-overlay-body')).backgroundColor)===0&&getComputedStyle(face.querySelector('.fixture-overlay-body')).backdropFilter==='none',`${theme}/${option.value}: inner layout has no second face or blur`);
+          check(draft.value===draftValue&&getComputedStyle(media).backgroundImage===mediaPaint&&getComputedStyle(action).backgroundColor===actionPaint&&getComputedStyle(badge).backgroundColor===badgePaint,`${theme}/${option.value}: draft/media/action/badge preserved`);
+        }
+        check(getComputedStyle(menu).backgroundColor==='rgba(28, 28, 28, 0.86)',`${theme}: player face stays dark for native light labels`);
+        check(getComputedStyle(menu.querySelector('.ytp-panel-header')).color==='rgb(255, 255, 255)',`${theme}: native player foreground remains white`);
+        await input(master,0);
+        for(const option of [...select.options]){
+          select.value=option.value;select.dispatchEvent(new Event('change',{bubbles:true}));
+          check(alpha(getComputedStyle(document.getElementById('fixture-overlay-renderer')).backgroundColor)===0,`${theme}/${option.value}: shared zero clears its face`);
+        }
+        check(alpha(getComputedStyle(menu).backgroundColor)===0,`${theme}: shared zero clears player face`);
+        const shadow=getComputedStyle(menu).boxShadow,shadowColors=shadow.match(/rgba?\([^)]*\)/g)||[];
+        check(shadow==='none'||shadowColors.length>0&&shadowColors.every(color=>alpha(color)===0),`${theme}: shadow alpha reaches zero`);
+        check(!getComputedStyle(menu).backdropFilter.includes('brightness(0.')&&getComputedStyle(menu).backdropFilter.includes('blur(0px)'),`${theme}: zero removes dimming and blur`);
+        check(rows.every(row=>alpha(getComputedStyle(row).backgroundColor)===0),`${theme}: selected/neutral rows have no paint floor`);
+        rows[1].focus({preventScroll:true});const zeroFocus=getComputedStyle(rows[1]).outline;
+        await input(master,1);await input(navigation,0);
+        check(alpha(getComputedStyle(menu).backgroundColor)===0&&alpha(getComputedStyle(document.getElementById('fixture-overlay-renderer')).backgroundColor)===0,`${theme}: individual navigation zero is independent`);
+        await input(navigation,100);await enabled(false);
+        for(const option of [...select.options]){
+          select.value=option.value;select.dispatchEvent(new Event('change',{bubbles:true}));const face=document.getElementById('fixture-overlay-renderer');
+          check(getComputedStyle(face).backgroundColor===probe(face,'--fixture-popup-base')&&getComputedStyle(document.getElementById('fixture-overlay-wrapper')).backgroundColor===probe(face,'--fixture-popup-base'),`${theme}/${option.value}: OFF restores original outer/inner paints`);
+        }
+        check(getComputedStyle(menu).backgroundColor==='rgb(40, 40, 40)',`${theme}: OFF restores native player paint`);
+        rows[1].focus({preventScroll:true});const nativeFocus=getComputedStyle(rows[1]);
+        check(nativeFocus.outlineStyle==='solid'&&parseFloat(nativeFocus.outlineWidth)>0&&nativeFocus.outline===zeroFocus,`${theme}: zero retains the exact native OFF focus outline`);await enabled(true);
+      }
+      check(getComputedStyle(menu).opacity===menuOpacity&&getComputedStyle(rows.at(-1)).opacity===disabledOpacity, 'native popup and disabled opacity are unchanged');
+      check(rows.every((row,index)=>row.getAttribute('aria-checked')===rowStates[index]),'native checkbox/radio states are unchanged');
+      check(draft.value===draftValue,'input draft survives all shade/theme/OFF changes');
+    }catch(error){failures.push(error.message);}finally{
+      document.documentElement.toggleAttribute('dark',originalDark);select.value=originalKind;select.dispatchEvent(new Event('change',{bubbles:true}));
+      await input(master,originalMaster);await input(navigation,originalNavigation);await enabled(originalEnabled);checkButton.disabled=false;originalFocus?.focus?.({preventScroll:true});
+    }
+    report.dataset.status=failures.length?'fail':'pass';report.dataset.results=JSON.stringify({failures,checks});report.textContent=failures.length?'FAIL: '+failures.join('\n'):'PASS: '+checks.length+' dark/light, single-face, zero, OFF and original-state checks. Native-site behavior remains separate.';
+  };
+}
+if(fixtureParameters.has('chat')||fixtureParameters.has('playlist')||fixtureParameters.has('reading-surfaces')){
   const diagnosticStyle=document.createElement('style');diagnosticStyle.textContent=`
     html[data-fixture-backdrop] ytd-app::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;background:#fff}
     html[data-fixture-backdrop="black"] ytd-app::before{background:#000}
@@ -338,7 +774,7 @@ if(fixtureParameters.has('chat')||fixtureParameters.has('playlist')){
     #fixture-reading-result{display:block;white-space:pre-wrap}
   `;document.head.append(diagnosticStyle);
   const controls=document.createElement('section');controls.id='fixture-reading-controls';
-  controls.innerHTML='<strong>Reading contrast verification</strong><div><button id="fixture-light-theme">Light theme</button><button id="fixture-dark-theme">Dark theme</button><button id="fixture-white-backdrop">Static white backdrop</button><button id="fixture-black-backdrop">Static black backdrop</button><button id="fixture-ambient-backdrop">Ambient backdrop</button></div><button id="fixture-check-reading">Check dark/light + ON/OFF reading contrast</button><output id="fixture-reading-result">Ready. Checks use computed CSS paint over static black and white; no flashing test imagery.</output>';
+  controls.innerHTML='<strong>Reading contrast verification</strong><div><button id="fixture-light-theme">Light theme</button><button id="fixture-dark-theme">Dark theme</button><button id="fixture-white-backdrop">Static white backdrop</button><button id="fixture-black-backdrop">Static black backdrop</button><button id="fixture-ambient-backdrop">Ambient backdrop</button><button id="fixture-reading-top">Back to page top</button></div><button id="fixture-check-reading">Check dark/light + ON/OFF reading contrast</button><output id="fixture-reading-result">Ready. Checks use computed CSS paint over static black and white; no flashing test imagery.</output>';
   document.querySelector('#below').append(controls);
   const chatWindow=()=>document.querySelector('#chatframe')?.contentWindow;
   const setTheme=dark=>{document.documentElement.toggleAttribute('dark',dark);chatWindow()?.fixtureSetChatTheme?.(dark);};
@@ -347,11 +783,12 @@ if(fixtureParameters.has('chat')||fixtureParameters.has('playlist')){
   controls.querySelector('#fixture-white-backdrop').onclick=()=>document.documentElement.setAttribute('data-fixture-backdrop','white');
   controls.querySelector('#fixture-black-backdrop').onclick=()=>document.documentElement.setAttribute('data-fixture-backdrop','black');
   controls.querySelector('#fixture-ambient-backdrop').onclick=()=>document.documentElement.removeAttribute('data-fixture-backdrop');
+  controls.querySelector('#fixture-reading-top').onclick=()=>window.scrollTo({top:0,behavior:'instant'});
   const checkButton=controls.querySelector('#fixture-check-reading'),report=controls.querySelector('#fixture-reading-result');
   checkButton.onclick=async()=>{
     const failures=[],ratios=[],frame=document.querySelector('#chatframe'),originalDocument=frame?.contentDocument;
     const dark=document.documentElement.hasAttribute('dark'),chatDark=originalDocument?.documentElement.hasAttribute('dark');
-    const toggle=document.querySelector('#yac-controls')?.shadowRoot?.querySelector('input[role="switch"]');
+    const toggle=document.querySelector('#yac-enabled');
     if(!toggle||frame&&!chatWindow()?.fixtureCheckChatReadability){report.textContent='FAIL: controller/chat fixture is not ready; rerun after load';report.dataset.status='fail';return;}
     const initialEnabled=toggle.checked,originalFocus=document.activeElement;
     const waitPaint=()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
@@ -368,6 +805,10 @@ if(fixtureParameters.has('chat')||fixtureParameters.has('playlist')){
     const expectedSurface=(host,name)=>{const probe=document.createElement('span');probe.style.backgroundColor=`var(${name})`;host.append(probe);const paint=getComputedStyle(probe).backgroundColor;probe.remove();return paint;};
     const checkContrast=(element,name)=>{for(const backdrop of [0,255]){const ratio=contrast(element,backdrop);ratios.push({name,backdrop,ratio:Number(ratio.toFixed(3))});check(ratio>=4.5,`${name} over ${backdrop?'white':'black'}: ${ratio.toFixed(2)} < 4.5`);}};
     const playlist=document.querySelector('#fixture-playlist'),originalRows=[...(playlist?.querySelectorAll('ytd-playlist-panel-video-renderer')||[])],selectedRow=playlist?.querySelector('[selected]');
+    const readingPanes=fixtureParameters.has('reading-surfaces')?[document.getElementById('description'),document.getElementById('comments'),document.getElementById('related')]:[];
+    const paneFace=pane=>pane.id==='description'?pane.parentElement:pane.id==='related'&&pane.querySelector('ytd-playlist-panel-renderer')?(pane.querySelector('ytd-watch-next-secondary-results-renderer ytd-playlist-panel-renderer')?pane.querySelector('ytd-item-section-renderer'):pane.querySelector('ytd-watch-next-secondary-results-renderer')):pane;
+    const draft=document.getElementById('fixture-comment-draft'),draftValue=draft?.value,media=document.getElementById('fixture-related-media'),mediaImage=media&&getComputedStyle(media).backgroundImage;
+    const member=document.getElementById('fixture-member-badge'),memberPaint=member&&getComputedStyle(member).backgroundColor;
     checkButton.disabled=true;
     try{
       await setEnabled(true);
@@ -385,6 +826,13 @@ if(fixtureParameters.has('chat')||fixtureParameters.has('playlist')){
           check(getComputedStyle(selectedRow).backgroundColor===expectedSurface(playlist,'--fixture-playing-face'),`${theme}: selected row retains native paint`);
           check(playlist.querySelector('[selected]')===selectedRow&&originalRows.every(item=>item.isConnected),`${theme}: playing state and original row DOM are preserved`);
         }
+        for(const pane of readingPanes){
+          const face=paneFace(pane);
+          check(getComputedStyle(face).backgroundColor===expectedSurface(face,'--yac-reading-pane-surface'),`${theme}: ${pane.id} has its shared text owner`);
+          check(getComputedStyle(face).backdropFilter==='none'&&getComputedStyle(pane).backdropFilter==='none',`${theme}: ${pane.id} does not allocate a backdrop filter`);
+          for(const text of pane.querySelectorAll('.fixture-reading-heading,.fixture-reading-line,.fixture-reading-link'))checkContrast(text,`${theme} ${pane.id} ${text.className}`);
+        }
+        if(readingPanes.length){for(const text of document.querySelectorAll('#fixture-native-title,#owner .fixture-reading-link,#owner .fixture-reading-secondary'))checkContrast(text,`${theme} metadata ${text.id||text.className}`);check(draft.value===draftValue,`${theme}: comment draft is retained`);check(getComputedStyle(media).backgroundImage===mediaImage,`${theme}: thumbnail is unchanged`);check(getComputedStyle(member).backgroundColor===memberPaint,`${theme}: member color is unchanged`);check(getComputedStyle(document.getElementById('description')).backgroundColor===expectedSurface(document.getElementById('description'),'--yac-reading-pane-face'),`${theme}: description retains its clear child face`);}
       }
       await setEnabled(false);
       for(const themeDark of [true,false]){
@@ -395,12 +843,13 @@ if(fixtureParameters.has('chat')||fixtureParameters.has('playlist')){
           check(getComputedStyle(playlist.querySelector('.header')).backgroundColor===native&&getComputedStyle(playlist.querySelector('ytd-playlist-panel-video-renderer:not([selected])')).backgroundColor===native,`${theme}: OFF restores native playlist paint`);
           check(getComputedStyle(selectedRow).backgroundColor===expectedSurface(playlist,'--fixture-playing-face'),`${theme}: OFF retains the playing face`);
         }
+        for(const pane of readingPanes)check(getComputedStyle(pane).backgroundColor===expectedSurface(pane,'--fixture-popup-base')&&getComputedStyle(paneFace(pane)).backgroundColor===expectedSurface(pane,'--fixture-popup-base'),`${theme}: OFF restores native ${pane.id} paint`);
       }
     }catch(error){failures.push(error.message);}finally{
       setTheme(dark);if(frame)chatWindow()?.fixtureSetChatTheme?.(chatDark);
       await setEnabled(initialEnabled);checkButton.disabled=false;originalFocus?.focus?.({preventScroll:true});
     }
-    report.textContent=failures.length?'FAIL: '+failures.join('\n'):`PASS: same-document dark/light themes, ON/OFF restoration, native SVG/semantic/playing states; minimum primary contrast ${Math.min(...ratios.map(item=>item.ratio)).toFixed(2)} (required 4.5)`;
+    report.textContent=failures.length?'FAIL: '+failures.join('\n'):`PASS: local dark/light themes and ON/OFF restoration${readingPanes.length?', text panes/draft/media/semantic states':', native SVG/semantic/playing states'}; minimum measured text contrast ${Math.min(...ratios.map(item=>item.ratio)).toFixed(2)} (required 4.5)`;
     report.dataset.status=failures.length?'fail':'pass';report.dataset.results=JSON.stringify({failures,ratios});
   };
 }

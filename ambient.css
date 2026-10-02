@@ -17,30 +17,49 @@ html.yac-active {
   --yac-control-hover-opacity: .34;
   --yac-control-selected-opacity: .44;
   --yac-control-blur: 12px;
+  --yac-reading-blur: 12px;
+  --yac-navigation-blur: 16px;
+  --yac-navigation-backdrop: blur(var(--yac-navigation-blur));
+  --yac-control-dark-brightness: .50;
+  --yac-control-dark-hover-brightness: .40;
+  --yac-chip-dark-brightness: .44;
+  --yac-control-light-contrast: .1;
+  --yac-control-light-brightness: 1.8;
+  --yac-control-feedback: 1;
+  --yac-navigation-level: 1;
+  --yac-menu-opacity: .86;
+  --yac-guide-opacity: .78;
+  --yac-secondary-opacity: .90;
+  --yac-settings-opacity: .90;
   /* Keep the translucent paint; adjust only the backdrop under small controls.
      Native white/black primary text needs a dark/light lens respectively. */
-  --yac-control-dark-backdrop: blur(var(--yac-control-blur)) brightness(.5);
-  --yac-control-dark-hover-backdrop: blur(var(--yac-control-blur)) brightness(.4);
-  --yac-control-backdrop: blur(var(--yac-control-blur)) contrast(.1) brightness(1.8);
+  --yac-control-dark-backdrop: blur(var(--yac-control-blur)) brightness(var(--yac-control-dark-brightness));
+  --yac-control-dark-hover-backdrop: blur(var(--yac-control-blur)) brightness(var(--yac-control-dark-hover-brightness));
+  --yac-control-backdrop: blur(var(--yac-control-blur)) contrast(var(--yac-control-light-contrast)) brightness(var(--yac-control-light-brightness));
   --yac-control-hover-backdrop: var(--yac-control-backdrop);
   --yac-chip-backdrop: var(--yac-control-backdrop);
-  /* Text-heavy surfaces need a stronger face than short action buttons.
-     64% retains primary text contrast over both white and black frames. */
+  --yac-chip-hover-backdrop: var(--yac-control-hover-backdrop);
+  /* Text-heavy surfaces have a stronger dense endpoint. The shared setting
+     still permits complete transparency; foreground opacity is never scaled. */
   --yac-reading-rgb: 255, 255, 255;
-  --yac-reading-opacity: .64;
-  --yac-reading-hover-opacity: .70;
+  --yac-reading-opacity: .74;
+  --yac-reading-hover-opacity: .80;
+  --yac-reading-pane-opacity: .94;
+  --yac-reading-pane-hover-opacity: .98;
   --yac-reading-surface: rgba(var(--yac-reading-rgb), var(--yac-reading-opacity));
   --yac-reading-hover-surface: rgba(var(--yac-reading-rgb), var(--yac-reading-hover-opacity));
+  --yac-reading-pane-surface: rgba(var(--yac-reading-rgb), var(--yac-reading-pane-opacity));
+  --yac-reading-pane-hover-surface: rgba(var(--yac-reading-rgb), var(--yac-reading-pane-hover-opacity));
   --yac-control-surface: rgba(var(--yac-control-rgb), var(--yac-control-opacity));
   --yac-control-hover-surface: rgba(var(--yac-control-rgb), var(--yac-control-hover-opacity));
   --yac-control-selected-surface: rgba(var(--yac-control-rgb), var(--yac-control-selected-opacity));
   --yac-control-text: var(--yt-spec-text-primary, #0f0f0f);
   --yac-page-base: #fff;
-  --yac-secondary-surface: rgba(255, 255, 255, .9);
-  --yac-hover-surface: rgba(0, 0, 0, .08);
+  --yac-secondary-surface: rgba(255, 255, 255, var(--yac-secondary-opacity));
+  --yac-hover-surface: rgba(0, 0, 0, calc(.08 * var(--yac-control-feedback)));
   --yac-chip-arrow-surface: var(--yac-control-surface);
   --yac-text-shadow: 0 1px 3px rgba(255, 255, 255, .6);
-  --yac-search-border: rgba(0, 0, 0, .22);
+  --yac-search-border: rgba(0, 0, 0, calc(.22 * var(--yac-control-feedback)));
   background: var(--yac-page-base) !important;
 }
 html.yac-active[dark],
@@ -49,12 +68,14 @@ html.yac-active:has(link#efyt-dark-theme) {
   --yac-reading-rgb: var(--yac-control-rgb);
   --yac-control-backdrop: var(--yac-control-dark-backdrop);
   --yac-control-hover-backdrop: var(--yac-control-dark-hover-backdrop);
-  --yac-chip-backdrop: var(--yac-control-dark-hover-backdrop);
-  --yac-secondary-surface: rgba(28, 28, 28, .9);
-  --yac-hover-surface: rgba(255, 255, 255, .14);
+  --yac-chip-backdrop: blur(var(--yac-control-blur)) brightness(var(--yac-chip-dark-brightness));
+  --yac-chip-hover-backdrop: var(--yac-control-dark-hover-backdrop);
+  --yac-navigation-backdrop: blur(var(--yac-navigation-blur)) brightness(calc(1 - .65 * var(--yac-navigation-level)));
+  --yac-secondary-surface: rgba(28, 28, 28, var(--yac-secondary-opacity));
+  --yac-hover-surface: rgba(255, 255, 255, calc(.14 * var(--yac-control-feedback)));
   --yac-control-text: var(--main-text, var(--yt-spec-text-primary, #f1f1f1));
   --yac-text-shadow: 0 1px 4px #000c;
-  --yac-search-border: rgba(255, 255, 255, .24);
+  --yac-search-border: rgba(255, 255, 255, calc(.24 * var(--yac-control-feedback)));
 }
 html.yac-active #yac-background { display: block !important; }
 html.yac-active body { background: transparent !important; }
@@ -73,13 +94,12 @@ html.yac-active :is(ytd-watch-flexy,ytd-watch-grid,ytd-masthead) {
 }
 /* Paint actual component faces, not every button or structural wrapper. Native
    dimensions, icon accents, focus outlines and disabled opacity stay intact. */
-/* Preserve the approved chip/arrow lens in every state, including native
-   button hosts inside the chip cloud. Actions can be lighter independently. */
+/* Chips and nested arrow hosts follow the same density setting. */
 html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-chip-cloud-renderer {
   --yac-control-backdrop: var(--yac-chip-backdrop);
-  --yac-control-hover-backdrop: var(--yac-chip-backdrop);
+  --yac-control-hover-backdrop: var(--yac-chip-hover-backdrop);
 }
-html.yac-active :is(ytd-masthead,ytd-watch-flexy,ytd-watch-grid,ytd-popup-container,tp-yt-app-drawer) :is(.ytSpecButtonShapeNextHost,.yt-spec-button-shape-next):is(.ytSpecButtonShapeNextTonal,.ytSpecButtonShapeNextOutline,.ytSpecButtonShapeNextFilled,.ytSpecButtonShapeNextText,.yt-spec-button-shape-next--tonal,.yt-spec-button-shape-next--outline,.yt-spec-button-shape-next--filled,.yt-spec-button-shape-next--text),
+html.yac-active :is(ytd-masthead,ytd-watch-flexy,ytd-watch-grid,ytd-popup-container,tp-yt-app-drawer,.yt-uix-hovercard-card-content,.yt-uix-clickcard-card-content) :is(.ytSpecButtonShapeNextHost,.yt-spec-button-shape-next):is(.ytSpecButtonShapeNextTonal,.ytSpecButtonShapeNextOutline,.ytSpecButtonShapeNextText,.yt-spec-button-shape-next--tonal,.yt-spec-button-shape-next--outline,.yt-spec-button-shape-next--text,.ytSpecButtonShapeNextFilled.ytSpecButtonShapeNextMono,.yt-spec-button-shape-next--filled.yt-spec-button-shape-next--mono),
 html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-chip-cloud-renderer :is(.ytChipShapeActive,.ytChipShapeInactive,.YtChipShapeActive,.YtChipShapeInactive),
 html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-chip-cloud-renderer #chip-container {
   background-color: var(--yac-control-surface) !important;
@@ -87,7 +107,7 @@ html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-chip-cloud-renderer #chip
   -webkit-backdrop-filter: var(--yac-control-backdrop) !important;
   backdrop-filter: var(--yac-control-backdrop) !important;
 }
-html.yac-active :is(ytd-masthead,ytd-watch-flexy,ytd-watch-grid,ytd-popup-container,tp-yt-app-drawer) :is(.ytSpecButtonShapeNextHost,.yt-spec-button-shape-next):is(.ytSpecButtonShapeNextTonal,.ytSpecButtonShapeNextOutline,.ytSpecButtonShapeNextFilled,.ytSpecButtonShapeNextText,.yt-spec-button-shape-next--tonal,.yt-spec-button-shape-next--outline,.yt-spec-button-shape-next--filled,.yt-spec-button-shape-next--text):is(:hover,:focus-visible),
+html.yac-active :is(ytd-masthead,ytd-watch-flexy,ytd-watch-grid,ytd-popup-container,tp-yt-app-drawer,.yt-uix-hovercard-card-content,.yt-uix-clickcard-card-content) :is(.ytSpecButtonShapeNextHost,.yt-spec-button-shape-next):is(.ytSpecButtonShapeNextTonal,.ytSpecButtonShapeNextOutline,.ytSpecButtonShapeNextText,.yt-spec-button-shape-next--tonal,.yt-spec-button-shape-next--outline,.yt-spec-button-shape-next--text,.ytSpecButtonShapeNextFilled.ytSpecButtonShapeNextMono,.yt-spec-button-shape-next--filled.yt-spec-button-shape-next--mono):is(:hover,:focus-visible),
 html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-chip-cloud-renderer :is(.ytChipShapeActive,.ytChipShapeInactive,.YtChipShapeActive,.YtChipShapeInactive):is(:hover,:focus-within),
 html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-chip-cloud-renderer :where(.ytChipShapeButtonReset:focus-visible,.YtChipShapeButtonReset:focus-visible) :is(.ytChipShapeActive,.ytChipShapeInactive,.YtChipShapeActive,.YtChipShapeInactive),
 html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-chip-cloud-renderer #chip-container:is(:hover,:focus-within) {
@@ -95,7 +115,7 @@ html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-chip-cloud-renderer #chip
   -webkit-backdrop-filter: var(--yac-control-hover-backdrop) !important;
   backdrop-filter: var(--yac-control-hover-backdrop) !important;
 }
-html.yac-active :is(ytd-masthead,ytd-watch-flexy,ytd-watch-grid,ytd-popup-container,tp-yt-app-drawer) :is(.ytSpecButtonShapeNextHost,.yt-spec-button-shape-next):is(.ytSpecButtonShapeNextTonal,.ytSpecButtonShapeNextOutline,.ytSpecButtonShapeNextFilled,.ytSpecButtonShapeNextText,.yt-spec-button-shape-next--tonal,.yt-spec-button-shape-next--outline,.yt-spec-button-shape-next--filled,.yt-spec-button-shape-next--text):is([aria-pressed="true"],[aria-selected="true"]),
+html.yac-active :is(ytd-masthead,ytd-watch-flexy,ytd-watch-grid,ytd-popup-container,tp-yt-app-drawer,.yt-uix-hovercard-card-content,.yt-uix-clickcard-card-content) :is(.ytSpecButtonShapeNextHost,.yt-spec-button-shape-next):is(.ytSpecButtonShapeNextTonal,.ytSpecButtonShapeNextOutline,.ytSpecButtonShapeNextText,.yt-spec-button-shape-next--tonal,.yt-spec-button-shape-next--outline,.yt-spec-button-shape-next--text,.ytSpecButtonShapeNextFilled.ytSpecButtonShapeNextMono,.yt-spec-button-shape-next--filled.yt-spec-button-shape-next--mono):is([aria-pressed="true"],[aria-selected="true"]),
 html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-chip-cloud-renderer :is(.ytChipShapeActive,.YtChipShapeActive),
 html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-chip-cloud-renderer :is(.ytChipShapeActive,.YtChipShapeActive):is(:hover,:focus-within),
 html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-chip-cloud-renderer yt-chip-cloud-chip-renderer[selected] #chip-container {
@@ -103,7 +123,7 @@ html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-chip-cloud-renderer yt-ch
 }
 /* Native Filled and selected chip variants normally put dark text on white.
    Match text to the page theme now that their faces share the dark palette. */
-html.yac-active :is(ytd-masthead,ytd-watch-flexy,ytd-watch-grid,ytd-popup-container,tp-yt-app-drawer) :is(.ytSpecButtonShapeNextMono,.yt-spec-button-shape-next--mono):is(.ytSpecButtonShapeNextFilled,.yt-spec-button-shape-next--filled),
+html.yac-active :is(ytd-masthead,ytd-watch-flexy,ytd-watch-grid,ytd-popup-container,tp-yt-app-drawer,.yt-uix-hovercard-card-content,.yt-uix-clickcard-card-content) :is(.ytSpecButtonShapeNextMono,.yt-spec-button-shape-next--mono):is(.ytSpecButtonShapeNextFilled,.yt-spec-button-shape-next--filled),
 html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-chip-cloud-renderer :is(.ytChipShapeActive,.YtChipShapeActive),
 html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-chip-cloud-renderer yt-chip-cloud-chip-renderer[selected] #chip-container {
   color: var(--yac-control-text);
@@ -116,18 +136,25 @@ html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-chip-cloud-renderer :is(#
 html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-chip-cloud-renderer :is(#left-arrow-button,#right-arrow-button) button:is(:hover,:focus-visible) {
   background-color: var(--yac-control-hover-surface) !important;
 }
+/* Scale the background feedback too, including native ripple/fade tails.
+    Focus outlines and semantic icon colors remain native. */
+html.yac-active :is(ytd-masthead,ytd-watch-flexy,ytd-watch-grid,ytd-popup-container,tp-yt-app-drawer,.yt-uix-hovercard-card-content,.yt-uix-clickcard-card-content) button :is(.ytSpecTouchFeedbackShapeFill,.yt-spec-touch-feedback-shape__fill) {
+  /* The native alpha can live in either background-color or opacity. Multiply
+     the finished fill instead of replacing its opacity with the shared level. */
+  filter: opacity(var(--yac-control-feedback)) !important;
+}
 
 /* Portalled menus and the guide are outside the watch-page layout. Give each
    one translucent surface; clearing every descendant would erase row feedback. */
 html.yac-active {
-  --yac-menu-surface: rgba(255, 255, 255, .86);
-  --yac-guide-surface: rgba(255, 255, 255, .78);
+  --yac-menu-surface: rgba(255, 255, 255, var(--yac-menu-opacity));
+  --yac-guide-surface: rgba(255, 255, 255, var(--yac-guide-opacity));
   --yac-card-surface: var(--yac-reading-surface);
 }
 html.yac-active[dark],
 html.yac-active:has(link#efyt-dark-theme) {
-  --yac-menu-surface: rgba(28, 28, 28, .86);
-  --yac-guide-surface: rgba(18, 18, 18, .78);
+  --yac-menu-surface: rgba(28, 28, 28, var(--yac-menu-opacity));
+  --yac-guide-surface: rgba(18, 18, 18, var(--yac-guide-opacity));
   --yac-card-surface: var(--yac-reading-surface);
 }
 html.yac-active ytd-popup-container :is(ytd-menu-popup-renderer,ytd-multi-page-menu-renderer,yt-sheet-view-model.ytSheetViewModelContextual) {
@@ -145,8 +172,8 @@ html.yac-active ytd-popup-container :is(ytd-menu-popup-renderer,ytd-multi-page-m
 html.yac-active ytd-popup-container yt-sheet-view-model.ytSheetViewModelContextual > yt-contextual-sheet-layout {
   background-color: var(--yac-menu-surface) !important;
   background-image: none !important;
-  -webkit-backdrop-filter: blur(16px) !important;
-  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: var(--yac-navigation-backdrop) !important;
+  backdrop-filter: var(--yac-navigation-backdrop) !important;
 }
 html.yac-active ytd-popup-container ytd-menu-popup-renderer :is(tp-yt-paper-listbox,paper-listbox),
 html.yac-active ytd-popup-container ytd-multi-page-menu-renderer ytd-simple-menu-header-renderer {
@@ -156,12 +183,172 @@ html.yac-active ytd-popup-container ytd-multi-page-menu-renderer ytd-simple-menu
 html.yac-active tp-yt-app-drawer#guide #contentContainer {
   background-color: var(--yac-guide-surface) !important;
   background-image: none !important;
-  -webkit-backdrop-filter: blur(16px) !important;
-  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: var(--yac-navigation-backdrop) !important;
+  backdrop-filter: var(--yac-navigation-backdrop) !important;
 }
 html.yac-active tp-yt-app-drawer#guide :is(#guide-wrapper,#guide-content) {
   background-color: transparent !important;
   background-image: none !important;
+}
+/* Search suggestions may be portalled outside the masthead. Older search
+   paints both sbdd_b and sbsb_a; only the outer wrapper needs a face. */
+html.yac-active :is(.YtSearchboxComponentSuggestionsContainer,.ytSearchboxComponentSuggestionsContainer,.sbdd_b,.sbsb_a),
+html.yac-active ytd-popup-container :is(ytd-voice-search-dialog-renderer,yt-confirm-dialog-renderer,ytd-form-popup-renderer,ytd-hotkey-dialog-renderer,yt-report-form-modal-renderer,ytd-single-option-survey-renderer,ytd-survey-follow-up-renderer,ytd-checkbox-survey-renderer,ytd-dismissal-follow-up-renderer)[dialog][dialog][dialog],
+html.yac-active ytd-popup-container .yt-spec-dialog-layout {
+  --main-background: transparent !important;
+  --second-background: transparent !important;
+  --hover-background: rgba(var(--yac-reading-rgb), calc(.12 * var(--yac-navigation-level))) !important;
+  background-color: var(--yac-menu-surface) !important;
+  background-image: none !important;
+  -webkit-backdrop-filter: var(--yac-navigation-backdrop) !important;
+  backdrop-filter: var(--yac-navigation-backdrop) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, calc(.20 * var(--yac-navigation-level))) !important;
+}
+html.yac-active .sbdd_b .sbsb_a,
+html.yac-active ytd-popup-container :is(tp-yt-paper-dialog,paper-dialog):has(:is(ytd-voice-search-dialog-renderer,yt-confirm-dialog-renderer,ytd-form-popup-renderer,ytd-hotkey-dialog-renderer,yt-report-form-modal-renderer,ytd-single-option-survey-renderer,ytd-survey-follow-up-renderer,ytd-checkbox-survey-renderer,ytd-dismissal-follow-up-renderer)[dialog],.yt-spec-dialog-layout),
+html.yac-active ytd-popup-container :is(ytd-voice-search-dialog-renderer,yt-confirm-dialog-renderer,ytd-form-popup-renderer,ytd-hotkey-dialog-renderer,yt-report-form-modal-renderer,ytd-single-option-survey-renderer,ytd-survey-follow-up-renderer,ytd-checkbox-survey-renderer,ytd-dismissal-follow-up-renderer)[dialog][dialog][dialog] .yt-spec-dialog-layout,
+html.yac-active ytd-popup-container .yt-spec-dialog-layout .yt-spec-dialog-layout {
+  background-color: transparent !important;
+  background-image: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  box-shadow: none !important;
+}
+/* Legacy hover/click cards can be portalled directly into the app. Their
+   content owns the face; the surrounding border and native arrows stay sized
+   by YouTube and follow the same navigation multiplier. */
+html.yac-active :is(.yt-uix-hovercard-card,.yt-uix-clickcard-card,.yt-uix-hovercard-card-reverse,.yt-uix-clickcard-card-reverse,.yt-uix-hovercard-card-flip,.yt-uix-clickcard-card-flip) {
+  --hover-background: var(--yac-menu-surface) !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  box-shadow: none !important;
+}
+html.yac-active :is(.yt-uix-hovercard-card-content,.yt-uix-clickcard-card-content) {
+  --main-background: transparent !important;
+  --second-background: transparent !important;
+  background-color: var(--yac-menu-surface) !important;
+  background-image: none !important;
+  border-color: rgba(var(--yac-reading-rgb), calc(.16 * var(--yac-navigation-level))) !important;
+  -webkit-backdrop-filter: var(--yac-navigation-backdrop) !important;
+  backdrop-filter: var(--yac-navigation-backdrop) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, calc(.20 * var(--yac-navigation-level))) !important;
+}
+html.yac-active :is(.yt-uix-hovercard-card-border,.yt-uix-clickcard-card-border) {
+  background-color: transparent !important;
+  background-image: none !important;
+  border-color: rgba(var(--yac-reading-rgb), calc(.16 * var(--yac-navigation-level))) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  box-shadow: none !important;
+}
+html.yac-active :is(.yt-uix-hovercard-card-reverse,.yt-uix-clickcard-card-reverse) .yt-uix-card-body-arrow-vertical {
+  border-bottom-color: var(--yac-menu-surface) !important;
+}
+html.yac-active :is(.yt-uix-hovercard-card-flip,.yt-uix-clickcard-card-flip) .yt-uix-card-body-arrow-horizontal {
+  border-right-color: var(--yac-menu-surface) !important;
+}
+html.yac-active :is(.yt-uix-hovercard-card-content,.yt-uix-clickcard-card-content) :is(.yt-uix-hovercard-card-content,.yt-uix-clickcard-card-content) {
+  background-color: transparent !important;
+  background-image: none !important;
+  border-color: transparent !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  box-shadow: none !important;
+}
+/* Native tooltip text is light in either page theme. Use one dark lens and
+   keep its foreground, fade opacity and pointer geometry under native control. */
+html.yac-active { --yac-tooltip-surface: rgba(28, 28, 28, var(--yac-menu-opacity)); }
+html.yac-active :is(yt-tooltip-renderer,#tooltip.tp-yt-paper-tooltip,#tooltip.paper-tooltip),
+html.yac-active #movie_player .ytp-promotooltip-container {
+  --hover-background: var(--yac-tooltip-surface) !important;
+  background-color: var(--yac-tooltip-surface) !important;
+  background-image: none !important;
+  -webkit-backdrop-filter: blur(var(--yac-navigation-blur)) brightness(calc(1 - .65 * var(--yac-navigation-level))) !important;
+  backdrop-filter: blur(var(--yac-navigation-blur)) brightness(calc(1 - .65 * var(--yac-navigation-level))) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, calc(.20 * var(--yac-navigation-level))) !important;
+}
+html.yac-active yt-tooltip-renderer:has(:is(#tooltip.tp-yt-paper-tooltip,#tooltip.paper-tooltip)) {
+  background-color: transparent !important;
+  background-image: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  box-shadow: none !important;
+}
+html.yac-active yt-tooltip-renderer::before {
+  border-color: transparent transparent var(--yac-tooltip-surface) transparent !important;
+}
+html.yac-active #movie_player .ytp-promotooltip-pointer {
+  border-color: var(--yac-tooltip-surface) !important;
+}
+html.yac-active :is(.YtSearchboxComponentSuggestionsContainer,.ytSearchboxComponentSuggestionsContainer,.sbsb_a) :is(.YtSuggestionComponentSuggestion,.ytSuggestionComponentSuggestion,.sbsb_c,.sbfl_b) {
+  background-color: transparent !important;
+  background-image: none !important;
+}
+html.yac-active :is(.YtSearchboxComponentSuggestionsContainer,.ytSearchboxComponentSuggestionsContainer,.sbsb_a) :is(.YtSuggestionComponentSuggestion,.ytSuggestionComponentSuggestion,.sbsb_c,.sbfl_b):is(:hover,:focus-visible,[aria-selected="true"],.sbsb_d) {
+  background-color: var(--hover-background) !important;
+}
+/* The compact guide also has an outer face. Keep entry and icon geometry,
+   native accent colors, and the active/hover/focus states. */
+html.yac-active ytd-mini-guide-renderer {
+  --hover-background: rgba(var(--yac-reading-rgb), calc(.12 * var(--yac-navigation-level))) !important;
+  background-color: var(--yac-guide-surface) !important;
+  background-image: none !important;
+  -webkit-backdrop-filter: var(--yac-navigation-backdrop) !important;
+  backdrop-filter: var(--yac-navigation-backdrop) !important;
+}
+html.yac-active ytd-mini-guide-renderer :is(ytd-mini-guide-entry-renderer,a.ytd-mini-guide-entry-renderer) {
+  background-color: transparent !important;
+  background-image: none !important;
+}
+html.yac-active ytd-mini-guide-renderer a.ytd-mini-guide-entry-renderer:is(:hover,:focus-visible),
+html.yac-active ytd-mini-guide-renderer :is(ytd-mini-guide-entry-renderer[active],ytd-mini-guide-entry-renderer[selected]) a.ytd-mini-guide-entry-renderer,
+html.yac-active ytd-mini-guide-renderer a.ytd-mini-guide-entry-renderer[aria-current="page"] {
+  background-color: var(--hover-background) !important;
+}
+/* Menus and the guide already have a reading face. Nested neutral buttons
+   need interaction feedback, without another dark lens or normal paint layer. */
+html.yac-active ytd-popup-container :is(ytd-menu-popup-renderer,ytd-multi-page-menu-renderer,yt-contextual-sheet-layout),
+html.yac-active :is(.YtSearchboxComponentSuggestionsContainer,.ytSearchboxComponentSuggestionsContainer,.sbdd_b,.sbsb_a),
+html.yac-active ytd-popup-container :is(ytd-voice-search-dialog-renderer,yt-confirm-dialog-renderer,ytd-form-popup-renderer,ytd-hotkey-dialog-renderer,yt-report-form-modal-renderer,ytd-single-option-survey-renderer,ytd-survey-follow-up-renderer,ytd-checkbox-survey-renderer,ytd-dismissal-follow-up-renderer)[dialog],
+html.yac-active ytd-popup-container .yt-spec-dialog-layout,
+html.yac-active :is(.yt-uix-hovercard-card-content,.yt-uix-clickcard-card-content),
+html.yac-active ytd-mini-guide-renderer,
+html.yac-active tp-yt-app-drawer#guide #contentContainer {
+  --yac-control-surface: transparent;
+  --yac-control-hover-surface: rgba(var(--yac-reading-rgb), calc(.12 * var(--yac-navigation-level)));
+  --yac-control-selected-surface: rgba(var(--yac-reading-rgb), calc(.20 * var(--yac-navigation-level)));
+  --yac-control-feedback: var(--yac-navigation-level);
+  --yac-control-backdrop: none;
+  --yac-control-hover-backdrop: none;
+}
+/* The native player keeps its own icons, toggles, focus outline and opacity.
+   Only its popup face and neutral row feedback follow the navigation level. */
+html.yac-active #movie_player .ytp-popup {
+  /* Player chrome uses light foregrounds in both page themes, like Enhancer. */
+  --yac-menu-surface: rgba(28, 28, 28, var(--yac-menu-opacity));
+  --yac-navigation-backdrop: blur(var(--yac-navigation-blur)) brightness(calc(1 - .65 * var(--yac-navigation-level)));
+  /* A light feedback wash loses contrast with native muted labels after the
+     popup's own opacity. Dim the row without changing its foreground/state. */
+  --yac-reading-rgb: 0, 0, 0;
+  --main-background: transparent !important;
+  --second-background: var(--yac-menu-surface) !important;
+  --hover-background: rgba(var(--yac-reading-rgb), calc(.12 * var(--yac-navigation-level))) !important;
+  background-color: var(--yac-menu-surface) !important;
+  background-image: none !important;
+  -webkit-backdrop-filter: var(--yac-navigation-backdrop) !important;
+  backdrop-filter: var(--yac-navigation-backdrop) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, calc(.20 * var(--yac-navigation-level))) !important;
+}
+html.yac-active #movie_player .ytp-popup .ytp-menuitem {
+  background-color: transparent !important;
+}
+html.yac-active #movie_player .ytp-popup .ytp-menuitem:not([aria-disabled="true"]):is(:hover,:focus-visible) {
+  background-color: var(--hover-background) !important;
+}
+html.yac-active #movie_player .ytp-popup .ytp-menuitem:is([aria-checked="true"],[aria-selected="true"]) {
+  background-color: rgba(var(--yac-reading-rgb), calc(.20 * var(--yac-navigation-level))) !important;
 }
 /* Search and the Enhancer toolbar share the native tonal button surface.
    Preserve the toolbar geometry, icon fills and interaction states. */
@@ -224,31 +411,88 @@ html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) ytd-playlist-panel-renderer 
 html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) ytd-playlist-panel-video-renderer:not([selected]) {
   background-color: var(--yac-card-surface) !important;
   background-image: none !important;
-  -webkit-backdrop-filter: blur(12px) !important;
-  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(var(--yac-reading-blur)) !important;
+  backdrop-filter: blur(var(--yac-reading-blur)) !important;
 }
 html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) ytd-playlist-panel-video-renderer:not([selected]):is(:hover,:focus-within) {
   background-color: var(--yac-reading-hover-surface) !important;
 }
 
 html.yac-active #cinematics { display: none !important; }
+/* Metadata owns the title, channel and description face. Paint once, without
+   changing native geometry or stacking a second face under its description. */
+html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) :is(ytd-watch-metadata,ytd-video-primary-info-renderer,ytd-video-secondary-info-renderer) {
+  --yac-metadata-reading-face: var(--yac-reading-pane-surface);
+  background-color: var(--yac-metadata-reading-face) !important;
+  background-image: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  border-radius: 12px;
+}
+html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) :is(ytd-watch-metadata,ytd-video-secondary-info-renderer) #description {
+  --yac-reading-pane-face: transparent;
+  background-color: var(--yac-reading-pane-face) !important;
+  background-image: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+/* Paint long text once, without a potentially document-height blur texture.
+   Keep native spacing, links, comment controls and media untouched. */
+html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) ytd-comments {
+  --yac-reading-pane-face: var(--yac-reading-pane-surface);
+  background-color: var(--yac-reading-pane-face) !important;
+  background-image: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) :is(#related,ytd-watch-next-secondary-results-renderer) {
+  --yac-related-reading-face: transparent;
+  background-color: var(--yac-related-reading-face) !important;
+  background-image: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) #related:not(:has(ytd-playlist-panel-renderer)),
+html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) ytd-watch-next-secondary-results-renderer:not(#related ytd-watch-next-secondary-results-renderer):not(:has(ytd-playlist-panel-renderer)) {
+  --yac-related-reading-face: var(--yac-reading-pane-surface);
+}
+/* A mixed related/playlist wrapper stays clear. Paint only a result renderer
+   or its first playlist-free section, never a playing row's ancestor. */
+html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) #related:has(ytd-playlist-panel-renderer) ytd-watch-next-secondary-results-renderer:not(:has(ytd-playlist-panel-renderer)) {
+  --yac-related-reading-face: var(--yac-reading-pane-surface);
+}
+html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) :is(#related,ytd-watch-next-secondary-results-renderer) :is(ytd-item-section-renderer,ytd-rich-grid-renderer) {
+  --yac-related-section-face: transparent;
+  background-color: var(--yac-related-section-face) !important;
+  background-image: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) :is(#related,ytd-watch-next-secondary-results-renderer):has(ytd-playlist-panel-renderer) :is(ytd-item-section-renderer,ytd-rich-grid-renderer):not(:has(ytd-playlist-panel-renderer)):not(ytd-watch-next-secondary-results-renderer:not(:has(ytd-playlist-panel-renderer)) :is(ytd-item-section-renderer,ytd-rich-grid-renderer)):not(:is(ytd-item-section-renderer,ytd-rich-grid-renderer):not(:has(ytd-playlist-panel-renderer)) :is(ytd-item-section-renderer,ytd-rich-grid-renderer)) {
+  --yac-related-section-face: var(--yac-reading-pane-surface);
+}
+html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) ytd-watch-metadata[description-collapsed]:has(#description:is(:hover,:focus-within)) {
+  --yac-metadata-reading-face: var(--yac-reading-pane-hover-surface);
+}
 /* The chat document paints its own theme-sensitive reading face. The parent
    iframe only blurs what lies behind it; no second dark layer or forced text. */
 html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) ytd-live-chat-frame #chatframe {
   background-color: transparent !important;
   background-image: none !important;
-  -webkit-backdrop-filter: blur(var(--yac-control-blur)) !important;
-  backdrop-filter: blur(var(--yac-control-blur)) !important;
+  -webkit-backdrop-filter: blur(var(--yac-reading-blur)) !important;
+  backdrop-filter: blur(var(--yac-reading-blur)) !important;
 }
 html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) ytd-live-chat-frame {
   background: transparent !important;
 }
-/* Metadata carousel cards (including the replay prompt) keep a readable face. */
-html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-video-metadata-carousel-view-model {
+/* Metadata cards and text-heavy engagement panels have one reading face.
+   Header/content/transcript wrappers are cleared by the surface guard. */
+html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) yt-video-metadata-carousel-view-model,
+html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) ytd-engagement-panel-section-list-renderer {
   background-color: var(--yac-card-surface) !important;
   background-image: none !important;
-  -webkit-backdrop-filter: blur(12px) !important;
-  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(var(--yac-reading-blur)) !important;
+  backdrop-filter: blur(var(--yac-reading-blur)) !important;
 }
 #movie_player.yac-settings-open .ytp-chrome-bottom {
   opacity: 1 !important;
@@ -294,13 +538,82 @@ html.yac-active ytd-masthead :is(yt-searchbox,ytd-searchbox) input::placeholder 
   color: var(--yac-control-text);
   opacity: 1;
 }
+/* The panel already owns the blur. Do not stack a second backdrop filter
+   under its transcript input; retain native field dimensions and text. */
+html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) ytd-transcript-search-box-renderer .input-container {
+  background-color: var(--yac-control-surface) !important;
+  background-image: none !important;
+  border-color: var(--yac-search-border) !important;
+}
+html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) ytd-transcript-search-box-renderer .input-container:focus-within {
+  border-color: var(--main-color, var(--yt-spec-call-to-action, #1c62b9)) !important;
+}
+html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) ytd-transcript-search-box-renderer input {
+  background-color: transparent !important;
+}
+html.yac-active :is(ytd-watch-flexy,ytd-watch-grid) ytd-transcript-search-box-renderer input::placeholder {
+  color: var(--yac-control-text);
+  opacity: 1;
+}
+#movie_player #yac-launcher {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+  height: 36px;
+  margin: 4px 2px;
+  border: 1px solid rgba(255, 255, 255, calc(.16 * var(--yac-launcher-level, 1)));
+  border-radius: 24px;
+  background: rgba(18, 20, 25, var(--yac-launcher-opacity, .22));
+  backdrop-filter: blur(calc(12px * var(--yac-launcher-level, 1)));
+  -webkit-backdrop-filter: blur(calc(12px * var(--yac-launcher-level, 1)));
+  color: white;
+}
+#movie_player #yac-launcher[hidden] { display: none !important; }
+#movie_player #yac-launcher .yac-ambient-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 34px;
+  width: 48px;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+}
+#movie_player #yac-enabled {
+  appearance: none;
+  position: relative;
+  width: 32px;
+  height: 20px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: #66666b;
+  cursor: pointer;
+}
+#movie_player #yac-enabled::before {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: white;
+  transition: transform .12s;
+}
+#movie_player #yac-enabled:checked { background: #30d158; }
+#movie_player #yac-enabled:checked::before { transform: translateX(12px); }
+#movie_player #yac-enabled:focus-visible { outline: 2px solid white; outline-offset: 3px; }
 #movie_player #yac-settings-button {
   position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  flex: 0 0 48px;
-  width: 48px;
+  flex: 0 0 36px;
+  width: 36px;
   height: 100%;
   padding: 0;
   color: #fff;
@@ -310,8 +623,14 @@ html.yac-active ytd-masthead :is(yt-searchbox,ytd-searchbox) input::placeholder 
 #movie_player #yac-settings-button.yac-enabled { color: #fff; }
 #movie_player #yac-settings-button:hover { opacity: 1; }
 #movie_player #yac-settings-button:focus-visible { outline: 2px solid #fff; outline-offset: -3px; }
-#yac-settings-button .yac-tooltip { position:absolute; bottom:calc(100% + 10px); left:50%; transform:translateX(-50%); display:none; padding:7px 9px; border-radius:4px; background:#161616ee; color:white; font:12px/1.2 system-ui,sans-serif; white-space:nowrap; pointer-events:none; }
-#yac-settings-button:hover .yac-tooltip, #yac-settings-button:focus-visible .yac-tooltip { display:block; }
+#yac-launcher .yac-tooltip { position:absolute; bottom:calc(100% + 10px); left:50%; transform:translateX(-50%); display:none; padding:7px 9px; border-radius:8px; background:#161616ee; color:white; font:12px/1.2 system-ui,sans-serif; white-space:nowrap; pointer-events:none; }
+#yac-settings-button:hover .yac-tooltip, #yac-settings-button:focus-visible .yac-tooltip, #yac-launcher .yac-ambient-toggle:hover .yac-tooltip, #yac-launcher .yac-ambient-toggle:focus-within .yac-tooltip { display:block; }
+@media (prefers-reduced-motion: reduce) { #movie_player #yac-enabled::before { transition: none; } }
+@media (pointer: coarse) {
+  #movie_player #yac-launcher { height: 44px; margin-block: 0; }
+  #movie_player #yac-launcher .yac-ambient-toggle { height: 42px; }
+  #movie_player #yac-settings-button { width: 44px; flex-basis: 44px; }
+}
 #yac-bar-layer { display:none; position:absolute; inset:0; overflow:clip; z-index:0; pointer-events:none; }
 #yac-bar-background { position:absolute; left:-180px; top:-180px; width:calc(100% + 360px); height:calc(100% + 360px); pointer-events:none; }
 #movie_player.yac-fill-bars { background:#080b12 !important; }

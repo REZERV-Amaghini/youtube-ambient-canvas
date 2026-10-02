@@ -87,7 +87,7 @@ window.fixtureCheckChatReadability=()=>{
     check(paint(document.documentElement)===expectedSurface('--yac-chat-surface'),'html paints the shared reading face');
     check(transparent(paint(document.body))&&transparent(paint(document.querySelector('yt-live-chat-renderer'))),'chat wrappers avoid stacking opaque layers');
     check(!transparent(expectedSurface('--yac-chat-header-surface'))&&paint(header)===expectedSurface('--yac-chat-header-surface'),'header uses theme-sensitive shared shade');
-    check(paint(menu)===expectedSurface('--yac-chat-surface')&&paint(replayMenu)===paint(menu),'both dropdowns use shared reading shade');
+    check(paint(menu)===expectedSurface('--yac-chat-overlay-surface')&&paint(replayMenu)===paint(menu),'both dropdowns use the overlay shade above the reading face');
     check(paint(fans)===paint(menu),'top fans panel uses shared readable shade');
     check(getComputedStyle(menu).backdropFilter===getComputedStyle(header).backdropFilter,'menus and header share blur');
     const message=document.querySelector('yt-live-chat-text-message-renderer');

@@ -6,14 +6,29 @@
   document.getElementById('yac-controls')?.remove();
   document.getElementById('yac-background')?.remove();
   const extension = typeof browser !== 'undefined' ? browser : globalThis.chrome;
-  const settings = { enabled: true, radial: true, avoidBars: true, fillBars: true, flashWarning: true, strength: 65, blur: 90, saturation: 145, inset: 0, fps: 30, language: 'ja' };
+  const settings = { enabled: true, radial: true, avoidBars: true, fillBars: true, flashWarning: true, strength: 65, blur: 90, saturation: 145, inset: 0, fps: 30, surfaceMultiplier: 1, controlDensity: 100, readingDensity: 100, navigationDensity: 100, language: 'ja' };
+  const paletteStyle = document.createElement('style');
+  paletteStyle.id = 'yac-surface-palette';
+  document.head.append(paletteStyle);
   const booleanKeys = ['enabled', 'radial', 'avoidBars', 'fillBars', 'flashWarning'];
+  const uiOnlySettings = new Set(['surfaceMultiplier', 'controlDensity', 'readingDensity', 'navigationDensity', 'language']);
   const translations = {
     ja: {
-      title: 'アンビエント設定', close: 'アンビエント設定を閉じる', language: '言語 / Language',
+      title: '設定', close: '設定を閉じる', back: '設定一覧に戻る', language: '言語 / Language',
+      openSettings: '設定を開く', on: 'オン', offState: 'オフ', info: '説明', applied: '適用',
       enabled: 'アンビエント背景', radial: '放射状モード', avoidBars: '黒帯を自動で除外', fillBars: '黒帯を背景に置き換える',
-      strength: '濃さ', blur: 'ぼかし', saturation: '彩度', inset: '採色範囲（内側）', fps: '背景のFPS',
-      appearance: '見た目', advanced: '詳細設定',
+      strength: '背景映像の濃さ', blur: 'ぼかし', saturation: '彩度', inset: '採色範囲（内側）', fps: '背景のFPS',
+      surfaceMultiplier: '全体の濃さ', surfaceMultiplierDescription: '各種類の濃さに0〜1を掛けます。0は完全な透明です。文字とアイコンの色は保ちます。',
+      controlDensity: 'ボタンと検索', controlDensityDescription: '検索欄・タグ・Enhancerのツールバーの濃さを0〜100%で設定します。',
+      readingDensity: 'カードとチャット', readingDensityDescription: 'タイトル・チャンネル・説明欄・コメント・関連動画、文字起こし・リプレイ・プレイリスト・チャットの濃さを0〜100%で設定します。',
+      navigationDensity: 'メニューとサイドバー', navigationDensityDescription: '検索候補・音声検索・通知・メニュー・ホバーカード・説明ラベル・サイドバー・この設定画面の濃さを0〜100%で設定します。',
+      appearance: '背景の見た目', appearanceDescription: '濃さ・ぼかし・彩度',
+      surfaces: '操作画面の濃さ', surfacesDescription: '全体の倍率と種類別の濃さ',
+      rendering: '黒帯と描画', renderingDescription: '黒帯・採色範囲・フレームレート',
+      safety: '安全と言語', safetyDescription: '高速点滅の警告・表示言語',
+      strengthDescription: '映像から作るアンビエント背景の濃さを調整します。',
+      blurDescription: 'スクロール後は設定値の半分でぼかします。下限は25 pxです。',
+      saturationDescription: '100%が元の彩度です。値を上げると背景の色が鮮やかになります。',
       flashWarning: '高速点滅の警告', flashWarningDescription: '高速点滅が約3秒続くと警告します。背景オフ・全画面でも監視し、「二度と表示しない」の設定もここで戻せます。',
       flashTitle: '高速点滅を繰り返しているようです。',
       flashBody: '光の点滅は、光に敏感な方の体調に影響することがあります。必要に応じて、アンビエントの濃さを下げてください。',
@@ -28,10 +43,21 @@
       radialHint: '動画が隠れると背景全体へゆっくり切り替わります。', fullFrameHint: '動画全体の色を背景に広げます。', failed: 'この動画では背景を描画できません。'
     },
     en: {
-      title: 'Ambient settings', close: 'Close ambient settings', language: '言語 / Language',
+      title: 'Settings', close: 'Close settings', back: 'Back to settings', language: '言語 / Language',
+      openSettings: 'Open settings', on: 'On', offState: 'Off', info: 'Information', applied: 'Applied',
       enabled: 'Ambient background', radial: 'Radial mode', avoidBars: 'Detect and exclude black bars', fillBars: 'Replace black bars with ambient',
-      strength: 'Strength', blur: 'Blur', saturation: 'Saturation', inset: 'Sample inset', fps: 'Background FPS',
-      appearance: 'Appearance', advanced: 'Advanced settings',
+      strength: 'Ambient strength', blur: 'Blur', saturation: 'Saturation', inset: 'Sample inset', fps: 'Background FPS',
+      surfaceMultiplier: 'Overall shade', surfaceMultiplierDescription: 'Multiplies each category by 0–1. Zero is fully transparent. Text and icon colors stay unchanged.',
+      controlDensity: 'Buttons and search', controlDensityDescription: 'Sets search, filter chips and the Enhancer toolbar from 0–100%.',
+      readingDensity: 'Cards and chat', readingDensityDescription: 'Sets titles, channels, descriptions, comments, related results, transcripts, replay cards, playlists and chat from 0–100%.',
+      navigationDensity: 'Menus and sidebar', navigationDensityDescription: 'Sets search suggestions, voice search, notifications, menus, hover cards, tooltips, the sidebar and this settings panel from 0–100%.',
+      appearance: 'Background appearance', appearanceDescription: 'Strength, blur and saturation',
+      surfaces: 'Interface shade', surfacesDescription: 'Overall multiplier and individual categories',
+      rendering: 'Black bars and rendering', renderingDescription: 'Bars, sample inset and frame rate',
+      safety: 'Safety and language', safetyDescription: 'Rapid-flash warning and display language',
+      strengthDescription: 'Adjusts the strength of the ambient background sampled from the video.',
+      blurDescription: 'After scrolling, blur uses half this value, with a minimum of 25 px.',
+      saturationDescription: '100% is the original saturation. Higher values make the background more vivid.',
       flashWarning: 'Rapid-flash warning', flashWarningDescription: 'Warns after about 3 seconds of rapid flashing, including with ambient off or in fullscreen. You can turn this back on here.',
       flashTitle: 'Rapid flashing appears to be repeating.',
       flashBody: 'Flashing light can affect people who are sensitive to it. Consider reducing the ambient strength.',
@@ -83,6 +109,7 @@
     ':is(ytd-watch-flexy,ytd-watch-grid) :is(.box.ytd-watch-flexy,.box.ytd-watch-grid,ytd-watch-next-secondary-results-renderer)',
     ':is(ytd-watch-flexy,ytd-watch-grid) :is(#below,#secondary,#panels) :is(div.ytd-watch-flexy,div.ytd-watch-grid,ytd-video-primary-info-renderer,ytd-video-secondary-info-renderer,ytd-ticket-shelf-renderer)',
     ':is(ytd-watch-flexy,ytd-watch-grid) :is(ytd-watch-metadata,ytd-video-primary-info-renderer,ytd-video-secondary-info-renderer) ytd-menu-renderer',
+    ':is(ytd-watch-flexy,ytd-watch-grid) :is(ytd-watch-metadata,ytd-video-primary-info-renderer,ytd-video-secondary-info-renderer) :is(#above-the-fold,#title,#top-row,#owner,#bottom-row,#info-contents)',
     ':is(ytd-watch-flexy,ytd-watch-grid) :is(ytd-engagement-panel-section-list-renderer,ytd-engagement-panel-title-header-renderer,ytd-transcript-renderer,ytd-transcript-search-panel-renderer,ytd-transcript-search-box-renderer,ytd-transcript-segment-list-renderer,ytd-transcript-body-renderer,.input-container.ytd-transcript-search-box-renderer)',
     ':is(ytd-watch-flexy,ytd-watch-grid) ytd-engagement-panel-section-list-renderer :is(#content,#header,#subheader,#panel-content)',
     ':is(ytd-watch-flexy,ytd-watch-grid)[theater] :is(#player,#player-full-bleed-container,#player-container,#player-container-outer,#player-container-inner,#ytd-player,.player-container-background)',
@@ -108,6 +135,25 @@
     }
     for (const element of surfaces) {
       const overrides = { 'background-color': 'transparent', 'background-image': 'none', 'box-shadow': 'none' };
+      // Keep one reading face on the panel. Its content/header wrappers stay
+      // clear; the transcript field uses the same control paint as search.
+      if (element.localName === 'ytd-engagement-panel-section-list-renderer') {
+        overrides['background-color'] = 'var(--yac-card-surface)';
+      } else if (element.matches('ytd-transcript-search-box-renderer .input-container')) {
+        overrides['background-color'] = 'var(--yac-control-surface)';
+      } else if (['ytd-watch-metadata', 'ytd-video-primary-info-renderer', 'ytd-video-secondary-info-renderer'].includes(element.localName)) {
+        overrides['background-color'] = 'var(--yac-metadata-reading-face)';
+      } else if (element.localName === 'ytd-comments' ||
+        (element.id === 'description' && element.closest('ytd-watch-metadata,ytd-video-secondary-info-renderer'))) {
+        overrides['background-color'] = 'var(--yac-reading-pane-face)';
+      } else if (element.id === 'related' || element.localName === 'ytd-watch-next-secondary-results-renderer') {
+        // CSS clears this face synchronously when a playlist appears and
+        // prevents a nested related renderer from painting a second layer.
+        overrides['background-color'] = 'var(--yac-related-reading-face)';
+      } else if (['ytd-item-section-renderer', 'ytd-rich-grid-renderer'].includes(element.localName) &&
+        element.closest('#related,ytd-watch-next-secondary-results-renderer')) {
+        overrides['background-color'] = 'var(--yac-related-section-face)';
+      }
       if (element.localName === 'ytd-app') {
         overrides['background-color'] = 'var(--yac-page-base)';
         overrides.isolation = 'isolate';
@@ -117,9 +163,11 @@
       for (const [name, value] of Object.entries(overrides)) {
         const current = element.style.getPropertyValue(name), priority = element.style.getPropertyPriority(name);
         const previous = properties.get(name);
-        if (previous && current === previous.applied && priority === 'important') continue;
+        const owned = previous && current === previous.applied && priority === 'important';
+        if (owned && previous.applied === value) continue;
         element.style.setProperty(name, value, 'important');
-        properties.set(name, { value: current, priority, applied: element.style.getPropertyValue(name) });
+        properties.set(name, { value: owned ? previous.value : current,
+          priority: owned ? previous.priority : priority, applied: element.style.getPropertyValue(name) });
       }
     }
   }
@@ -157,6 +205,7 @@
   const surfaceClasses = new Set(['box', 'ytd-watch-flexy', 'ytd-watch-grid', 'player-container-background',
     'input-container', 'ytd-transcript-search-box-renderer', 'ytp-fullscreen', 'ytp-miniplayer-ui',
     'html5-video-container', 'html5-main-video']);
+  const readingOwners = 'ytd-watch-metadata,ytd-video-primary-info-renderer,ytd-video-secondary-info-renderer';
   const ownElement = element => element?.nodeType === 1 && !!element.closest('[id^="yac-"]');
   function relevantSurfaceMutation(record) {
     const element = record.target;
@@ -189,6 +238,13 @@
   }
   const surfaceObserver = new MutationObserver(records => {
     if (disposed) return;
+    // Activation and visibility resume perform one complete synchronization.
+    // Avoid walking every added subtree while native UI paint is retained or
+    // the tab is hidden; keep the pending change for that synchronization.
+    if (document.hidden || !document.documentElement.classList.contains('yac-active')) {
+      surfacesDirty = true;
+      return;
+    }
     const relevant = records.filter(relevantSurfaceMutation);
     if (!relevant.length) return;
     surfacesDirty = true;
@@ -196,7 +252,14 @@
     // while waiting for the normal coalesced refresh.
     const modeChange = relevant.some(record => record.type === 'attributes' &&
       (record.attributeName === 'theater' || record.attributeName === 'class' && record.target.id === 'movie_player'));
-    refreshPageSurfaces(modeChange);
+    // A native metadata shell can be replaced in a single navigation/layout
+    // update. Apply its face in the observer microtask, before the next paint,
+    // instead of leaving an inline theme background for the coalescing window.
+    const readingOwnerChange = relevant.some(record => record.type === 'attributes' ?
+      record.attributeName === 'style' && record.target.matches(readingOwners) :
+      [...record.addedNodes].some(node => node.nodeType === 1 &&
+        (node.matches(readingOwners) || node.querySelector(readingOwners))));
+    refreshPageSurfaces(modeChange || readingOwnerChange);
   });
   surfaceObserver.observe(document.documentElement, {
     childList: true, subtree: true, attributes: true, attributeOldValue: true,
@@ -207,7 +270,8 @@
       --yt-live-chat-background-color:transparent;--yt-live-chat-action-panel-background-color:transparent;
       --yac-reading-rgb:255,255,255;
       --yac-chat-surface:rgba(var(--yac-reading-rgb),var(--yac-reading-opacity));
-      --yac-chat-header-surface:rgba(var(--yac-reading-rgb),var(--yac-control-opacity));
+      --yac-chat-header-surface:rgba(var(--yac-reading-rgb),var(--yac-chat-header-opacity));
+      --yac-chat-overlay-surface:rgba(var(--yac-reading-rgb),var(--yac-chat-overlay-opacity));
       background-color:var(--yac-chat-surface)!important;background-image:none!important;
     }
     html.yac-chat-active[dark]{--yac-reading-rgb:var(--yac-control-rgb)}`,
@@ -220,7 +284,7 @@
       -webkit-backdrop-filter:blur(var(--yac-control-blur))!important;backdrop-filter:blur(var(--yac-control-blur))!important;
     }
     html.yac-chat-active :is(ytd-menu-popup-renderer,ytd-engagement-panel-section-list-renderer){
-      background-color:var(--yac-chat-surface)!important;background-image:none!important;
+      background-color:var(--yac-chat-overlay-surface)!important;background-image:none!important;
       -webkit-backdrop-filter:blur(var(--yac-control-blur))!important;backdrop-filter:blur(var(--yac-control-blur))!important;
     }
     html.yac-chat-active ytd-menu-popup-renderer :is(tp-yt-paper-listbox,paper-listbox),
@@ -235,61 +299,62 @@
     removers.add(remove);
     return remove;
   }
+  const fields = {}, outputs = {}, fieldLabels = {}, descriptions = {}, infoButtons = {};
+  function makeIcon(path) {
+    const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    for (const [key, value] of Object.entries({ viewBox: '0 0 24 24', width: '20', height: '20', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.7', 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'aria-hidden': 'true' })) icon.setAttribute(key, value);
+    const shape = document.createElementNS(icon.namespaceURI, 'path');shape.setAttribute('d', path);icon.append(shape);
+    return icon;
+  }
+  const launcher = document.createElement('div');launcher.id = 'yac-launcher';
+  const ambientToggle = document.createElement('label');ambientToggle.className = 'yac-ambient-toggle';
+  fields.enabled = document.createElement('input');fields.enabled.id = 'yac-enabled';fields.enabled.type = 'checkbox';fields.enabled.setAttribute('role', 'switch');
+  const toggleTooltip = document.createElement('span');toggleTooltip.className = 'yac-tooltip';toggleTooltip.setAttribute('aria-hidden', 'true');
+  ambientToggle.append(fields.enabled, toggleTooltip);
   const button = document.createElement('button');
   button.id = 'yac-settings-button';
   button.className = 'ytp-button';
   button.type = 'button';
   for (const [key, value] of Object.entries({
-    'aria-label': 'アンビエント設定', 'aria-haspopup': 'dialog',
+    'aria-label': '設定を開く', 'aria-haspopup': 'dialog',
     'aria-expanded': 'false', 'aria-controls': 'yac-controls'
   })) button.setAttribute(key, value);
-  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  for (const [key, value] of Object.entries({
-    viewBox: '0 0 24 24', width: '24', height: '24', fill: 'none',
-    stroke: 'currentColor', 'stroke-width': '1.6', 'aria-hidden': 'true'
-  })) svg.setAttribute(key, value);
-  for (const radius of ['7', '2.5']) {
-    const circle = document.createElementNS(svg.namespaceURI, 'circle');
-    for (const [key, value] of Object.entries({ cx: '12', cy: '12', r: radius })) circle.setAttribute(key, value);
-    svg.append(circle);
-  }
-  const rays = document.createElementNS(svg.namespaceURI, 'path');
-  rays.setAttribute('d', 'M12 1v2M12 21v2M1 12h2M21 12h2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4');
-  svg.append(rays);
-  button.append(svg);
+  button.append(makeIcon('M9.5 3h5l.6 2.4 2 .9 2.2-.7 2.5 4.3-1.6 1.7v2.4l1.6 1.7-2.5 4.3-2.2-.7-2 .9-.6 2.4h-5l-.6-2.4-2-.9-2.2.7-2.5-4.3 1.6-1.7v-2.4L2.2 9.9l2.5-4.3 2.2.7 2-.9L9.5 3ZM15.5 12a3.5 3.5 0 1 0-7 0 3.5 3.5 0 0 0 7 0Z'));
   const tooltip = document.createElement('span');
   tooltip.className = 'yac-tooltip';
   tooltip.textContent = 'アンビエント設定';
   tooltip.setAttribute('aria-hidden', 'true');
   button.append(tooltip);
+  launcher.append(ambientToggle, button);
 
   const panel = document.createElement('div');
   panel.id = 'yac-controls';
   panel.hidden = true;
   panel.setAttribute('role', 'dialog');
   panel.setAttribute('aria-label', 'アンビエント設定');
-  panel.style.setProperty('background-color', 'rgba(28, 28, 28, .9)', 'important');
+  panel.style.setProperty('background-color', 'rgba(28, 28, 30, var(--yac-settings-opacity, .90))', 'important');
   // Direct DOM construction also works on pages requiring TrustedHTML.
   const root = panel.attachShadow({ mode: 'open' });
   const style = document.createElement('style');
   style.textContent = [
-    ':host{position:absolute;right:12px;bottom:60px;z-index:2200;display:flex;flex-direction:column;box-sizing:border-box;width:320px;max-width:calc(100% - 24px);overflow:hidden;color:#eee;font:14px/1.4 "YouTube Noto",Roboto,Arial,Helvetica,sans-serif;text-align:left;text-shadow:none;background:rgba(28,28,28,.9)!important;border:0!important;border-radius:12px!important;box-shadow:0 4px 20px #0003!important;color-scheme:dark}',
-    ':host([hidden]){display:none!important}*{box-sizing:border-box}.body{padding:0 8px 8px;min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin}',
-    'header{display:flex;flex-shrink:0;align-items:center;justify-content:space-between;gap:8px;min-height:48px;padding:8px 12px;border-bottom:1px solid #ffffff14}h2{margin:0;font-size:14px;font-weight:500}',
-    'button{width:32px;height:32px;padding:0;color:#eee;background:transparent;border:0;border-radius:8px;font-size:22px;cursor:pointer}button:hover{background:#ffffff1a}',
-    'select{max-width:136px;padding:6px 8px;border:1px solid #ffffff24;border-radius:6px;background:#ffffff0f;color:#eee;font:inherit;cursor:pointer}option{background:#1c1c1c}',
-    'label{display:block;margin:0;padding:8px}.toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;cursor:pointer;border-radius:8px}.toggle:hover,summary:hover{background:#ffffff1a}',
-    '.copy{min-width:0}.hint{display:block;margin:4px 0 0;color:#bdbdbd;font-size:12px;line-height:1.4}.section-title{margin:8px 8px 0;color:#bdbdbd;font-size:12px;font-weight:500}.slider-label{padding:8px}.slider-heading{display:flex;align-items:center;justify-content:space-between;gap:8px}',
-    'details{margin-top:4px;border-top:1px solid #ffffff14}summary{display:flex;align-items:center;justify-content:space-between;min-height:44px;padding:8px;border-radius:8px;cursor:pointer;list-style:none}summary::-webkit-details-marker{display:none}summary::after{content:"›";font-size:22px;transform:rotate(90deg)}details[open]>summary::after{transform:rotate(-90deg)}.advanced-body{padding-bottom:4px}.language{margin-top:4px;border-top:1px solid #ffffff14;cursor:default}',
-    'input{accent-color:white}input[type=range]{appearance:none;display:block;width:100%;height:24px;margin:4px 0 0;padding:0;cursor:pointer;background:transparent}',
-    'input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:3px;background:linear-gradient(to right,#fff 0%,#fff var(--progress),#ffffff38 var(--progress),#ffffff38 100%)}input[type=range]::-webkit-slider-thumb{appearance:none;width:14px;height:14px;margin-top:-5px;border:0;border-radius:50%;background:white}',
-    'input[type=range]::-moz-range-track{height:4px;background:#ffffff38;border-radius:3px}input[type=range]::-moz-range-progress{height:4px;background:white;border-radius:3px}input[type=range]::-moz-range-thumb{width:14px;height:14px;border:0;border-radius:50%;background:white}',
-    'input[type=checkbox]{appearance:none;position:relative;margin:0;flex:0 0 34px;width:34px;height:20px;border-radius:12px;background:#444449;cursor:pointer}',
-    'input[type=checkbox]::before{content:"";position:absolute;left:3px;top:3px;width:14px;height:14px;border-radius:50%;background:#ddd;transition:transform .12s}',
-    'input[type=checkbox]:checked{background:#f5f5f5}input[type=checkbox]:checked::before{transform:translateX(14px);background:#171719}',
-    'output{flex-shrink:0;color:#eee;font-variant-numeric:tabular-nums}p{margin:4px 8px 8px;padding-top:8px;border-top:1px solid #ffffff14;font-size:12px;color:#bdbdbd}',
+    ':host{position:absolute;right:12px;bottom:60px;z-index:2200;display:flex;flex-direction:column;box-sizing:border-box;width:340px;max-width:calc(100% - 24px);overflow:hidden;color:#f5f5f7;font:14px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;text-align:left;text-shadow:none;background:rgba(28,28,30,var(--yac-settings-opacity,.90))!important;border:1px solid rgba(255,255,255,calc(.18 * var(--yac-settings-level,1)))!important;border-radius:24px!important;box-shadow:0 8px 32px rgba(0,0,0,calc(.2 * var(--yac-settings-level,1)))!important;backdrop-filter:blur(calc(18px * var(--yac-settings-level,1)));-webkit-backdrop-filter:blur(calc(18px * var(--yac-settings-level,1)));color-scheme:dark}',
+    ':host([hidden]),[hidden]{display:none!important}*{box-sizing:border-box}.body{padding:0 12px 8px;min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin}',
+    ':host{--yac-detail-height:460px}:host([data-page=appearance]){--yac-detail-height:360px}:host([data-page=rendering]){--yac-detail-height:340px}:host([data-page=safety]){--yac-detail-height:210px}',
+    'header{display:flex;flex-shrink:0;align-items:center;gap:8px;min-height:52px;padding:8px 12px}h2{flex:1;min-width:0;margin:0;font-size:15px;font-weight:600}',
+    'button{display:inline-flex;align-items:center;justify-content:center;min-width:32px;min-height:32px;padding:0;color:inherit;background:transparent;border:0;border-radius:50%;font:inherit;cursor:pointer}button:hover{background:rgba(255,255,255,calc(.10 * var(--yac-settings-level,1)))}.close{background:rgba(255,255,255,calc(.08 * var(--yac-settings-level,1)))}svg{flex-shrink:0}',
+    '.menu-item{display:flex;width:100%;gap:12px;min-height:58px;padding:8px;border-radius:14px;text-align:left}.menu-item+.menu-item{border-top:1px solid rgba(255,255,255,calc(.06 * var(--yac-settings-level,1)))}.menu-copy{flex:1;min-width:0}.menu-title{display:block;font-weight:500}.menu-description{display:block;margin-top:2px;color:#c3c3ca;font-size:11px}.menu-icon{display:flex;color:#c4d0f7}',
+    'select{min-width:0;max-width:48%;padding:6px 8px;border:1px solid rgba(255,255,255,calc(.18 * var(--yac-settings-level,1)));border-radius:10px;background:rgba(255,255,255,calc(.06 * var(--yac-settings-level,1)));color:inherit;font:inherit;cursor:pointer}option{background:rgba(28,28,30,var(--yac-settings-level,1));color:#f5f5f7}',
+    '.setting-row{position:relative;padding:10px 4px;border-top:1px solid rgba(255,255,255,calc(.08 * var(--yac-settings-level,1)))}.setting-row:first-child{border-top:0}.toggle,.language{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:48px}.toggle{flex-wrap:wrap}.setting-heading{display:flex;align-items:center;gap:6px;min-width:0}.toggle .setting-heading{flex:1}.setting-heading label{min-width:0;cursor:pointer}.slider-heading{display:flex;flex-wrap:wrap;align-items:center;gap:4px}.slider-heading output{margin-left:auto}',
+    '.info{flex:0 0 28px;min-width:28px;min-height:28px;color:#c3c3ca;font-size:16px}.hint{display:none;flex-basis:100%;margin:8px 0 0;padding:8px 10px;background:rgba(255,255,255,calc(.06 * var(--yac-settings-level,1)));border-radius:10px;color:#f5f5f7;font-size:12px;line-height:1.5}.setting-row[data-help-open=true] .hint{display:block}.applied{display:block;font-size:11px;color:#c3c3ca;font-weight:400}',
+    'input{accent-color:#fff}input[type=range]{appearance:none;display:block;width:100%;height:28px;margin:4px 0 0;padding:0;cursor:pointer;background:transparent}',
+    'input[type=range]::-webkit-slider-runnable-track{height:5px;border-radius:4px;background:linear-gradient(to right,#fff 0%,#fff var(--progress),#ffffff38 var(--progress),#ffffff38 100%)}input[type=range]::-webkit-slider-thumb{appearance:none;width:20px;height:20px;margin-top:-7.5px;border:0;border-radius:50%;background:white;box-shadow:0 1px 4px #0003}',
+    'input[type=range]::-moz-range-track{height:5px;background:#ffffff38;border-radius:4px}input[type=range]::-moz-range-progress{height:5px;background:white;border-radius:4px}input[type=range]::-moz-range-thumb{width:20px;height:20px;border:0;border-radius:50%;background:white}',
+    'input[type=checkbox]{appearance:none;position:relative;margin:0;flex:0 0 36px;width:36px;height:22px;border-radius:14px;background:#66666b;cursor:pointer}',
+    'input[type=checkbox]::before{content:"";position:absolute;left:3px;top:3px;width:16px;height:16px;border-radius:50%;background:white;transition:transform .12s}',
+    'input[type=checkbox]:checked{background:#30d158}input[type=checkbox]:checked::before{transform:translateX(14px)}',
+    'output{flex-shrink:0;color:inherit;text-align:right;font-variant-numeric:tabular-nums}p.status{margin:4px 4px 0;padding:8px 0 4px;border-top:1px solid rgba(255,255,255,calc(.08 * var(--yac-settings-level,1)));font-size:11px;color:#c3c3ca}',
     '.save-error{margin:8px;padding:12px;border:1px solid #ffffff38;border-radius:8px;font-size:12px;color:#eee}.save-error[hidden]{display:none}.save-error button{display:block;width:auto;height:auto;min-height:36px;margin-top:8px;padding:6px 12px;border:1px solid #ffffff38;font:inherit}.save-error button[aria-disabled=true]{opacity:.6;cursor:wait}',
-    ':focus-visible{outline:2px solid white;outline-offset:1px}@media(prefers-reduced-motion:reduce){input[type=checkbox]::before{transition:none}}'
+    ':focus-visible{outline:2px solid white;outline-offset:2px}@media(pointer:coarse){:host{--yac-detail-height:540px}:host([data-page=appearance]){--yac-detail-height:440px}:host([data-page=rendering]){--yac-detail-height:400px}:host([data-page=safety]){--yac-detail-height:250px}button{min-height:44px;min-width:44px}.info{flex-basis:44px}.setting-row{padding-block:12px}input[type=range]{height:40px}}@media(prefers-reduced-motion:reduce){input[type=checkbox]::before{transition:none}}'
   ].join('\n');
   root.append(style);
   const body = document.createElement('div');
@@ -297,28 +362,97 @@
   root.append(body);
   const header = document.createElement('header');
   const heading = document.createElement('h2');
-  heading.textContent = 'アンビエント設定';
+  heading.textContent = '設定';
+  const back = document.createElement('button');back.id = 'yac-settings-back';back.type = 'button';back.hidden = true;back.append(makeIcon('M15 5l-7 7 7 7'));
   const close = document.createElement('button');
   close.type = 'button';
-  close.textContent = '×';
-  close.setAttribute('aria-label', 'アンビエント設定を閉じる');
-  header.append(heading, close);
+  close.id = 'yac-settings-close';close.className = 'close';close.append(makeIcon('M6 6l12 12M18 6 6 18'));
+  close.setAttribute('aria-label', '設定を閉じる');
+  header.append(back, heading, close);
   root.append(header, body);
-  const fields = {}, outputs = {}, fieldLabels = {}, descriptions = {};
-  const appearance = document.createElement('section');
-  const appearanceHeading = document.createElement('h3');
-  appearanceHeading.className = 'section-title';
-  appearanceHeading.id = 'yac-appearance-title';
-  appearance.setAttribute('aria-labelledby', appearanceHeading.id);
-  appearance.append(appearanceHeading);
-  const advanced = document.createElement('details');
-  const advancedHeading = document.createElement('summary');
-  const advancedBody = document.createElement('div');
-  advancedBody.className = 'advanced-body';
-  advanced.append(advancedHeading, advancedBody);
-  const languageLabel = document.createElement('label');
-  languageLabel.className = 'toggle language';
-  fieldLabels.language = document.createTextNode(translations.ja.language);
+  const menu = document.createElement('nav');menu.id = 'yac-settings-menu';
+  const pages = {}, menuLabels = {}, menuDescriptions = {}, menuButtons = {};
+  const groups = {
+    appearance: ['radial', 'strength', 'blur', 'saturation'],
+    surfaces: ['surfaceMultiplier', 'controlDensity', 'readingDensity', 'navigationDensity'],
+    rendering: ['avoidBars', 'fillBars', 'inset', 'fps'],
+    safety: ['flashWarning', 'language']
+  };
+  const categoryIcons = { appearance: 'M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4M16 12a4 4 0 1 0-8 0 4 4 0 0 0 8 0Z', surfaces: 'M4 7h6M14 7h6M4 17h10M18 17h2M10 4v6M14 14v6', rendering: 'M7 3v14h14M3 7h14v14', safety: 'M12 3 3 7v5c0 5 9 9 9 9s9-4 9-9V7l-9-4ZM8 12l3 3 5-6' };
+  let currentPage = '', helpRow = null, helpPinned = false, hoveredHelpRow = null, focusedHelpRow = null;
+  const dismissedHelpRows = new Set();
+  function hideHelp(dismiss = false) {
+    if (!helpRow) return;
+    const previous = helpRow;
+    previous.removeAttribute('data-help-open');
+    previous.querySelector('.hint').hidden = true;
+    previous.querySelector('.info').setAttribute('aria-expanded', 'false');
+    if (dismiss) dismissedHelpRows.add(previous);
+    helpRow = null;helpPinned = false;
+  }
+  function showHelp(row, pin = false) {
+    if (!pin && dismissedHelpRows.has(row)) return;
+    if (helpRow === row) { if (pin) helpPinned = true;return; }
+    hideHelp();helpRow = row;helpPinned = pin;
+    row.setAttribute('data-help-open', 'true');
+    row.querySelector('.hint').hidden = false;
+    row.querySelector('.info').setAttribute('aria-expanded', 'true');
+  }
+  function resetHelp() {
+    hideHelp();hoveredHelpRow = null;focusedHelpRow = null;dismissedHelpRows.clear();
+  }
+  for (const key of Object.keys(groups)) {
+    const item = document.createElement('button');item.type = 'button';item.className = 'menu-item';item.id = 'yac-menu-' + key;
+    item.setAttribute('aria-controls', 'yac-page-' + key);
+    const icon = document.createElement('span');icon.className = 'menu-icon';icon.append(makeIcon(categoryIcons[key]));
+    const copy = document.createElement('span');copy.className = 'menu-copy';
+    menuLabels[key] = document.createElement('span');menuLabels[key].className = 'menu-title';
+    menuDescriptions[key] = document.createElement('span');menuDescriptions[key].className = 'menu-description';
+    copy.append(menuLabels[key], menuDescriptions[key]);item.append(icon, copy, makeIcon('M9 6l6 6-6 6'));menu.append(item);menuButtons[key] = item;
+    const page = document.createElement('section');page.id = 'yac-page-' + key;page.hidden = true;pages[key] = page;
+    listen(item, 'click', () => showPage(key, true));
+  }
+  function showPage(key = '', focus = false) {
+    resetHelp();
+    currentPage = key;panel.setAttribute('data-page', key);menu.hidden = !!key;back.hidden = !key;
+    for (const [name, page] of Object.entries(pages)) page.hidden = name !== key;
+    heading.textContent = translations[settings.language][key || 'title'];body.scrollTop = 0;
+    positionPanel();
+    if (focus) (key ? back : menuButtons.appearance).focus({ preventScroll: true });
+  }
+  function fieldRow(key, type) {
+    const row = document.createElement('div');row.className = 'setting-row ' + type;
+    const copy = document.createElement('span');copy.className = 'setting-heading';
+    const label = document.createElement('label');label.htmlFor = 'yac-' + key;fieldLabels[key] = document.createTextNode('');label.append(fieldLabels[key]);copy.append(label);
+    let hint;
+    if (key !== 'language') {
+      const info = document.createElement('button');info.type = 'button';info.className = 'info';info.textContent = 'ⓘ';info.setAttribute('aria-expanded', 'false');info.setAttribute('aria-controls', 'yac-' + key + '-hint');infoButtons[key] = info;
+      hint = document.createElement('span');hint.id = 'yac-' + key + '-hint';hint.className = 'hint';hint.hidden = true;hint.setAttribute('role', 'tooltip');descriptions[key + 'Description'] = hint;
+      info.setAttribute('aria-describedby', hint.id);
+      copy.append(info);row.append(hint);fields[key].setAttribute('aria-describedby', hint.id);
+      listen(info, 'pointerenter', event => {
+        if (event.pointerType === 'touch') return;
+        hoveredHelpRow = row;dismissedHelpRows.delete(row);showHelp(row);
+      });
+      listen(row, 'pointerleave', () => {
+        if (hoveredHelpRow === row) hoveredHelpRow = null;
+        if (helpRow === row && !helpPinned && focusedHelpRow !== row) hideHelp();
+      });
+      listen(info, 'focus', () => {
+        focusedHelpRow = row;dismissedHelpRows.delete(row);showHelp(row);
+      });
+      listen(info, 'blur', () => {
+        if (focusedHelpRow === row) focusedHelpRow = null;
+        if (helpRow === row && !helpPinned && hoveredHelpRow !== row) hideHelp();
+      });
+      listen(info, 'click', () => {
+        if (helpRow === row && helpPinned) hideHelp(true);
+        else { dismissedHelpRows.delete(row);showHelp(row, true); }
+      });
+    }
+    row.append(copy);
+    return { row, copy, hint };
+  }
   fields.language = document.createElement('select');
   fields.language.id = 'yac-language';
   fields.language.setAttribute('aria-label', translations.ja.language);
@@ -327,57 +461,33 @@
     option.value = value; option.textContent = name;
     fields.language.append(option);
   }
-  languageLabel.append(fieldLabels.language, fields.language);
-  for (const [key, title] of [['enabled', 'アンビエント背景'], ['radial', '放射状モード'], ['avoidBars', '黒帯を自動で除外'], ['fillBars', '黒帯を背景に置き換える'], ['flashWarning', '高速点滅の警告']]) {
-    const label = document.createElement('label');
-    label.className = 'toggle';
+  const languageRow = fieldRow('language', 'language');languageRow.row.append(fields.language);pages.safety.append(languageRow.row);
+  for (const key of booleanKeys.filter(key => key !== 'enabled')) {
     fields[key] = document.createElement('input');
     fields[key].type = 'checkbox';
+    fields[key].id = 'yac-' + key;
     fields[key].setAttribute('role', 'switch');
-    const copy = document.createElement('span');
-    copy.className = 'copy';
-    fieldLabels[key] = document.createTextNode(title);
-    copy.append(fieldLabels[key]);
-    if (key !== 'enabled') {
-      const hint = document.createElement('span');
-      hint.id = 'yac-' + key + '-hint';
-      hint.className = 'hint';
-      descriptions[key + 'Description'] = hint;
-      fields[key].setAttribute('aria-describedby', hint.id);
-      copy.append(hint);
-    }
-    label.append(copy, fields[key]);
-    (key === 'enabled' ? body : advancedBody).append(label);
+    const { row, hint } = fieldRow(key, 'toggle');row.append(fields[key], hint);
+    pages[Object.keys(groups).find(name => groups[name].includes(key))].append(row);
   }
-  for (const [key, title, min, max] of [
-    ['strength', '濃さ', 15, 100], ['blur', 'ぼかし', 0, 160], ['saturation', '彩度', 0, 250], ['inset', '縁の内側', 0, 40], ['fps', '背景のFPS', 24, 60]
+  for (const [key, min, max] of [
+    ['surfaceMultiplier', 0, 1], ['controlDensity', 0, 100], ['readingDensity', 0, 100], ['navigationDensity', 0, 100],
+    ['strength', 15, 100], ['blur', 0, 160], ['saturation', 0, 250], ['inset', 0, 40], ['fps', 24, 60]
   ]) {
-    const label = document.createElement('label');
-    label.className = 'slider-label';
-    label.htmlFor = 'yac-' + key;
     fields[key] = document.createElement('input');
     fields[key].id = 'yac-' + key;
     fields[key].type = 'range';
     fields[key].min = min;
     fields[key].max = max;
-    fields[key].setAttribute('aria-label', title);
+    fields[key].step = key === 'surfaceMultiplier' || key.endsWith('Density') ? 'any' : '1';
     outputs[key] = document.createElement('output');
-    fieldLabels[key] = document.createTextNode(title);
-    const row = document.createElement('span');
-    row.className = 'slider-heading';
-    row.append(fieldLabels[key], outputs[key]);
-    label.append(row, fields[key]);
-    if (key === 'inset' || key === 'fps') {
-      const hint = document.createElement('span');
-      hint.id = 'yac-' + key + '-hint';
-      hint.className = 'hint';
-      descriptions[key + 'Description'] = hint;
-      fields[key].setAttribute('aria-describedby', hint.id);
-      label.append(hint);
-    }
-    (key === 'inset' || key === 'fps' ? advancedBody : appearance).append(label);
+    const { row, copy, hint } = fieldRow(key, 'slider-label');
+    const sliderHeading = document.createElement('div');sliderHeading.className = 'slider-heading';sliderHeading.append(copy, outputs[key]);row.append(sliderHeading, fields[key], hint);
+    pages[Object.keys(groups).find(name => groups[name].includes(key))].append(row);
   }
+  pages.safety.append(languageRow.row);
   const status = document.createElement('p');
+  status.className = 'status';
   function createSaveNotice() {
     const container = document.createElement('div');container.className = 'save-error';container.hidden = true;
     container.setAttribute('role', 'alert');
@@ -387,7 +497,7 @@
     return { container, message, retry };
   }
   const panelSaveNotice = createSaveNotice();
-  body.append(appearance, advanced, panelSaveNotice.container, status, languageLabel);
+  body.append(menu, ...Object.values(pages), panelSaveNotice.container, status);
   let statusKey = 'waiting';
   function setStatus(key) {
     statusKey = key;
@@ -396,15 +506,21 @@
   }
   function localize() {
     const text = translations[settings.language];
-    heading.textContent = tooltip.textContent = text.title;
-    button.setAttribute('aria-label', text.title);
+    heading.textContent = text[currentPage || 'title'];
+    tooltip.textContent = open ? text.close : text.openSettings;
+    button.setAttribute('aria-label', tooltip.textContent);
+    fields.enabled.setAttribute('aria-label', text.enabled);
+    toggleTooltip.textContent = text.enabled + ' · ' + (settings.enabled ? text.on : text.offState);
     panel.setAttribute('aria-label', text.title);
     panel.lang = settings.language;
     close.setAttribute('aria-label', text.close);
+    back.setAttribute('aria-label', text.back);
     fields.language.value = settings.language;
-    appearanceHeading.textContent = text.appearance;
-    advancedHeading.textContent = text.advanced;
-    advancedHeading.setAttribute('aria-label', text.advanced);
+    menu.setAttribute('aria-label', text.title);
+    for (const key of Object.keys(groups)) {
+      menuLabels[key].textContent = text[key];menuDescriptions[key].textContent = text[key + 'Description'];pages[key].setAttribute('aria-label', text[key]);
+    }
+    for (const [key, info] of Object.entries(infoButtons)) info.setAttribute('aria-label', text[key] + ' · ' + text.info);
     for (const [key, element] of Object.entries(descriptions)) element.textContent = text[key];
     for (const [key, label] of Object.entries(fieldLabels)) {
       label.textContent = text[key];
@@ -420,24 +536,37 @@
         nativeMenu && getComputedStyle(nativeMenu).display !== 'none')) nativeGear?.click();
     open = nextOpen;
     panel.hidden = !open;
+    if (open) showPage();
+    else resetHelp();
+    localize();
     button.setAttribute('aria-expanded', String(open));
     player?.classList.toggle('yac-settings-open', open);
     positionPanel();
     if (open) {
-      fields.enabled.focus({ preventScroll: true });
+      menuButtons.appearance.focus({ preventScroll: true });
     } else if (returnFocus && button.isConnected) button.focus();
   }
   listen(button, 'click', event => { event.stopPropagation(); setOpen(!open); });
-  listen(button, 'keydown', event => {
+  listen(launcher, 'click', event => event.stopPropagation());
+  listen(launcher, 'dblclick', event => { event.preventDefault();event.stopPropagation(); });
+  listen(launcher, 'keydown', event => {
     event.stopPropagation();
   });
-  listen(button, 'keyup', event => event.stopPropagation());
+  listen(launcher, 'keyup', event => event.stopPropagation());
   listen(close, 'click', () => setOpen(false, true));
+  listen(back, 'click', () => { const previous = currentPage;showPage();menuButtons[previous]?.focus({ preventScroll: true }); });
   listen(panel, 'click', event => event.stopPropagation());
   listen(panel, 'dblclick', event => { event.preventDefault(); event.stopPropagation(); });
   listen(panel, 'keydown', event => {
     event.stopPropagation();
-    if (event.key === 'Escape') { event.preventDefault(); setOpen(false, true); }
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      // Help is dismissed first, including hover/focus-only help. Do not move
+      // focus or reopen it while the same trigger remains hovered/focused.
+      if (helpRow) hideHelp(true);
+      else if (currentPage) { const previous = currentPage;showPage();menuButtons[previous]?.focus({ preventScroll: true }); }
+      else setOpen(false, true);
+    }
   });
   listen(panel, 'keyup', event => event.stopPropagation());
   let videoListeners = [], gearListener = null, gearElement = null;
@@ -493,13 +622,24 @@
     neverCheckbox.checked = !settings.flashWarning;
     renderSaveErrors();
   }
+  function focusedElement() {
+    let element = document.activeElement;
+    while (element?.shadowRoot?.activeElement) element = element.shadowRoot.activeElement;
+    return element;
+  }
   function closeFlashWarning(returnFocus = true) {
     if (!flashWarningOpen) return;
     flashWarningOpen = false;warningPresentation++;reductionPresentation = null;
     reducingWarning = retryingWarning = false;
     warningReduce.removeAttribute('aria-busy');warningSaveNotice.retry.removeAttribute('aria-disabled');
     warningDialog.close();flashMonitor.reset();
-    if (returnFocus) (warningFocus?.isConnected ? warningFocus : button).focus({ preventScroll: true });
+    if (returnFocus) {
+      const target = warningFocus?.isConnected ? warningFocus : button;
+      target.focus({ preventScroll: true });
+      // A connected opener can have become hidden or disabled during the modal.
+      // Verify the browser accepted focus instead of leaving it on the page body.
+      if (focusedElement() !== target && button.isConnected) button.focus({ preventScroll: true });
+    }
     warningFocus = null;
     if (warningHost.parentElement !== document.documentElement) document.documentElement.append(warningHost);
   }
@@ -514,8 +654,7 @@
     if (!settings.flashWarning || flashWarningOpen || warnedVideoKey === key) return;
     warnedVideoKey = key;
     warningPresentation++;
-    warningFocus = document.activeElement;
-    while (warningFocus?.shadowRoot?.activeElement) warningFocus = warningFocus.shadowRoot.activeElement;
+    warningFocus = focusedElement();
     localizeWarning();positionWarning();warningDialog.showModal();flashWarningOpen = true;warningReduce.focus();
     // Notification only: do not pause video, disable ambient, or change strength.
   }
@@ -585,25 +724,39 @@
     if (canvas.style.filter !== filter) canvas.style.filter = filter;
     if (barCanvas.style.filter !== filter) barCanvas.style.filter = filter;
   }
-  function apply() {
+  function apply(renderChanged = true) {
     localize();
     localizeWarning();
+    // One saved preference derives the palette for every supported face. This
+    // runs on settings changes only, never in the video/frame/message loop.
+    const palette = YacSettingsStore.surfacePalette(settings);
+    const declarations = Object.entries(palette).map(([key, value]) => key + ':' + value).join(';');
+    const paletteText = `html.yac-active{${declarations}}:root{--yac-settings-opacity:${palette['--yac-settings-opacity']};--yac-settings-level:${palette['--yac-navigation-level']};--yac-launcher-opacity:${palette['--yac-control-opacity']};--yac-launcher-level:${palette['--yac-control-feedback']}}`;
+    if (paletteStyle.textContent !== paletteText) { paletteStyle.textContent = paletteText;syncChat(); }
     updateAppearance();
     button.classList.toggle('yac-enabled', settings.enabled);
     for (const key of booleanKeys) {
       fields[key].checked = settings[key];
       fields[key].setAttribute('aria-checked', String(settings[key]));
     }
-    for (const key of ['strength', 'blur', 'saturation', 'inset', 'fps']) {
+    for (const key of ['strength', 'blur', 'saturation', 'inset', 'fps', 'surfaceMultiplier', 'controlDensity', 'readingDensity', 'navigationDensity']) {
       fields[key].value = settings[key];
       fields[key].style.setProperty('--progress', (settings[key] - Number(fields[key].min)) / (Number(fields[key].max) - Number(fields[key].min)) * 100 + '%');
-      const valueText = settings[key] + (key === 'blur' ? ' px' : key === 'fps' ? ' FPS' : '%');
+      const text = translations[settings.language];
+      const number = Math.round(settings[key] * 1000) / 1000;
+      const valueText = key === 'surfaceMultiplier' ? '× ' + number : number + (key === 'blur' ? ' px' : key === 'fps' ? ' FPS' : '%');
       outputs[key].textContent = valueText;
-      fields[key].setAttribute('aria-valuetext', valueText);
+      let appliedText = '';
+      if (key.endsWith('Density')) {
+        appliedText = text.applied + ' ' + Math.round(settings[key] * settings.surfaceMultiplier * 10) / 10 + '%';
+        const applied = document.createElement('span');applied.className = 'applied';applied.textContent = appliedText;outputs[key].append(applied);
+      }
+      fields[key].setAttribute('aria-valuetext', valueText + (appliedText ? ' · ' + appliedText : ''));
     }
-    lastTime = -1;
-    lastDrawFrame = 0;
-    invalidateFrame(false);
+    if (renderChanged) {
+      lastDrawFrame = 0;
+      invalidateFrame(false);
+    }
     if (!settings.fillBars || !settings.enabled) restoreBars();
   }
   for (const key of Object.keys(fields)) {
@@ -620,9 +773,13 @@
     const preferredBottom = controls ? Math.max(48, player.clientHeight - controls.offsetTop + 8) : 60;
     // Keep the header and close action reachable in a short player.
     const bottom = Math.min(preferredBottom, Math.max(0, player.clientHeight - 64));
-    panel.style.width = Math.min(320, Math.max(1, player.clientWidth - 24)) + 'px';
+    panel.style.width = Math.min(340, Math.max(1, player.clientWidth - 24)) + 'px';
     panel.style.bottom = bottom + 'px';
-    panel.style.maxHeight = Math.max(1, player.clientHeight - bottom - 8) + 'px';
+    const availableHeight = Math.max(1, player.clientHeight - bottom - 8);
+    panel.style.maxHeight = availableHeight + 'px';
+    // Help expands inside a stable detail page. A bottom-anchored auto-height
+    // panel would move the hovered info button and repeatedly hide/show it.
+    panel.style.height = currentPage ? 'min(var(--yac-detail-height, 460px), ' + availableHeight + 'px)' : 'auto';
   }
   const panelResizeObserver = new ResizeObserver(() => {
     restoreBars();
@@ -669,13 +826,15 @@
       const value = palette.getPropertyValue(property).trim(), number = Number(value);
       return value && Number.isFinite(number) && number >= 0 && number <= 1 ? number : fallback;
     };
-    const blur = palette.getPropertyValue('--yac-control-blur').trim();
+    const blur = palette.getPropertyValue('--yac-reading-blur').trim();
     const safeBlur = /^\d+(?:\.\d+)?px$/.test(blur) && parseFloat(blur) <= 64 ? blur : '12px';
     const text = `html.yac-chat-active{--yac-control-rgb:${safeRgb};
       --yac-control-opacity:${alpha('--yac-control-opacity', .22)};
       --yac-control-hover-opacity:${alpha('--yac-control-hover-opacity', .34)};
       --yac-control-selected-opacity:${alpha('--yac-control-selected-opacity', .44)};
       --yac-reading-opacity:${alpha('--yac-reading-opacity', .64)};
+      --yac-chat-header-opacity:${alpha('--yac-chat-header-opacity', .12)};
+      --yac-chat-overlay-opacity:${alpha('--yac-chat-overlay-opacity', .13)};
       --yac-control-blur:${safeBlur};
       --yac-control-surface:rgba(var(--yac-control-rgb),var(--yac-control-opacity));
       --yac-control-hover-surface:rgba(var(--yac-control-rgb),var(--yac-control-hover-opacity));
@@ -732,11 +891,12 @@
       gearListener = gear ? listen(gear, 'click', () => { if (open) setOpen(false); }, true) : null;
     }
     const toolbar = gear?.parentElement || player?.querySelector('.ytp-right-controls');
-    if (toolbar && button.parentElement !== toolbar) toolbar.insertBefore(button, gear || toolbar.firstChild);
+    if (toolbar && launcher.parentElement !== toolbar) toolbar.insertBefore(launcher, gear || toolbar.firstChild);
     if (player && panel.parentElement !== player) player.append(panel);
     if (player && barLayer.parentElement !== player) player.prepend(barLayer);
-    button.hidden = location.pathname !== '/watch';
-    if (button.hidden || !toolbar || !player) setOpen(false);
+    launcher.hidden = location.pathname !== '/watch';
+    button.hidden = launcher.hidden;
+    if (launcher.hidden || !toolbar || !player) setOpen(false);
     positionPanel();
     syncChat();
     refreshPageSurfaces();
@@ -984,19 +1144,24 @@
     restoreBars();
     document.documentElement.classList.remove('yac-active');
     syncPageSurfaces(false);
-    button.remove(); panel.remove(); canvas.remove(); barLayer.remove();
+    launcher.remove(); panel.remove(); canvas.remove(); barLayer.remove();paletteStyle.remove();
   }, { once: true });
   apply(); discover(); draw();
   frameRequest = requestAnimationFrame(animate);
   const settingsStore = new YacSettingsStore(extension.storage, settings, {
     onChange(snapshot, { loaded, error, saveError: nextSaveError }) {
       if (disposed) return;
-      const changed = loaded !== settingsLoaded || Object.keys(snapshot).some(key => snapshot[key] !== settings[key]);
+      const changedKeys = Object.keys(snapshot).filter(key => snapshot[key] !== settings[key]);
+      const loadChanged = loaded !== settingsLoaded;
+      const changed = loadChanged || changedKeys.length > 0;
+      // Palette/language edits do not invalidate an in-flight Worker frame or
+      // force a video capture. Ambient and warning preferences keep that path.
+      const renderChanged = loadChanged || changedKeys.some(key => !uiOnlySettings.has(key));
       if (snapshot.flashWarning !== settings.flashWarning) { flashMonitor.reset();warnedVideoKey = ''; }
       settingsLoaded = loaded;Object.assign(settings, snapshot);
       saveError = nextSaveError;
       if (error && !nextSaveError) console.warn(error);
-      if (changed) { apply();draw(); }
+      if (changed) { apply(renderChanged);if (renderChanged) draw(); }
       else renderSaveErrors();
     }
   });
