@@ -1,4 +1,4 @@
-# Theme compatibility - 0.2.22 development revision
+# Theme compatibility - 0.2.23 development revision
 
 Some YouTube theme extensions apply high-specificity `!important` backgrounds.
 With Enhancer for YouTube's dark theme, these rules can cover the ambient canvas
@@ -24,6 +24,13 @@ The extension still runs only on `https://www.youtube.com/*` and saves local
 preferences with `storage`.
 
 ## Reproduce the conflict
+
+Development 0.2.23 lightens the resting dark backdrop lens for native actions,
+search and Enhancer from brightness .4 to .5 while retaining .4 during hover or
+keyboard focus. Chip clouds, including nested native arrow buttons, retain the
+previous backdrop and 22/34/44% paint alpha in every state. Reading/chat/menu
+surfaces, SVG fills, disabled opacity and geometry are unchanged. Local fixture
+checks do not establish installed-extension behavior on YouTube.
 
 Development 0.2.19 leaves the currently playing playlist row's native selected
 background unchanged. Other playlist rows and the header use one 64% surface

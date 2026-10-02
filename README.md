@@ -16,7 +16,7 @@ Chromeは展開して「パッケージ化されていない拡張機能」と�
 Firefoxの永続インストールにはAMOの署名が必要です。
 
 GitHub Releasesの配布パッケージは0.2.2です。開発ソースとローカルのChrome／Firefox用
-ビルドは0.2.22で、Enhancer for YouTubeなどとの互換修正を検証中です。
+ビルドは0.2.23で、Enhancer for YouTubeなどとの互換修正を検証中です。
 両ストアには0.2.17を提出済みです。現在の審査結果・公開状態は再確認していません。
 
 ## 機能
@@ -37,6 +37,8 @@ GitHub Releasesの配布パッケージは0.2.2です。開発ソースとロー
   開発版0.2.20では、その濃さを保持し、ボタンの背後の明るさを文字色に合わせて補正します。
   `--yac-control-backdrop`で補正を一括調整。Enhancerは明るいアイコンに合わせた暗い補正を使います。
   検索欄の枠を保持し、入力中は枠を強調します。
+  開発版0.2.23では、操作ボタン・検索欄・Enhancerの通常時の背景補正を明るくしました。
+  絞り込みタグと矢印、チャットなどの読む面の濃さは保持します。
   設定パネルはYouTubeの設定に近い半透明のダーク背景。
 - 対称な黒帯の自動除外と、黒帯を背景に置き換えるスイッチ。
 - 開発版0.2.12では黒帯を320×180で検出し、圧縮ノイズ・小さな字幕やロゴ・境界の揺れを考慮。
@@ -148,5 +150,5 @@ dark modal appears after about three seconds of detected rapid flashing while
 playback and ambient continue. You can reduce strength to 15% or disable further
 warnings; Advanced settings can re-enable them. Detection and reduced opacity
 do not guarantee safety. GitHub release packages remain on 0.2.2; current development
-sources and local builds are 0.2.22. Version 0.2.17 was submitted to both stores;
+sources and local builds are 0.2.23. Version 0.2.17 was submitted to both stores;
 their current review/publication state has not been rechecked.

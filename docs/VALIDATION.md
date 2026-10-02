@@ -1,4 +1,28 @@
-# 検証結果 — 0.2.22 development / 2026-10-02
+# 検証結果 — 0.2.23 development / 2026-10-02
+
+## 0.2.23 lighter action surfaces
+
+- Resting native actions, modern/legacy search and Enhancer use dark backdrop
+  brightness .5 instead of .4. Hover/keyboard focus retain .4 to accommodate
+  native white feedback without losing primary-text contrast. Light-theme
+  native action correction, RGB and 22/34/44% paint alpha remain unchanged.
+- Chip clouds retain the old backdrop in all states, including nested native
+  arrow buttons. Before/after white/color metadata for normal/selected chips
+  and the arrow matches in computed colors, filters, alpha, geometry and focus.
+  Reading/chat/menu/guide styles were not changed.
+- Local in-app browser: 19 viewport captures, 265/266 valid measured faces.
+  All 153 active primary-text checks pass, minimum 4.652435:1. Measured ordinary
+  SVG fill minimum is 3.321210:1. Original eight SVGs, geometry, disabled opacity,
+  native focus feedback and light/dark OFF restoration checks pass.
+- One color-background chip-arrow patch is nonuniform and rejected. The full
+  pixel matrix is therefore not a PASS. Semantic pink/disabled appearance and
+  arbitrary theme text colors are not certified by these checks.
+- Initial full-page screenshots did not match viewport aspect ratios and were
+  rejected. All final captures use viewport screenshots and matching metadata;
+  no dimensions or measured background values were rewritten to force a pass.
+  Evidence: `artifacts/button-shade-0.2.23/captures.json`, `result.json` and JPEGs.
+- `npm run check` and all ten `npm test` suites pass. Installed Chrome/Firefox
+  and native YouTube behavior remain unverified; this is a fixture result.
 
 ## 0.2.22 idle scheduling and sample ownership
 
