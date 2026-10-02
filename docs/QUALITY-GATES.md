@@ -373,11 +373,14 @@ It adds no canvas readback, frame transfer, DOM work or worker messages.
 None is verified as an installed
 extension on the current Chrome, Firefox or in-app YouTube page.
 
-Version 0.2.17 was submitted to Chrome Web Store and AMO and was awaiting review
-at the last recorded check on 2026-10-01. Versions 0.2.18–0.2.24 have not been
-submitted. Current public visibility and review outcomes have not been checked
-again. The historical AMO submission screen showed the old 0.2.2 version disabled
-by Mozilla; this is not evidence that the new version was approved or published.
+The 2026-10-03 live store check found Chrome Web Store version 0.2.17 publicly
+available, with an update date of 2026-10-02 and a visible installation action.
+AMO still reports version 0.2.17 as awaiting review; its listing explicitly says
+it is not public and is visible only because the signed-in developer has elevated
+permissions. Versions 0.2.18–0.2.24 have not been submitted. The historical AMO
+submission screen showed the old 0.2.2 version disabled by Mozilla; this does not
+establish approval or publication of a newer version. The focused browser evidence
+is `liquid-store-status-20261003.json` in this task's visualization directory.
 
 |Requirement|Recorded evidence|Remaining verification|
 |---|---|---|
