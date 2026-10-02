@@ -16,7 +16,7 @@ Chromeは展開して「パッケージ化されていない拡張機能」と�
 Firefoxの永続インストールにはAMOの署名が必要です。
 
 GitHub Releasesの配布パッケージは0.2.2です。開発ソースとローカルのChrome／Firefox用
-ビルドは0.2.23で、Enhancer for YouTubeなどとの互換修正を検証中です。
+ビルドは0.2.24で、Enhancer for YouTubeなどとの互換修正を検証中です。
 両ストアには0.2.17を提出済みです。現在の審査結果・公開状態は再確認していません。
 
 ## 機能
@@ -42,6 +42,8 @@ GitHub Releasesの配布パッケージは0.2.2です。開発ソースとロー
   設定パネルはYouTubeの設定に近い半透明のダーク背景。
 - 対称な黒帯の自動除外と、黒帯を背景に置き換えるスイッチ。
 - 開発版0.2.12では黒帯を320×180で検出し、圧縮ノイズ・小さな字幕やロゴ・境界の揺れを考慮。
+- 開発版0.2.24では、黒帯内の薄い字幕や色付きロゴも、検出できた最初のフレームから
+  映像の切り取り範囲に残します。縮小時に消える細い文字などは、保護できない場合があります。
   動画の表示サイズを保ち、背景の色採取には別の160×90画像を使います。
   採色と表示の境界を分け、検出できた帯内の明るい字幕・ロゴを表示側に残します。
   背景の色計算・描画は専用Workerへ分離し、YouTube側の半透明表示と設定操作はページ側に残します。
@@ -150,5 +152,5 @@ dark modal appears after about three seconds of detected rapid flashing while
 playback and ambient continue. You can reduce strength to 15% or disable further
 warnings; Advanced settings can re-enable them. Detection and reduced opacity
 do not guarantee safety. GitHub release packages remain on 0.2.2; current development
-sources and local builds are 0.2.23. Version 0.2.17 was submitted to both stores;
+sources and local builds are 0.2.24. Version 0.2.17 was submitted to both stores;
 their current review/publication state has not been rechecked.

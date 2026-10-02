@@ -46,6 +46,11 @@ expectBands({ top: 9, left: 18 }, { x: 18, y: 9, width: 124, height: 72 }, 'wind
 expectBands({ top: 2, left: 2 }, { x: 2, y: 2, width: 156, height: 86 }, 'two-sample bands');
 expectBands({ left: 54 }, { x: 54, y: 0, width: 52, height: H }, 'portrait content');
 expectBands({ top: 12, band: 26, noise: 6 }, { x: 0, y: 12, width: W, height: 66 }, 'off-black compression');
+{
+  const { detector } = expectBands({ top: 12, left: 20, band: 26, noise: 6 },
+    { x: 20, y: 12, width: 120, height: 66 }, 'noisy mixed bands');
+  assert.deepEqual(detector.displayCrop, detector.crop, 'bounded codec noise does not undo display clipping');
+}
 expectBands({ top: 11, bottom: 12, left: 25, right: 26 }, { x: 25, y: 11, width: 109, height: 67 }, 'subsample asymmetric rounding');
 
 // Sparse border logos and short subtitle clutter are outliers, not
@@ -75,6 +80,39 @@ expectBands({ top: 11, bottom: 12, left: 25, right: 26 }, { x: 25, y: 11, width:
   assert.ok(detector.displayCrop.y <= 2, 'new glyph is protected on its first observation');
   detector.sample(new Uint8ClampedArray(0));
   assert.deepEqual(detector.displayCrop, full(), 'invalid samples cannot retain clipping');
+}
+
+// Low-opacity captions/watermarks can remain visible below the bright-pixel
+// cutoff. Protect all four display edges without contaminating ambient samples,
+// including on the first frame after the overlay appears.
+for (const scale of [1, 2]) {
+  const width = W * scale, height = H * scale;
+  const detector = new Detector({ width, height });
+  const clean = frame({ width, height, top: 12 * scale, left: 20 * scale, band: 16, noise: 3 });
+  const sampling = { ...settle(detector, clean) };
+  assert.deepEqual(detector.displayCrop, sampling, `dim-overlay ${scale}: codec noise still permits bar removal`);
+  const overlays = [
+    [70 * scale, 3 * scale, 4 * scale, 2 * scale],
+    [70 * scale, 84 * scale, 4 * scale, 2 * scale],
+    [3 * scale, 40 * scale, 2 * scale, 3 * scale],
+    [151 * scale, 40 * scale, 2 * scale, 3 * scale],
+    [3 * scale, 3 * scale, 2 * scale, 2 * scale],
+    [0, 3 * scale, 2 * scale, 2 * scale],
+    [3 * scale, 0, 2 * scale, 2 * scale],
+  ];
+  for (const color of [[35, 35, 35], [36, 22, 25]]) {
+    for (const [x, y, w, h] of overlays) {
+      const data = clean.slice();
+      paint(data, x, y, w, h, color, width);
+      detector.sample(data);
+      assert.deepEqual(detector.crop, sampling, `dim-overlay ${scale}: sampling remains settled`);
+      const display = detector.displayCrop;
+      assert.ok(display.x <= x && display.y <= y && display.x + display.width >= x + w && display.y + display.height >= y + h,
+        `dim-overlay ${scale}: ${color} overlay at ${x},${y} remains inside the first-frame display crop`);
+      detector.sample(clean);
+      assert.deepEqual(detector.displayCrop, sampling, `dim-overlay ${scale}: clean display bounds recover immediately`);
+    }
+  }
 }
 
 // Adversarial/holdout scenes: broad dark gradients, dim textured edges,

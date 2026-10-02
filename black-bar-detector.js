@@ -18,7 +18,7 @@
     }
 
     makeLines(length) {
-      return { count: new Uint16Array(length), sum: new Uint32Array(length), square: new Uint32Array(length), bright: new Uint16Array(length) };
+      return { count: new Uint16Array(length), sum: new Uint32Array(length), square: new Uint32Array(length), bright: new Uint16Array(length), peak: new Uint8Array(length) };
     }
 
     reset() {
@@ -33,13 +33,15 @@
 
     collect(data) {
       for (const lines of [this.rows, this.columns]) {
-        lines.count.fill(0); lines.sum.fill(0); lines.square.fill(0); lines.bright.fill(0);
+        lines.count.fill(0); lines.sum.fill(0); lines.square.fill(0); lines.bright.fill(0); lines.peak.fill(0);
       }
       let bright = 0;
       for (let y = 0, i = 0; y < this.height; y++) {
         for (let x = 0; x < this.width; x++, i += 4) {
           const r = data[i], g = data[i + 1], b = data[i + 2];
           const value = Math.max(r, g, b);
+          if (value > this.rows.peak[y]) this.rows.peak[y] = value;
+          if (value > this.columns.peak[x]) this.columns.peak[x] = value;
           // Limited-range black, mild compression noise and a small tint are
           // allowed. Bright subtitle/logo pixels are excluded from flatness.
           if (value <= 42 && value - Math.min(r, g, b) <= 18) {
@@ -189,7 +191,7 @@
     sample(data, options = {}) {
       const crop = this.analyze(data, options);
       // Sampling may ignore sparse subtitles/logos; clipping must preserve them.
-      // Only remove the outer black run before the first bright sample, with a
+      // Only remove the outer black run before the first visible sample, with a
       // one-sample guard for antialiasing. Each axis considers the entire frame
       // so corner logos are protected against either independent clip edge.
       const edges = this.currentEdges();
@@ -197,9 +199,15 @@
         for (let edge = 0; edge < 4; edge++) {
           const lines = edge % 2 === 0 ? this.columns : this.rows;
           const reverse = edge >= 2;
+          const outer = reverse ? lines.count.length - 1 : 0;
+          // Dim/colored glyphs can be visible without reaching the absolute
+          // bright cutoff. Compare against this edge's black level, allowing
+          // mild codec noise. Peaks reuse the existing readback/collection pass.
+          const black = lines.count[outer] ? lines.sum[outer] / lines.count[outer] : 0;
+          const threshold = Math.min(48, Math.max(12, black + 12));
           for (let offset = 0; offset < edges[edge]; offset++) {
             const index = reverse ? lines.bright.length - 1 - offset : offset;
-            if (lines.bright[index]) { edges[edge] = Math.max(0, offset - 1); break; }
+            if (lines.peak[index] >= threshold) { edges[edge] = Math.max(0, offset - 1); break; }
           }
         }
       }

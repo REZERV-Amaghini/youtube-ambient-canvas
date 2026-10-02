@@ -1,4 +1,36 @@
-# 検証結果 — 0.2.23 development / 2026-10-02
+# 検証結果 — 0.2.24 development / 2026-10-02
+
+## 0.2.24 dim overlay preservation
+
+- Reproduced a faded gray caption (RGB 35) on a black band (RGB 16)
+  being clipped even though the ambient sampling ROI was correct.
+- Display-only protection now uses line peaks relative to the outer band
+  black level, capped at the existing bright threshold, with the existing
+  one-sample guard. Peaks are collected in the existing RGBA pass; there is
+  no additional readback or transfer. Sampling acquisition is unchanged.
+- Regression tests cover gray/colored overlays, four edges and corners at
+  160x90 and 320x180, immediate appearance/removal, noisy mixed bands,
+  renderer videoCrop/samplingCrop and fill-only mode. Syntax and all ten
+  numerical/controller suites pass.
+- Local reused-buffer benchmark: 0.045 ms/sample at 160x90, 0.307 ms/sample
+  at 320x180 (2000 iterations each). This excludes browser readback, decoding,
+  transfers, CSS compositing and YouTube; it is not an end-to-end speed claim.
+- Native YouTube access remains blocked by saved browser permission policy.
+  Native theater chat icons and installed Chrome/Firefox remain unverified.
+  Dim features erased during downsampling or within 12 levels of the band
+  remain outside this protection; full-resolution picture safety is not proved.
+
+## 0.2.23 repeated local check / 2026-10-02
+
+- Four fresh viewport captures yielded 55/56 valid measurements. One
+  dark-color chip-arrow patch was nonuniform and remains inconclusive;
+  the complete matrix is not a PASS. Active primary text minimum: 4.652435:1;
+  ordinary SVG fill minimum: 3.420645:1. Native invariant failures were empty.
+- Local chat/playlist dark/light ON/OFF reading checks passed (minimum 4.76:1).
+  Turning ambient OFF kept the settings panel and chat frame visible; ON was
+  restored after testing. This does not establish native theater initialization.
+- Evidence: the task visualization folder `retest-20261002`, including
+  `captures.json`, `result.json`, `reading-result.txt` and `summary.json`.
 
 ## 0.2.23 lighter action surfaces
 

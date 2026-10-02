@@ -1,4 +1,4 @@
-# Development quality status — 0.2.23 / 2026-10-02
+# Development quality status — 0.2.24 / 2026-10-02
 
 Versions 0.2.18–0.2.23 have recorded numerical/controller test results and local
 in-app browser fixture verification. Version 0.2.19 passes the 32-case primary-text
@@ -14,11 +14,16 @@ native comment-load performance. Version 0.2.23 lightens resting action/search/
 Enhancer surfaces while preserving chips and reading faces. Its 19 local browser
 captures contain 265/266 measured faces and 153 passing active primary-text checks
 (minimum 4.652435:1); one color chip-arrow patch remains inconclusive.
+Version 0.2.24 protects sampled dim/colored captions and watermarks below the
+absolute bright-pixel cutoff, using each band's measured black level. Numerical
+tests cover all four edges, corners, first-frame protection, clean recovery,
+codec noise and the renderer's separate sampling/display contracts at 160/320.
+It adds no canvas readback, frame transfer, DOM work or worker messages.
 None is verified as an installed
 extension on the current Chrome, Firefox or in-app YouTube page.
 
 Version 0.2.17 was submitted to Chrome Web Store and AMO and was awaiting review
-at the last recorded check on 2026-10-01. Versions 0.2.18–0.2.23 have not been
+at the last recorded check on 2026-10-01. Versions 0.2.18–0.2.24 have not been
 submitted. Current public visibility and review outcomes have not been checked
 again. The historical AMO submission screen showed the old 0.2.2 version disabled
 by Mozilla; this is not evidence that the new version was approved or published.
@@ -33,13 +38,13 @@ by Mozilla; this is not evidence that the new version was approved or published.
 |Page UI and ambient rendering remain responsive|Single in-flight Worker with layout preflight; no recurring stable/hidden/50-comment surface scans; decoded-frame pacing: 30 FPS video × 120 Hz display gives 90 captures/3s in main/Worker controller tests; unchanged-frame layout probes follow background FPS|Actual comment-load latency, CPU/GPU/transfer cost and long playback on actual devices; capture/presentation and CSS blur/compositing still use the browser renderer|
 |GPU projection preserves appearance and falls back safely|0.2.18 local in-app browser: 13 static GPU/2D comparison cases, a packaged Worker bitmap transfer and forced context loss; the detector remains intact during 2D fallback|Installed Chrome/Firefox GPU behavior, video capture/transfer and end-to-end cost remain unverified; the static projection benchmark excludes these costs, CSS blur and YouTube|
 |Scrolled full-frame background uses finer blur|0.2.18 main/Worker controller tests cover interpolation to `max(25px, configuredBlur / 2)`, settings 0/40/90/160, saved-value preservation and scrolling back|Actual YouTube scroll/layout transitions and visual quality on Chrome/Firefox|
-|Black-band removal preserves the picture|Noisy-band/dark-scene/jitter/reset holdouts at 160/320; separate sampling and display boundaries; bright subtitle/logo cases protected on their first observed frame|Thin/dark glyphs lost in 320×180 reduction, unusual ratios, changing bars and real subtitles; detector is an estimate, not full-resolution proof|
+|Black-band removal preserves the picture|Noisy-band/dark-scene/jitter/reset holdouts at 160/320; separate sampling and display boundaries; bright and dim/colored subtitle/logo cases protected on their first observed frame, with clean-boundary recovery|Glyphs lost in 320×180 reduction or below the band-relative threshold, unusual ratios, changing bars and real subtitles; detector is an estimate, not full-resolution proof|
 |Warning appears above playback with a dark backdrop|0.2.21 local browser: native modal/top layer, dark backdrop, real fullscreen host, focus/keyboard/Escape, video and background continuation, zero warning click/double-click/key bubbles to fixture player, explicit 15% only, ambient OFF sampling; numerical input only|Actual YouTube handlers, installed Chrome/Firefox and real-video detection; warning cannot certify safety or complete detection|
 |Never-show preference and save failures remain clear|Per-key/concurrent/delayed-read tests; 0.2.21 sync/async failed writes, multiple-key retry, stale completion and disposal tests; local browser error/retry/focus, Never-show reload and advanced re-enable|Real extension storage events across Chrome/Firefox tabs and reload; local fixture uses its own sessionStorage namespace|
 |Seek, layout transitions and disposal preserve state/resources|Zero geometry waits, seeking guard, clip ownership, suspended timeouts, stale frame disposal and subscription teardown tests|Native iframe recreation, page navigation, hidden-tab suspension and long sessions|
 
 `npm run check` and `npm test` cover syntax and ten numerical/controller suites.
-The recorded 0.2.23 numerical/controller results passed. No numerical test displays flashing imagery or
+The recorded 0.2.24 numerical/controller results passed. No numerical test displays flashing imagery or
 accesses YouTube. DOM tests use test doubles; they do not establish rendered
 appearance or browser decoding. The separate local browser checks establish
 fixture behavior only, not native YouTube initialization or installed-extension

@@ -92,6 +92,19 @@ assert.deepEqual(fillOnly.samplingCrop, { x: 0, y: 0, width: 160, height: 90 }, 
 assert.equal(fillOnly.videoCrop.y, 12, 'display replacement still detects bars with sampling exclusion off');
 assert.ok(fillOnly.videoCrop.y + fillOnly.videoCrop.height >= 85, 'independent display replacement preserves subtitles');
 assert.deepEqual(renderer.crop, fillOnly.samplingCrop);
+// A faded caption below the detector's absolute bright threshold reaches the
+// renderer's display contract while the ambient exclusion remains independent.
+for (let y = 0; y < 180; y++) for (let x = 0; x < 320; x++) {
+  if (y >= 24 && y < 156) continue;
+  const caption = x >= 130 && x < 170 && y >= 168 && y < 170;
+  letterbox.data.set(caption ? [35, 35, 35, 255] : [16, 16, 16, 255], (y * 320 + x) * 4);
+}
+const dim = renderer.inspect(letterbox, rect, vp, { sourceKey: 'fill-only', avoidBars: true, fillBars: true });
+assert.deepEqual(dim.samplingCrop, { x: 0, y: 12, width: 160, height: 66 }, 'faded caption keeps clean ambient samples');
+assert.ok(dim.videoCrop.y + dim.videoCrop.height >= 85, 'first faded caption reaches renderer display bounds');
+const dimFillOnly = renderer.inspect(letterbox, rect, vp, { sourceKey: 'fill-only', avoidBars: false, fillBars: true });
+assert.deepEqual(dimFillOnly.samplingCrop, { x: 0, y: 0, width: 160, height: 90 });
+assert.ok(dimFillOnly.videoCrop.y + dimFillOnly.videoCrop.height >= 85, 'fill-only display preserves faded caption');
 const neither = renderer.inspect(letterbox, rect, vp, { avoidBars: false, fillBars: false });
 assert.deepEqual(neither.videoCrop, { x: 0, y: 0, width: 160, height: 90 });
 console.log('Projection RGBA, cache lifecycle, and inspect tests passed');

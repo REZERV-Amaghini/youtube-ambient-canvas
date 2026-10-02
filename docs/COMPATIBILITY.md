@@ -1,4 +1,4 @@
-# Theme compatibility - 0.2.23 development revision
+# Theme compatibility - 0.2.24 development revision
 
 Some YouTube theme extensions apply high-specificity `!important` backgrounds.
 With Enhancer for YouTube's dark theme, these rules can cover the ambient canvas
