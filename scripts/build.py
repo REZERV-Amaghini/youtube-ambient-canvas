@@ -12,7 +12,7 @@ EXTENSION_FILES = ["settings-store.js", "black-bar-detector.js", "renderer.js", 
     f"assets/icon-{size}.png" for size in (16, 32, 48, 96, 128)
 ]
 SOURCE_FILES = ["manifest.json", "README.md", "PRIVACY.md", "CONTRIBUTING.md", "assets/preview-hardwell-ja.gif",
-                "LICENSE", ".gitignore", "package.json", "scripts/build.py",
+                "LICENSE", ".gitignore", ".github/workflows/quality.yml", "package.json", "scripts/build.py",
                 "scripts/create_assets.py", "tests/fixture.html",
                 "tests/server.cjs", "tests/check-renderer.js", "tests/check-flash-monitor.cjs", "tests/check-black-bars.cjs",
                 "tests/check-worker.cjs", "tests/check-gpu.cjs", "tests/check-settings.cjs", "tests/check-ambient.cjs", "tests/check-projection.cjs",

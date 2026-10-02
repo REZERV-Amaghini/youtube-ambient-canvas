@@ -4,6 +4,13 @@ The runtime uses plain JavaScript and CSS, with no dependencies or remote code.
 `renderer.js` owns frame sampling and rendering; `ambient.js` owns the YouTube
 adapter and settings; `ambient.css` changes watch-page surfaces.
 
+The Quality workflow runs syntax checks and all numerical/controller suites on
+Linux with Node 18/24 and Windows with Node 24 for pull requests and main pushes.
+Linux/Node 24 also builds and CRC-checks the Chrome, Firefox, source and store-assets
+archives with Python 3.12. These checks do not replace real YouTube or installed-
+browser testing. The workflow has read-only repository permissions and does not
+publish packages or submit store releases.
+
 Run `npm run check`, then `npm run demo`. Open the printed localhost URL and run
 `tests/check-renderer.js` in the page's developer console. The demo uses our own
 generated graphics. Add `?bars` to exercise embedded black bars.
