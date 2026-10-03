@@ -5,12 +5,17 @@ html,body{margin:0;color:#0f0f0f;background:#fff;font:13px system-ui}
 html{--fixture-chat-base:#fff;--fixture-chat-popup:#fff;--fixture-chat-input:#fff;--fixture-chat-button:#00000014}
 html[dark]{--fixture-chat-base:#0f0f0f;--fixture-chat-popup:#282828;--fixture-chat-input:#222;--fixture-chat-button:#ffffff14}
 html{--fixture-chat-menu-feedback:rgba(0,0,0,.1)}html[dark]{--fixture-chat-menu-feedback:rgba(255,255,255,.1)}
+html{--yt-spec-text-primary:#0f0f0f;--fixture-mono-face:#0f0f0f;--fixture-mono-text:#f1f1f1}html[dark]{--yt-spec-text-primary:#eee;--fixture-mono-face:#f1f1f1;--fixture-mono-text:#0f0f0f}
 html[dark],html[dark] body{color:#eee;background:#0f0f0f}
 yt-live-chat-app,yt-live-chat-renderer,yt-live-chat-header-renderer,yt-live-chat-item-list-renderer{display:block;background:var(--fixture-chat-base)}
 yt-live-chat-header-renderer{display:flex;gap:4px;align-items:center;padding:8px;border-bottom:1px solid #ffffff30}
 button{color:inherit;font:inherit;cursor:pointer;background:var(--fixture-chat-button);border:0;border-radius:20px;padding:8px}
 #label{display:flex;align-items:center;margin-right:auto}#label-icon{width:24px;height:24px;display:block}
 .ytSpecButtonShapeNextIcon{width:24px;height:24px}.yt-icon-shape{display:block;width:100%;height:100%}.yt-icon-shape svg{width:100%;height:100%;fill:currentColor}
+.fixture-native-mono{position:relative}.fixture-native-mono.ytSpecButtonShapeNextFilled{background:var(--fixture-mono-face);color:var(--fixture-mono-text)}
+.fixture-native-mono:focus-visible{outline:2px solid currentColor;outline-offset:2px}
+.fixture-native-mono .ytSpecTouchFeedbackShapeFill{position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:rgb(255,255,255);opacity:.35}
+.fixture-native-mono .fixture-alpha-feedback{background:rgba(255,255,255,.14);opacity:.55}
 yt-live-chat-text-message-renderer,yt-live-chat-message-input-renderer,yt-live-chat-paid-message-renderer{display:block;padding:12px}
 yt-live-chat-paid-message-renderer{background:#663399;color:#fff}yt-live-chat-message-input-renderer{background:var(--fixture-chat-input)}
 yt-live-chat-membership-item-renderer{display:block;background:#0ba75e;color:#fff;padding:12px}
@@ -25,6 +30,9 @@ yt-dropdown-menu{display:block}
 #fixture-native-view-menu a:focus-visible{outline:2px solid currentColor;outline-offset:-2px}
 ytd-engagement-panel-section-list-renderer{display:block;position:absolute;inset:0;background:var(--fixture-chat-popup);z-index:5}
 ytd-engagement-panel-section-list-renderer #header,ytd-engagement-panel-section-list-renderer #content{background:var(--fixture-chat-popup);padding:12px}
+/* Native content-pages switches the visible page. Keep the synthetic chat
+   beneath a transparent fans page from showing through during visual checks. */
+yt-live-chat-renderer:has(ytd-engagement-panel-section-list-renderer:not([hidden])) > :is(yt-live-chat-header-renderer,#chat){visibility:hidden}
 [hidden]{display:none!important}
 </style></head><body>
 <yt-live-chat-app><yt-live-chat-renderer>
@@ -32,7 +40,7 @@ ytd-engagement-panel-section-list-renderer #header,ytd-engagement-panel-section-
 <button id="label">Top chat replay <span id="label-icon"><span class="yt-icon-shape"><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6-1.5-1.5L12 12 7.5 7.5z"/></svg></span></span></button>
 <yt-dropdown-menu><button id="fixture-native-dropdown-trigger" aria-haspopup="listbox" aria-expanded="false">Native chat views</button><tp-yt-paper-menu-button><tp-yt-iron-dropdown><div class="dropdown-content"><tp-yt-paper-listbox id="fixture-native-view-menu" role="listbox" aria-label="Native chat views" hidden><a href="#top" role="option" aria-selected="true" class="yt-simple-endpoint style-scope yt-dropdown-menu iron-selected">Top chat</a><a href="#all" role="option" aria-selected="false" class="yt-simple-endpoint style-scope yt-dropdown-menu">Chat</a></tp-yt-paper-listbox></div></tp-yt-iron-dropdown></tp-yt-paper-menu-button></yt-dropdown-menu>
 <div id="viewer-leaderboard-entry-point"><button aria-label="Top fans"><div class="ytSpecButtonShapeNextIcon" style="color:#9b6aff"><span class="yt-icon-shape"><svg viewBox="0 0 24 24"><path d="m2 7 6 4 4-8 4 8 6-4-3 13H5z"/></svg></span></div></button></div>
-<yt-live-chat-button id="live-chat-header-context-menu"><button aria-label="More chat options"><div class="ytSpecButtonShapeNextIcon"><span class="yt-icon-shape"><svg viewBox="0 0 24 24"><circle cx="12" cy="6" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="18" r="2"/></svg></span></div></button></yt-live-chat-button>
+<yt-live-chat-button id="live-chat-header-context-menu"><button aria-label="More chat options" class="fixture-native-mono ytSpecButtonShapeNextHost ytSpecButtonShapeNextText ytSpecButtonShapeNextMono"><div class="ytSpecButtonShapeNextIcon"><span class="yt-icon-shape"><svg viewBox="0 0 24 24"><circle cx="12" cy="6" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="18" r="2"/></svg></span></div><div class="ytSpecTouchFeedbackShapeFill"></div></button></yt-live-chat-button>
 <div id="close-button"><button aria-label="Close chat"><div class="ytSpecButtonShapeNextIcon"><span class="yt-icon-shape"><svg viewBox="0 0 24 24"><path d="m6 4 6 6 6-6 2 2-6 6 6 6-2 2-6-6-6 6-2-2 6-6-6-6z"/></svg></span></div></button></div>
 </yt-live-chat-header-renderer>
 <div id="chat"><yt-live-chat-item-list-renderer><div id="item-scroller"><div id="items">
@@ -40,8 +48,8 @@ ytd-engagement-panel-section-list-renderer #header,ytd-engagement-panel-section-
 <yt-live-chat-paid-message-renderer>Highlighted card</yt-live-chat-paid-message-renderer>
 <yt-live-chat-membership-item-renderer>Membership card</yt-live-chat-membership-item-renderer>
 <yt-live-chat-viewer-engagement-message-renderer><div id="card" style="background:#3e3e3e;padding:12px">Welcome card</div></yt-live-chat-viewer-engagement-message-renderer>
-</div></div></yt-live-chat-item-list-renderer><yt-live-chat-message-input-renderer><div id="input-container" style="background:#ffffff1a">Chat input</div></yt-live-chat-message-input-renderer></div>
-<div id="content-pages"><ytd-engagement-panel-section-list-renderer hidden><div id="header"><button id="fixture-fans-back">Back</button> Top fans</div><div id="content"><p>Demo viewer A - 100 XP</p><p>Demo viewer B - 80 XP</p><span style="background:#7b3edb;padding:4px;border-radius:10px">#1 badge</span></div></ytd-engagement-panel-section-list-renderer></div>
+</div></div></yt-live-chat-item-list-renderer><yt-live-chat-message-input-renderer><div id="input-container" style="background:#ffffff1a">Chat input <button id="fixture-chat-login" aria-label="Fixture sign in" class="fixture-native-mono ytSpecButtonShapeNextHost ytSpecButtonShapeNextFilled ytSpecButtonShapeNextMono">Sign in<div class="ytSpecTouchFeedbackShapeFill fixture-alpha-feedback"></div></button></div></yt-live-chat-message-input-renderer></div>
+<div id="content-pages"><ytd-engagement-panel-section-list-renderer hidden><div id="header"><button id="fixture-fans-back">Back</button> Top fans</div><div id="content"><p>Demo viewer A - 100 XP</p><p>Demo viewer B - 80 XP</p><span style="background:#7b3edb;padding:4px;border-radius:10px">#1 badge</span><button id="fixture-rank-badge" class="ytSpecButtonShapeNextHost ytSpecButtonShapeNextFilled" disabled style="background:#dd98ff;color:#000">#1</button><button id="fixture-fans-up" aria-label="Fixture fans up" class="fixture-native-mono ytSpecButtonShapeNextHost ytSpecButtonShapeNextFilled ytSpecButtonShapeNextMono"><svg width="24" height="24" viewBox="0 0 24 24" style="fill:currentColor"><path d="M12 3 4 11l2 2 5-5v13h2V8l5 5 2-2z"/></svg><div class="ytSpecTouchFeedbackShapeFill"></div></button></div></ytd-engagement-panel-section-list-renderer></div>
 </yt-live-chat-renderer><ytd-menu-popup-renderer id="fixture-options-menu" hidden><tp-yt-paper-listbox><button>Timestamps</button><button>Send feedback</button></tp-yt-paper-listbox></ytd-menu-popup-renderer><ytd-menu-popup-renderer id="fixture-replay-menu" hidden><tp-yt-paper-listbox><button aria-selected="true">Top chat replay</button><button aria-selected="false">Chat replay</button></tp-yt-paper-listbox></ytd-menu-popup-renderer></yt-live-chat-app>
 <script>
 const menu=document.querySelector('#fixture-options-menu'),replayMenu=document.querySelector('#fixture-replay-menu'),fans=document.querySelector('ytd-engagement-panel-section-list-renderer');
@@ -170,5 +178,60 @@ nativeChecks.onclick=async()=>{
   }
   nativeResult.textContent=failures.length?'FAIL: '+failures.join('; '):'PASS: '+assertions+' native-shaped chat menu checks across dark/light, multiplied/zero shades and OFF restoration';
   nativeResult.dataset.status=failures.length?'fail':'pass';nativeResult.dataset.results=JSON.stringify({assertions,failures,cases});
+};
+const controlChecks=document.createElement('button');controlChecks.id='fixture-check-chat-controls';controlChecks.textContent='Check native chat controls';
+const controlResult=document.createElement('output');controlResult.id='fixture-chat-controls-result';controlResult.style.display='block';document.body.append(controlChecks,controlResult);
+controlChecks.onclick=async()=>{
+  const root=parent.document.querySelector('#yac-controls')?.shadowRoot;
+  const fields=Object.fromEntries(['enabled','surfaceMultiplier','controlDensity','navigationDensity','readingDensity'].map(key=>[key,key==='enabled'?parent.document.querySelector('#yac-enabled'):root?.querySelector('#yac-'+key)]));
+  if(Object.values(fields).some(field=>!field)){controlResult.textContent='FAIL: parent controller is not ready';controlResult.dataset.status='fail';return;}
+  const saved=Object.fromEntries(Object.entries(fields).map(([key,field])=>[key,key==='enabled'?field.checked:field.value]));
+  const dark=parent.document.documentElement.hasAttribute('dark'),chatDark=document.documentElement.hasAttribute('dark'),fansHidden=fans.hidden,focused=document.activeElement;
+  const headerButton=document.querySelector('#live-chat-header-context-menu button'),login=document.querySelector('#fixture-chat-login'),up=document.querySelector('#fixture-fans-up'),badge=document.querySelector('#fixture-rank-badge'),upIcon=up.querySelector('svg');
+  const late=login.cloneNode(true);late.id='fixture-chat-late-control';login.after(late);
+  const failures=[],cases=[];let assertions=0,geometry=null;
+  const check=(value,message)=>{assertions++;if(!value)failures.push(message);};
+  const update=(key,value)=>{const field=fields[key];if(key==='enabled')field.checked=value;else field.value=value;field.dispatchEvent(new Event('input',{bubbles:true}));};
+  const waitPaint=()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+  const alpha=value=>Number(value.match(/[\d.]+/g)?.[3]??1),paint=n=>getComputedStyle(n).backgroundColor;
+  const filterLevel=n=>{const value=getComputedStyle(n).filter;return value==='none'?1:Number(value.match(/opacity\(([^)]+)\)/)?.[1]);};
+  try{
+    update('enabled',true);fans.hidden=false;
+    for(const themeDark of [true,false]){
+      parent.document.documentElement.toggleAttribute('dark',themeDark);document.documentElement.toggleAttribute('dark',themeDark);
+      for(const values of [{master:1,controls:100,reading:100,navigation:100},{master:.5,controls:60,reading:80,navigation:40},{master:1,controls:0,reading:100,navigation:100},{master:1,controls:100,reading:0,navigation:100},{master:1,controls:100,reading:100,navigation:0},{master:0,controls:100,reading:100,navigation:100}]){
+        update('surfaceMultiplier',values.master);update('controlDensity',values.controls);update('readingDensity',values.reading);update('navigationDensity',values.navigation);await waitPaint();
+        const controls=values.master*values.controls/100,navigation=values.master*values.navigation/100,reading=values.master*values.reading/100,name=(themeDark?'dark':'light')+' '+JSON.stringify(values);
+        const headerStyle=getComputedStyle(headerButton),loginStyle=getComputedStyle(login),upStyle=getComputedStyle(up),rect=up.getBoundingClientRect();
+        if(!geometry)geometry={width:rect.width,height:rect.height};
+        check(Math.abs(alpha(headerStyle.backgroundColor)-.22*controls)<.002,name+': header control paint');
+        check(Math.abs(alpha(loginStyle.backgroundColor)-.22*controls)<.002,name+': neutral filled paint');
+        check(headerStyle.backdropFilter.includes('blur('+Number((12*controls).toFixed(6))+'px)'),name+': independent control blur');
+        check(getComputedStyle(document.querySelector('yt-live-chat-header-renderer')).backdropFilter==='blur('+Number((12*reading).toFixed(6))+'px)',name+': independent reading blur');
+        check(alpha(upStyle.backgroundColor)===0&&upStyle.backdropFilter==='none',name+': menu control avoids an extra face and blur');
+        check(Math.abs(filterLevel(headerButton.querySelector('.ytSpecTouchFeedbackShapeFill'))-controls)<.000001,name+': header feedback multiplier');
+        check(Math.abs(filterLevel(login.querySelector('.ytSpecTouchFeedbackShapeFill'))-controls)<.000001,name+': alpha feedback multiplier');
+        check(Math.abs(filterLevel(up.querySelector('.ytSpecTouchFeedbackShapeFill'))-navigation)<.000001,name+': menu feedback multiplier');
+        check(getComputedStyle(headerButton.querySelector('.ytSpecTouchFeedbackShapeFill')).opacity==='0.35'&&getComputedStyle(login.querySelector('.ytSpecTouchFeedbackShapeFill')).opacity==='0.55',name+': native fade opacity retained');
+        check(loginStyle.color===(themeDark?'rgb(238, 238, 238)':'rgb(15, 15, 15)')&&upStyle.color===loginStyle.color,name+': neutral foreground follows page theme');
+        check(up.querySelector('svg')===upIcon&&getComputedStyle(upIcon).fill===upStyle.color,name+': original icon and currentColor retained');
+        check(paint(badge)==='rgb(221, 152, 255)'&&getComputedStyle(badge).color==='rgb(0, 0, 0)'&&badge.disabled,name+': semantic rank badge retained');
+        check(getComputedStyle(late).backgroundColor===loginStyle.backgroundColor&&getComputedStyle(late).backdropFilter===loginStyle.backdropFilter,name+': late neutral control uses the same CSS');
+        check(Math.abs(rect.width-geometry.width)<.001&&Math.abs(rect.height-geometry.height)<.001,name+': native control dimensions retained');
+        cases.push({theme:themeDark?'dark':'light',values,headerPaint:headerStyle.backgroundColor,controlBlur:headerStyle.backdropFilter,menuPaint:upStyle.backgroundColor,menuBlur:upStyle.backdropFilter});
+      }
+      update('enabled',false);await waitPaint();
+      check(paint(login)===(themeDark?'rgb(241, 241, 241)':'rgb(15, 15, 15)'),(themeDark?'dark':'light')+': OFF restores native filled background');
+      check(getComputedStyle(login).color===(themeDark?'rgb(15, 15, 15)':'rgb(241, 241, 241)'),(themeDark?'dark':'light')+': OFF restores native filled foreground');
+      check(getComputedStyle(login).backdropFilter==='none'&&getComputedStyle(login.querySelector('.ytSpecTouchFeedbackShapeFill')).filter==='none',(themeDark?'dark':'light')+': OFF restores native effects');
+      check(paint(badge)==='rgb(221, 152, 255)'&&badge.disabled,(themeDark?'dark':'light')+': OFF preserves semantic badge');
+      update('enabled',true);
+    }
+  }catch(error){failures.push(error.message);}finally{
+    parent.document.documentElement.toggleAttribute('dark',dark);document.documentElement.toggleAttribute('dark',chatDark);
+    for(const [key,value] of Object.entries(saved))update(key,value);await waitPaint();fans.hidden=fansHidden;late.remove();focused?.focus?.({preventScroll:true});
+  }
+  controlResult.textContent=failures.length?'FAIL: '+failures.join('; '):'PASS: '+assertions+' chat control checks across independent roles, zero shade, native fade/state, late controls and OFF restoration';
+  controlResult.dataset.status=failures.length?'fail':'pass';controlResult.dataset.results=JSON.stringify({assertions,failures,cases});
 };
 </script></body></html>

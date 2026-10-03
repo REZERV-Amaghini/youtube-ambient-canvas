@@ -1,5 +1,44 @@
 # Development quality status — 0.2.24 source / 2026-10-03
 
+## Native chat neutral controls and feedback
+
+A read-only native audit found monochrome Filled/Text/Outline controls inside
+the chat iframe. The top-fans scroll-to-top button had a white face and dark
+arrow; colored rank badges used Filled without Mono. Page-level button CSS
+does not cross that iframe, leaving those neutral faces and native feedback
+independent of the shade settings. No chat messages or viewer names were saved.
+
+Chat CSS now applies the shared control palette to native Mono shapes only.
+Neutral Filled foregrounds follow the page theme; SVG nodes, dimensions,
+disabled states and colored rank badges remain native. Feedback multiplies
+the finished native fill with a filter, retaining its original color alpha
+and opacity. Buttons nested in chat menus or top-fans panels inherit the
+navigation feedback level with no extra resting face or backdrop filter.
+The iframe copies independent control and reading blur plus the shared
+brightness/contrast values; its header still follows the reading category.
+This uses CSS and the existing palette synchronization, adding no observer,
+per-message scan, video capture or per-frame work.
+
+The native-shaped localhost fixture failed 78 of 176 assertions before the
+fix and passes all 176 afterward. The matrix covers both themes, six settings
+combinations, independent category zeros, master zero, unchanged native fade,
+SVG/badge/dimensions, dynamically added controls and OFF restoration. Actual
+keyboard input retains the original focus-outline width and offset at master
+zero and OFF. The menu's existing 70 checks and 28 calculated reading-contrast
+measurements still pass, minimum 6.29:1. The fixture also hides its underlying
+chat when showing the fans page, matching native page switching for screenshots.
+
+Syntax and affected ambient/surface-controller suites pass. Evidence is
+`native-chat-controls-dom-20261003.json`,
+`native-chat-controls-before-20261003.json`,
+`native-chat-controls-after-20261003.json`,
+`native-chat-controls-keyboard-20261003.json`,
+`native-chat-controls-menu-retest-20261003.json` and
+`native-chat-controls-reading-retest-20261003.json` in this chat's visualization
+directory. These fixture results do not establish installed-extension behavior,
+native button contrast across video content or a fix for persistent native
+chat-icon disappearance. All 12 full installed-extension gates remain pending.
+
 ## Native chat view menu and overlay variables
 
 A read-only audit of the current YouTube chat found that the Top chat/Chat

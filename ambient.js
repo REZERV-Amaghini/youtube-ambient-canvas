@@ -265,6 +265,9 @@
     childList: true, subtree: true, attributes: true, attributeOldValue: true,
     attributeFilter: ['style', 'class', 'id', 'theater']
   });
+  // Chat is a separate document. Match only native monochrome shapes so
+  // paid messages, rank badges and other semantic colors keep their paint.
+  const chatNeutralControl = ':is(.ytSpecButtonShapeNextHost.ytSpecButtonShapeNextMono,.yt-spec-button-shape-next.yt-spec-button-shape-next--mono):is(.ytSpecButtonShapeNextTonal,.ytSpecButtonShapeNextOutline,.ytSpecButtonShapeNextText,.ytSpecButtonShapeNextFilled,.yt-spec-button-shape-next--tonal,.yt-spec-button-shape-next--outline,.yt-spec-button-shape-next--text,.yt-spec-button-shape-next--filled)';
   const chatCss = [
     `html.yac-chat-active{
       --yt-live-chat-background-color:transparent;--yt-live-chat-action-panel-background-color:transparent;
@@ -273,16 +276,24 @@
       --yac-chat-header-surface:rgba(var(--yac-reading-rgb),var(--yac-chat-header-opacity));
       --yac-chat-overlay-surface:rgba(var(--yac-reading-rgb),var(--yac-chat-overlay-opacity));
       --yac-chat-menu-feedback:rgba(0,0,0,calc(.10 * var(--yac-navigation-level,1)));
+      --yac-control-text:var(--yt-spec-text-primary,#0f0f0f);
+      --yac-control-backdrop:blur(var(--yac-control-blur)) contrast(var(--yac-control-light-contrast)) brightness(var(--yac-control-light-brightness));
+      --yac-control-hover-backdrop:var(--yac-control-backdrop);
       background-color:var(--yac-chat-surface)!important;background-image:none!important;
     }
-    html.yac-chat-active[dark]{--yac-reading-rgb:var(--yac-control-rgb);--yac-chat-menu-feedback:rgba(255,255,255,calc(.10 * var(--yac-navigation-level,1)))}`,
+    html.yac-chat-active[dark]{
+      --yac-reading-rgb:var(--yac-control-rgb);--yac-chat-menu-feedback:rgba(255,255,255,calc(.10 * var(--yac-navigation-level,1)));
+      --yac-control-text:var(--main-text,var(--yt-spec-text-primary,#f1f1f1));
+      --yac-control-backdrop:blur(var(--yac-control-blur)) brightness(var(--yac-control-dark-brightness));
+      --yac-control-hover-backdrop:blur(var(--yac-control-blur)) brightness(var(--yac-control-dark-hover-brightness));
+    }`,
     'html.yac-chat-active body,html.yac-chat-active yt-live-chat-app,html.yac-chat-active yt-live-chat-renderer,html.yac-chat-active yt-live-chat-item-list-renderer,html.yac-chat-active yt-live-chat-ticker-renderer,html.yac-chat-active yt-live-chat-renderer #chat,html.yac-chat-active yt-live-chat-renderer #contents,html.yac-chat-active yt-live-chat-renderer #items,html.yac-chat-active yt-live-chat-renderer #item-scroller,html.yac-chat-active yt-live-chat-renderer #panel-pages{background-color:transparent!important;background-image:none!important}',
     'html.yac-chat-active yt-live-chat-message-input-renderer,html.yac-chat-active yt-live-chat-message-input-renderer #input-container{background:transparent!important;box-shadow:none!important}',
     'html.yac-chat-active yt-live-chat-text-message-renderer{text-shadow:0 1px 3px #fff9}',
     'html.yac-chat-active[dark] yt-live-chat-text-message-renderer{text-shadow:0 1px 3px #000b}',
     `html.yac-chat-active yt-live-chat-header-renderer{
       background-color:var(--yac-chat-header-surface)!important;background-image:none!important;
-      -webkit-backdrop-filter:blur(var(--yac-control-blur))!important;backdrop-filter:blur(var(--yac-control-blur))!important;
+      -webkit-backdrop-filter:blur(var(--yac-reading-blur))!important;backdrop-filter:blur(var(--yac-reading-blur))!important;
     }
     html.yac-chat-active :is(ytd-menu-popup-renderer,ytd-engagement-panel-section-list-renderer),
     html.yac-chat-active yt-live-chat-header-renderer yt-dropdown-menu :is(tp-yt-paper-listbox,paper-listbox){
@@ -298,6 +309,30 @@
     }
     html.yac-chat-active yt-live-chat-header-renderer yt-dropdown-menu :is(tp-yt-paper-listbox,paper-listbox) > a.yt-simple-endpoint:is(:hover,:focus-visible,.iron-selected,[aria-selected="true"]){
       background-color:var(--yac-chat-menu-feedback)!important;
+    }`,
+    `html.yac-chat-active :is(ytd-menu-popup-renderer,ytd-engagement-panel-section-list-renderer){
+      --yac-control-surface:transparent;
+      --yac-control-hover-surface:rgba(var(--yac-reading-rgb),calc(.12 * var(--yac-navigation-level)));
+      --yac-control-selected-surface:rgba(var(--yac-reading-rgb),calc(.20 * var(--yac-navigation-level)));
+      --yac-control-feedback:var(--yac-navigation-level);
+      --yac-control-backdrop:none;--yac-control-hover-backdrop:none;
+    }
+    html.yac-chat-active ${chatNeutralControl}{
+      background-color:var(--yac-control-surface)!important;background-image:none!important;
+      -webkit-backdrop-filter:var(--yac-control-backdrop)!important;backdrop-filter:var(--yac-control-backdrop)!important;
+    }
+    html.yac-chat-active ${chatNeutralControl}:is(:hover,:focus-visible){
+      background-color:var(--yac-control-hover-surface)!important;
+      -webkit-backdrop-filter:var(--yac-control-hover-backdrop)!important;backdrop-filter:var(--yac-control-hover-backdrop)!important;
+    }
+    html.yac-chat-active ${chatNeutralControl}:is([aria-pressed="true"],[aria-selected="true"]){
+      background-color:var(--yac-control-selected-surface)!important;
+    }
+    html.yac-chat-active ${chatNeutralControl}:is(.ytSpecButtonShapeNextFilled,.yt-spec-button-shape-next--filled){
+      color:var(--yac-control-text);
+    }
+    html.yac-chat-active ${chatNeutralControl} :is(.ytSpecTouchFeedbackShapeFill,.yt-spec-touch-feedback-shape__fill){
+      filter:opacity(var(--yac-control-feedback))!important;
     }`
   ].join('\n');
   const removers = new Set();
@@ -830,24 +865,30 @@
     const rgb = palette.getPropertyValue('--yac-control-rgb').trim();
     const channels = rgb.split(',').map(Number);
     const safeRgb = channels.length === 3 && channels.every(v => Number.isFinite(v) && v >= 0 && v <= 255) ? channels.join(',') : '18,20,25';
-    const alpha = (property, fallback) => {
+    const scalar = (property, fallback, maximum = 1) => {
       const value = palette.getPropertyValue(property).trim(), number = Number(value);
-      return value && Number.isFinite(number) && number >= 0 && number <= 1 ? number : fallback;
+      return value && Number.isFinite(number) && number >= 0 && number <= maximum ? number : fallback;
     };
-    const blur = palette.getPropertyValue('--yac-reading-blur').trim();
-    const safeBlur = /^\d+(?:\.\d+)?px$/.test(blur) && parseFloat(blur) <= 64 ? blur : '12px';
-    const navigationBlur = palette.getPropertyValue('--yac-navigation-blur').trim();
-    const safeNavigationBlur = /^\d+(?:\.\d+)?px$/.test(navigationBlur) && parseFloat(navigationBlur) <= 64 ? navigationBlur : '16px';
+    const safeBlur = (property, fallback) => {
+      const value = palette.getPropertyValue(property).trim();
+      return /^\d+(?:\.\d+)?px$/.test(value) && parseFloat(value) <= 64 ? value : fallback;
+    };
     const text = `html.yac-chat-active{--yac-control-rgb:${safeRgb};
-      --yac-control-opacity:${alpha('--yac-control-opacity', .22)};
-      --yac-control-hover-opacity:${alpha('--yac-control-hover-opacity', .34)};
-      --yac-control-selected-opacity:${alpha('--yac-control-selected-opacity', .44)};
-      --yac-reading-opacity:${alpha('--yac-reading-opacity', .64)};
-      --yac-chat-header-opacity:${alpha('--yac-chat-header-opacity', .12)};
-      --yac-chat-overlay-opacity:${alpha('--yac-chat-overlay-opacity', .13)};
-      --yac-control-blur:${safeBlur};
-      --yac-navigation-level:${alpha('--yac-navigation-level', 1)};
-      --yac-navigation-blur:${safeNavigationBlur};
+      --yac-control-opacity:${scalar('--yac-control-opacity', .22)};
+      --yac-control-hover-opacity:${scalar('--yac-control-hover-opacity', .34)};
+      --yac-control-selected-opacity:${scalar('--yac-control-selected-opacity', .44)};
+      --yac-reading-opacity:${scalar('--yac-reading-opacity', .64)};
+      --yac-chat-header-opacity:${scalar('--yac-chat-header-opacity', .12)};
+      --yac-chat-overlay-opacity:${scalar('--yac-chat-overlay-opacity', .13)};
+      --yac-control-blur:${safeBlur('--yac-control-blur', '12px')};
+      --yac-reading-blur:${safeBlur('--yac-reading-blur', '12px')};
+      --yac-control-feedback:${scalar('--yac-control-feedback', 1)};
+      --yac-control-dark-brightness:${scalar('--yac-control-dark-brightness', .50)};
+      --yac-control-dark-hover-brightness:${scalar('--yac-control-dark-hover-brightness', .40)};
+      --yac-control-light-contrast:${scalar('--yac-control-light-contrast', .10)};
+      --yac-control-light-brightness:${scalar('--yac-control-light-brightness', 1.8, 2)};
+      --yac-navigation-level:${scalar('--yac-navigation-level', 1)};
+      --yac-navigation-blur:${safeBlur('--yac-navigation-blur', '16px')};
       --yac-control-surface:rgba(var(--yac-control-rgb),var(--yac-control-opacity));
       --yac-control-hover-surface:rgba(var(--yac-control-rgb),var(--yac-control-hover-opacity));
       --yac-control-selected-surface:rgba(var(--yac-control-rgb),var(--yac-control-selected-opacity))}
