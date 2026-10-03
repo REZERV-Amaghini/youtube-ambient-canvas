@@ -1,5 +1,73 @@
 # Development quality status — 0.2.24 source / 2026-10-03
 
+## Native chat view menu and overlay variables
+
+A read-only audit of the current YouTube chat found that the Top chat/Chat
+selector paints `yt-dropdown-menu`'s `tp-yt-paper-listbox`, outside the existing
+`ytd-menu-popup-renderer` selector. Its native face was opaque and its selected
+row had independent 10% feedback. The native options popup still used the
+existing supported renderer. No message contents were saved by this audit.
+
+Chat CSS now covers that observed header listbox. Resting rows stay clear;
+selected, hover and keyboard-focus feedback multiply by the navigation level,
+while original foregrounds, selection attributes and focus outlines remain.
+The chat iframe also receives the shared navigation level and blur. View menus,
+options and top-fans overlays use navigation blur; the reading header keeps
+its reading blur. Zero navigation shade no longer leaves an overlay blur tied
+to the independent reading category. This adds no observer, icon replacement,
+video capture or recurring page scan.
+
+The native-shaped localhost fixture reproduced 22 failed assertions before
+the fix: view-menu paint/blur and selected feedback did not follow settings.
+After the fix, all 70 checks pass across dark/light themes, four multiplied or
+zero-shade cases, unchanged menu dimensions, original icons and OFF restoration.
+The existing reading check, expanded with both native-shaped menu rows, passes
+28 calculated primary-text contrast measurements, minimum 6.29:1. Actual Enter
+input selects Chat, retains its selection and returns focus to the opener.
+These are fixture results informed by live DOM, not installed-extension checks
+or a fix for the outstanding persistent native chat-icon disappearance.
+
+Syntax and the affected ambient and surface-controller suites pass. Evidence
+is `native-chat-menu-dom-20261003.json`, `native-chat-menu-before-20261003.json`,
+`native-chat-menu-after-20261003.json`, `native-chat-reading-after-20261003.json`,
+`native-chat-menu-keyboard-20261003.json` and `native-chat-menu-local-20261003.jpg`
+in this chat's visualization directory. An initial reading assertion compared
+`16.000000px` with computed `16px` as strings; its failed report is retained in
+`native-chat-reading-initial-20261003.json`. The assertion now normalizes the
+number without changing product behavior or contrast thresholds. All 12 full
+installed-extension gates and store submissions remain pending.
+
+## New-chat YouTube connection and native chat baseline
+
+On 2026-10-03, the new chat confirmed the same local main checkout and HEAD
+`725230b10c82b5c9db96aa85d754eb81d12a3a1d`, with the existing 19 modified or
+untracked entries preserved. Its execution context is `danger-full-access`
+with approval policy `never`. A normal in-app browser call opened YouTube and
+returned a live accessibility tree. The earlier saved-permission refusal did
+not recur in this connection check; this does not establish that creating a
+chat itself repaired the previous permission state.
+
+The browser tool rejected navigation to `chrome://extensions/`: its URL policy
+allows only HTTP and HTTPS and explicitly prohibits another command or browser
+route to accomplish the blocked action. No installation workaround was used.
+Development-extension loading therefore requires a manual user action. Neither
+the Ambient settings launcher nor an Enhancer toolbar appeared on the inspected
+watch pages. This observation does not identify an installed extension version.
+
+A native baseline on NASASpaceflight's `Jm8wRjD3xVA` live watch page inspected the
+chat dropdown and options SVGs before and after a theater-mode transition, then
+after an additional explicit 10-second wait. Both SVGs retained paths, 24x24 CSS
+pixel bounds, visible display and native light fill. The desktop test used a
+temporary 1280x800 viewport. This is a baseline without observed Ambient/Enhancer
+controls; it does not reproduce, fix or pass the outstanding combined-extension
+chat-icon gate. All 12 installed-extension gates below remain pending.
+
+Evidence is `browser-connection-20261003.json`,
+`native-chat-baseline-20261003.json` and `native-chat-theater-20261003.jpg` in
+the new chat's visualization directory. Product code and distribution packages
+were not changed, and the earlier suites were not rerun for this evidence-only
+update. Store submission remains pending completion of native verification.
+
 ## Unreleased compact settings and percentage controls
 
 The production source now uses the selected four-category menu and an independent
@@ -415,11 +483,12 @@ The latest continuous-transfer evidence is in
 the 90px → 45px → 90px blur transition. Browser artifacts are ignored and excluded
 from packages.
 
-The normal browser tool rejected YouTube access after the user's explicit grant,
-citing a saved access setting. Localhost fixture access succeeded for the
-0.2.18 in-app browser checks. The YouTube restriction must be resolved through
-the supported permission UI before the remaining native-site checks can run;
-no alternative browser or command route was used to bypass it.
+Earlier normal browser calls rejected YouTube access after the user's explicit
+grant, citing a saved access setting. Localhost fixture access succeeded for the
+0.2.18 in-app browser checks. The new-chat connection check above now succeeds
+on native YouTube. Extension installation is separately blocked by the browser
+tool's internal-URL policy; no alternative browser or command route was used
+to bypass that restriction.
 
 Dialog placement follows the browser's native
 [showModal top-layer behavior](https://developer.mozilla.org/en-US/docs/Web/API/HTMLDialogElement/showModal).
