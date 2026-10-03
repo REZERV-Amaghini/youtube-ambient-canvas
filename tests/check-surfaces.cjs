@@ -11,10 +11,11 @@ async function main() {
   chatFrame.style.setProperty('border-color', 'rgb(65, 66, 69)');
   chat.append(chatFrame); h.watch.append(chat);
   h.below.style.setProperty('background-color', 'rgb(30, 30, 30)', 'important');
+  h.comments.style.setProperty('background-color', 'rgb(22, 23, 24)', 'important');
   await h.load({ enabled: true, flashWarning: false });
   const scans = () => h.stats.surfaceScans;
   assert.equal(h.below.style.getPropertyValue('background-color'), 'transparent', 'ON guards a real watch surface');
-  assert.equal(h.comments.style.getPropertyValue('background-color'), 'transparent', 'comments shell remains transparent');
+  assert.equal(h.comments.style.getPropertyValue('background-color'), 'var(--yac-reading-pane-face)', 'comments have one shared reading face');
   assert.equal(h.get('yac-background').style.opacity, '0.6500', 'ambient strength remains unchanged');
   assert.equal(chat.style.getPropertyValue('background-color'), 'rgb(35, 36, 39)', 'the inline surface guard leaves the CSS chat shade intact');
   assert.equal(chatFrame.style.getPropertyValue('border-color'), 'rgb(65, 66, 69)', 'native iframe border is retained');
@@ -29,12 +30,118 @@ async function main() {
   }
   h.flushTasks(); h.advance(1000); h.discover();
   assert.equal(scans(), before, '50 loaded comment threads do not rescan the page');
-  assert.equal(h.comments.style.getPropertyValue('background-color'), 'transparent', 'loading comments preserves transparency');
+  assert.equal(h.comments.style.getPropertyValue('background-color'), 'var(--yac-reading-pane-face)', 'loading comments preserves the single reading face');
   h.comments.children[0].classList.add('expanded');
   h.player.classList.add('ytp-playing'); h.player.classList.add('ytp-autohide');
   h.flushTasks(); h.advance(1000); h.discover();
   assert.equal(scans(), before, 'comment and playback-control classes do not rescan structural surfaces');
   assert.equal(h.timeouts.size + h.idle.size, 0, 'unrelated classes do not schedule work');
+
+  const suggestions = h.document.createElement('div'); suggestions.className = 'ytSearchboxComponentSuggestionsContainer';
+  const popup = h.document.createElement('ytd-popup-container');
+  const voice = h.document.createElement('ytd-voice-search-dialog-renderer'); voice.setAttribute('dialog', '');
+  const mini = h.document.createElement('ytd-mini-guide-renderer');
+  popup.append(voice); h.app.append(suggestions, popup, mini); h.flushTasks();
+  for (let i = 0; i < 50; i++) {
+    const row = h.document.createElement('button'); row.className = 'ytSuggestionComponentSuggestion';
+    suggestions.append(row); row.setAttribute('aria-selected', String(i === 0));
+  }
+  h.flushTasks();
+  suggestions.className = 'YtSearchboxComponentSuggestionsContainer'; h.flushTasks();
+  assert.equal(scans(), before, 'portalled suggestions, voice dialog and mini-guide use CSS without whole-page scans');
+  assert.equal(h.timeouts.size + h.idle.size, 0, 'suggestion rows and selection do not enqueue structural refreshes');
+
+  for (const kind of ['ytd-form-popup-renderer', 'ytd-hotkey-dialog-renderer', 'yt-report-form-modal-renderer',
+    'ytd-single-option-survey-renderer', 'ytd-survey-follow-up-renderer', 'ytd-checkbox-survey-renderer', 'ytd-dismissal-follow-up-renderer']) {
+    const dialog = h.document.createElement(kind); dialog.setAttribute('dialog', '');
+    const layout = h.document.createElement('div'); layout.className = 'yt-spec-dialog-layout';
+    dialog.append(layout); popup.append(dialog);
+  }
+  const playerMenu = h.document.createElement('div'); playerMenu.className = 'ytp-settings-menu ytp-popup';
+  const playerRow = h.document.createElement('button'); playerRow.className = 'ytp-menuitem';
+  playerMenu.append(playerRow); h.player.append(playerMenu); h.flushTasks();
+  playerRow.setAttribute('aria-checked', 'true'); playerRow.classList.add('native-selected'); h.flushTasks();
+  assert.equal(scans(), before, 'late dialogs/player menus and native row states use CSS without page scans');
+  assert.equal(h.timeouts.size + h.idle.size, 0, 'popup navigation does not schedule structural work');
+
+  const hoverCard = h.document.createElement('div'); hoverCard.className = 'yt-uix-hovercard-card';
+  const hoverContent = h.document.createElement('div'); hoverContent.className = 'yt-uix-hovercard-card-content';
+  const tooltip = h.document.createElement('yt-tooltip-renderer');
+  const paperTooltip = h.document.createElement('tp-yt-paper-tooltip');
+  const tooltipFace = h.document.createElement('div'); tooltipFace.id = 'tooltip'; tooltipFace.className = 'tp-yt-paper-tooltip';
+  const promoTooltip = h.document.createElement('div'); promoTooltip.className = 'ytp-promotooltip-container';
+  hoverCard.append(hoverContent); paperTooltip.append(tooltipFace); tooltip.append(paperTooltip);
+  h.app.append(hoverCard, tooltip); h.player.append(promoTooltip); h.flushTasks();
+  hoverCard.classList.add('yt-uix-hovercard-card-reverse'); hoverCard.classList.add('yt-uix-hovercard-card-flip');
+  tooltipFace.style.setProperty('opacity', '.55'); tooltipFace.setAttribute('hidden', ''); h.flushTasks();
+  assert.equal(scans(), before, 'known portalled cards, tooltips, arrows and native fade changes cause no page scans');
+  assert.equal(h.timeouts.size + h.idle.size, 0, 'card/tooltip changes do not enqueue structural work');
+
+  const description = h.document.createElement('div'); description.id = 'description';
+  description.style.setProperty('background-color', 'rgb(44, 45, 46)', 'important');
+  const descriptionInner = h.document.createElement('div'); descriptionInner.id = 'description-inner';
+  description.append(descriptionInner); h.below.append(description); h.flushTasks(); h.advance(1000);
+  assert.equal(description.style.getPropertyValue('background-color'), 'transparent', 'unrelated description ID stays structural');
+  const metadata = h.document.createElement('ytd-watch-metadata');
+  metadata.style.setProperty('background-color', 'rgb(46, 47, 48)', 'important');
+  const title = h.document.createElement('div'); title.id = 'title'; title.textContent = 'Original native title';
+  title.style.setProperty('background-color', 'rgb(48, 49, 50)', 'important'); metadata.append(title);
+  metadata.append(description); h.below.append(metadata); h.flushTasks();
+  assert.equal(metadata.style.getPropertyValue('background-color'), 'var(--yac-metadata-reading-face)', 'a newly created metadata owner is guarded before the delayed refresh');
+  assert.equal(h.timeouts.size + h.idle.size, 0, 'a metadata replacement leaves no delayed duplicate scan');
+  h.advance(1000);
+  assert.equal(metadata.style.getPropertyValue('background-color'), 'var(--yac-metadata-reading-face)', 'metadata owns one title/channel/description face');
+  assert.equal(title.style.getPropertyValue('background-color'), 'transparent', 'inner title cannot stack a theme background');
+  assert.equal(title.textContent, 'Original native title', 'native title contents are untouched');
+  const ownerScan = scans();
+  metadata.style.setProperty('background-color', 'rgb(54, 55, 56)', 'important'); h.flushTasks();
+  assert.equal(metadata.style.getPropertyValue('background-color'), 'var(--yac-metadata-reading-face)', 'an external metadata paint change is guarded before the next frame');
+  assert.equal(scans(), ownerScan + 1, 'an external paint change causes one immediate metadata sync');
+  assert.equal(description.style.getPropertyValue('background-color'), 'var(--yac-reading-pane-face)', 'moving into the native metadata shell applies its text face');
+  assert.equal(descriptionInner.style.getPropertyValue('background-color'), 'transparent', 'description content cannot add a second pane');
+  h.below.append(description); metadata.remove(); h.flushTasks(); h.advance(1000);
+  assert.equal(metadata.style.getPropertyValue('background-color'), 'rgb(54, 55, 56)', 'a removed metadata owner restores the latest external paint');
+  assert.equal(title.style.getPropertyValue('background-color'), 'rgb(48, 49, 50)', 'removed metadata children retain their original paint');
+  assert.equal(description.style.getPropertyValue('background-color'), 'transparent', 'moving out of metadata removes the owned text face');
+  const legacyMetadata = h.document.createElement('ytd-video-secondary-info-renderer');
+  legacyMetadata.style.setProperty('background-color', 'rgb(50, 51, 52)', 'important');
+  legacyMetadata.append(description); h.below.append(legacyMetadata); h.flushTasks(); h.advance(1000);
+  assert.equal(description.style.getPropertyValue('background-color'), 'var(--yac-reading-pane-face)', 'legacy descriptions use the same text face');
+  assert.equal(legacyMetadata.style.getPropertyValue('background-color'), 'var(--yac-metadata-reading-face)', 'legacy owner and description share their parent face');
+  const legacyPrimary = h.document.createElement('ytd-video-primary-info-renderer');
+  legacyPrimary.style.setProperty('background-color', 'rgb(52, 53, 54)', 'important'); h.below.append(legacyPrimary); h.flushTasks(); h.advance(1000);
+  assert.equal(legacyPrimary.style.getPropertyValue('background-color'), 'var(--yac-metadata-reading-face)', 'legacy title/actions receive their native container face');
+
+  const related = h.document.createElement('div'); related.id = 'related';
+  related.style.setProperty('background-color', 'rgb(60, 61, 62)', 'important');
+  const results = h.document.createElement('ytd-watch-next-secondary-results-renderer');
+  results.style.setProperty('background-color', 'rgb(70, 71, 72)', 'important');
+  related.append(results); h.watch.append(related); h.flushTasks(); h.advance(1000);
+  assert.equal(related.style.getPropertyValue('background-color'), 'var(--yac-related-reading-face)', 'related wrapper uses the conditional reading face');
+  assert.equal(results.style.getPropertyValue('background-color'), 'var(--yac-related-reading-face)', 'nested renderer resolves its own conditional face instead of inheriting another paint');
+  const playlist = h.document.createElement('ytd-playlist-panel-renderer'); results.append(playlist);
+  const resultSection = h.document.createElement('ytd-item-section-renderer');
+  resultSection.style.setProperty('background-color', 'rgb(72, 73, 74)', 'important'); results.append(resultSection);
+  const nestedGrid = h.document.createElement('ytd-rich-grid-renderer');
+  nestedGrid.style.setProperty('background-color', 'rgb(74, 75, 76)', 'important'); resultSection.append(nestedGrid);
+  h.flushTasks(); h.advance(1000);
+  assert.equal(related.style.getPropertyValue('background-color'), 'var(--yac-related-reading-face)', 'playlist insertion retains the CSS-managed face without adding another inline layer');
+  assert.equal(resultSection.style.getPropertyValue('background-color'), 'var(--yac-related-section-face)', 'mixed result sections use a conditional CSS face');
+  assert.equal(nestedGrid.style.getPropertyValue('background-color'), 'var(--yac-related-section-face)', 'a nested grid resolves its own face to avoid inherited paint');
+  playlist.remove(); h.flushTasks(); h.advance(1000);
+  assert.equal(related.style.getPropertyValue('background-color'), 'var(--yac-related-reading-face)', 'related face stays CSS-managed after the playlist leaves');
+  h.watch.append(results); h.flushTasks(); h.advance(1000);
+  assert.equal(results.style.getPropertyValue('background-color'), 'var(--yac-related-reading-face)', 'moved renderer retains the conditional face');
+  h.enabled().checked = false; h.event(h.enabled(), 'input');
+  assert.equal(description.style.getPropertyValue('background-color'), 'rgb(44, 45, 46)', 'role changes retain the original description paint for OFF');
+  assert.equal(legacyMetadata.style.getPropertyValue('background-color'), 'rgb(50, 51, 52)', 'OFF restores the native legacy owner shell');
+  assert.equal(legacyPrimary.style.getPropertyValue('background-color'), 'rgb(52, 53, 54)', 'OFF restores the native legacy title shell');
+  assert.equal(related.style.getPropertyValue('background-color'), 'rgb(60, 61, 62)', 'OFF restores original related wrapper paint');
+  assert.equal(results.style.getPropertyValue('background-color'), 'rgb(70, 71, 72)', 'OFF restores original moved renderer paint');
+  assert.equal(resultSection.style.getPropertyValue('background-color'), 'rgb(72, 73, 74)', 'OFF restores a mixed result section');
+  assert.equal(nestedGrid.style.getPropertyValue('background-color'), 'rgb(74, 75, 76)', 'OFF restores nested grid paint');
+  assert.equal(h.comments.style.getPropertyValue('background-color'), 'rgb(22, 23, 24)', 'OFF restores original comments paint');
+  h.enabled().checked = true; h.event(h.enabled(), 'input'); h.flushTasks(); h.advance(1000); before = scans();
 
   const ticket = h.document.createElement('ytd-ticket-shelf-renderer');
   const transcript = h.document.createElement('ytd-transcript-renderer');
@@ -45,6 +152,33 @@ async function main() {
   assert.equal(transcript.style.getPropertyValue('background-color'), 'transparent');
   before = scans(); h.flushTasks(); h.advance(1000); h.discover();
   assert.equal(scans(), before, 'our own styles do not trigger a mutation feedback loop');
+
+  const panel = h.document.createElement('ytd-engagement-panel-section-list-renderer');
+  const content = h.document.createElement('div'); content.id = 'content';
+  const search = h.document.createElement('ytd-transcript-search-box-renderer');
+  const field = h.document.createElement('div'); field.className = 'input-container ytd-transcript-search-box-renderer';
+  const input = h.document.createElement('input'); input.value = 'Existing query';
+  panel.style.setProperty('background-color', 'rgb(40, 40, 40)', 'important');
+  field.style.setProperty('background-color', 'rgb(80, 80, 80)', 'important');
+  search.append(field); field.append(input); content.append(search); panel.append(content); h.watch.append(panel);
+  h.flushTasks();
+  assert.equal(panel.style.getPropertyValue('background-color'), 'var(--yac-card-surface)', 'late panel receives one reading face');
+  assert.equal(content.style.getPropertyValue('background-color'), 'transparent', 'inner panel content cannot stack theme paint');
+  assert.equal(search.style.getPropertyValue('background-color'), 'transparent', 'transcript search host remains clear');
+  assert.equal(field.style.getPropertyValue('background-color'), 'var(--yac-control-surface)', 'field follows control density independently');
+  assert.equal(input.value, 'Existing query', 'search input value is preserved');
+  h.get('yac-readingDensity').value = 0; h.event(h.get('yac-readingDensity'), 'input');
+  assert.match(h.get('yac-surface-palette').textContent, /--yac-reading-opacity:0\.000000/, 'panel shade reaches true zero');
+  assert.match(h.get('yac-surface-palette').textContent, /--yac-reading-pane-opacity:0\.000000/, 'long text panes also reach true zero');
+  before = scans(); h.flushTasks();
+  assert.equal(scans(), before, 'density changes use CSS variables without rescanning panel descendants');
+  h.enabled().checked = false; h.event(h.enabled(), 'input');
+  assert.equal(panel.style.getPropertyValue('background-color'), 'rgb(40, 40, 40)', 'OFF restores original panel theme');
+  assert.equal(field.style.getPropertyValue('background-color'), 'rgb(80, 80, 80)', 'OFF restores original field theme');
+  h.enabled().checked = true; h.event(h.enabled(), 'input'); h.flushTasks();
+  h.get('yac-readingDensity').value = 100; h.event(h.get('yac-readingDensity'), 'input');
+  h.advance(1000);
+  before = scans();
 
   h.below.style.setProperty('background-color', 'rgb(70, 80, 90)', 'important');
   h.flushTasks();
@@ -97,7 +231,51 @@ async function main() {
   console.log(`PASS (${idleCallbacks ? 'idle' : 'timer fallback'}): no recurring/50-comment/hidden scans; late surfaces, theme, theater, resize coalescing, restoration and teardown`);
  }
 
- const busy = harness(true);
+  for (const workerMode of [false, true]) for (const idleCallbacks of [true, false]) {
+   for (const mode of ['off', 'hidden', 'fullscreen']) {
+    const dormant = harness(workerMode, { idleCallbacks });
+    await dormant.load({ enabled: mode !== 'off', flashWarning: false });
+    if (mode === 'hidden') {
+      dormant.document.hidden = true; dormant.event(dormant.document, 'visibilitychange');
+    } else if (mode === 'fullscreen') {
+      dormant.document.fullscreenElement = dormant.player; dormant.event(dormant.document, 'fullscreenchange');
+    }
+    dormant.flushTasks();
+    const probeBefore = dormant.stats.surfaceSubtreeQueries, scanBefore = dormant.stats.surfaceScans;
+    const readsBefore = dormant.stats.rectReads, samplesBefore = dormant.stats.monitorSamples;
+    let late;
+    for (let i = 0; i < 50; i++) {
+      const wrapper = dormant.document.createElement('div'); wrapper.append(dormant.document.createElement('span'));
+      if (i === 0) {
+        late = dormant.document.createElement('ytd-ticket-shelf-renderer');
+        late.style.setProperty('background-color', 'rgb(51, 52, 53)', 'important'); wrapper.append(late);
+      }
+      dormant.below.append(wrapper);
+    }
+    dormant.flushTasks();
+    assert.equal(dormant.stats.surfaceSubtreeQueries, probeBefore, `${mode}: no per-wrapper descendant queries while UI guarding is dormant`);
+    assert.equal(dormant.stats.surfaceScans, scanBefore, `${mode}: no full-page scans while dormant`);
+    assert.equal(dormant.stats.rectReads, readsBefore, `${mode}: DOM additions do not force player layout`);
+    assert.equal(dormant.stats.monitorSamples, samplesBefore, `${mode}: DOM additions do not sample video`);
+    assert.equal(late.style.getPropertyValue('background-color'), 'rgb(51, 52, 53)', `${mode}: late theme paint stays native while dormant`);
+    if (mode === 'off') {
+      dormant.enabled().checked = true; dormant.event(dormant.enabled(), 'input');
+    } else if (mode === 'hidden') {
+      dormant.document.hidden = false; dormant.event(dormant.document, 'visibilitychange');
+    } else {
+      dormant.document.fullscreenElement = null; dormant.event(dormant.document, 'fullscreenchange');
+    }
+    dormant.flushTasks();
+    assert.equal(dormant.stats.surfaceScans, scanBefore + 1, `${mode}: resume synchronizes deferred surfaces once`);
+    assert.equal(late.style.getPropertyValue('background-color'), 'transparent', `${mode}: resume guards the late surface`);
+    dormant.enabled().checked = false; dormant.event(dormant.enabled(), 'input');
+    assert.equal(late.style.getPropertyValue('background-color'), 'rgb(51, 52, 53)', `${mode}: OFF restores the original late theme paint`);
+    dormant.event(dormant.document, 'yac-dispose');
+   }
+   console.log(`PASS (${workerMode ? 'worker' : 'main'}, ${idleCallbacks ? 'idle' : 'timer'}): OFF/hidden/fullscreen skip subtree probes and resume once`);
+  }
+
+  const busy = harness(true);
  await busy.load({ enabled: true });
  busy.tick({ flush: false });
  assert.ok(busy.worker.pending, 'test leaves one Worker frame outstanding');

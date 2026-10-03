@@ -2,7 +2,7 @@
 'use strict';
 (() => {
   const namespace = 'yac-warning-fixture:v1:';
-  const preferenceKeys = ['enabled', 'radial', 'avoidBars', 'fillBars', 'flashWarning', 'strength', 'blur', 'saturation', 'inset', 'fps', 'language'];
+  const preferenceKeys = ['enabled', 'radial', 'avoidBars', 'fillBars', 'flashWarning', 'strength', 'blur', 'saturation', 'inset', 'fps', 'surfaceMultiplier', 'controlDensity', 'readingDensity', 'navigationDensity', 'language'];
   const route = new URL(location.href);
   route.pathname = '/watch';route.searchParams.set('fixture', 'warning');
   if (!route.searchParams.has('v')) route.searchParams.set('v', 'warning-source-1');
@@ -19,7 +19,7 @@
     bubbleEvents: { click: 0, dblclick: 0, keydown: 0, keyup: 0 }, bubbleLog: [],
     outsideClicks: 0, storageWrites: [], storageWriteEvents: [], storageFailures: 0, failNextWrite: false,
     delayNextWrite: false, pendingWrites: 0,
-    errors: [], fullscreenError: null
+    errors: [], fullscreenError: null, changedOpener: null
   };
   const readStored = key => {
     const raw = sessionStorage.getItem(namespace + key);
@@ -178,6 +178,9 @@
     inspect();
   };
   document.querySelector('#fixture-inspect').onclick = inspect;
+  document.querySelector('#fixture-restore-opener').onclick = () => {
+    const opener = document.querySelector('#fixture-arm');opener.disabled = opener.hidden = false;inspect();
+  };
   function deepActive() {
     let element = document.activeElement;
     while (element?.shadowRoot?.activeElement) element = element.shadowRoot.activeElement;
@@ -185,10 +188,11 @@
   }
   function settingsState() {
     const root = document.querySelector('#yac-controls')?.shadowRoot;
-    const switches = root ? [...root.querySelectorAll('input[role="switch"]')] : [];
-    const ranges = root ? [...root.querySelectorAll('input[type="range"]')] : [];
-    return { enabled: switches[0]?.checked ?? null, flashWarning: switches[4]?.checked ?? null,
-      strength: ranges[0] ? Number(ranges[0].value) : null };
+    const strength = root?.querySelector('#yac-strength');
+    return { enabled: document.querySelector('#yac-enabled')?.checked ?? null,
+      flashWarning: root?.querySelector('#yac-flashWarning')?.checked ?? null,
+      strength: strength ? Number(strength.value) : null,
+      surfaceMultiplier: root?.querySelector('#yac-surfaceMultiplier') ? Number(root.querySelector('#yac-surfaceMultiplier').value) : null };
   }
   function rectangle(element) {
     if (!element) return null;
@@ -253,6 +257,15 @@
   document.addEventListener('fullscreenchange', inspect);
   const runtime = document.createElement('script');runtime.src = '/ambient.js';
   runtime.onload = () => {
+    const dialog = document.querySelector('#yac-flash-warning')?.shadowRoot?.querySelector('dialog');
+    if (dialog) new MutationObserver(() => {
+      if (!dialog.open) return;
+      const mode = document.querySelector('#fixture-opener-state').value;
+      const opener = document.querySelector('#fixture-arm');
+      if (mode !== 'usable') {
+        opener[mode] = true;evidence.changedOpener = { id: opener.id, mode };inspect();
+      }
+    }).observe(dialog, { attributes: true, attributeFilter: ['open'] });
     const canvas = document.querySelector('#yac-background');
     if (canvas) new MutationObserver(records => {
       evidence.ambientPresentationMarkers += records.filter(record => record.attributeName === 'data-blend').length;

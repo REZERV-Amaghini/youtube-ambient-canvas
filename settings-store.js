@@ -1,11 +1,66 @@
 (() => {
   'use strict';
   const prefix = 'yac-setting:';
-  const ranges = { strength: [15, 100], blur: [0, 160], saturation: [0, 250], inset: [0, 40], fps: [24, 60] };
+  const ranges = { strength: [15, 100], blur: [0, 160], saturation: [0, 250], inset: [0, 40], fps: [24, 60],
+    surfaceMultiplier: [0, 1], controlDensity: [0, 100], readingDensity: [0, 100], navigationDensity: [0, 100],
+    surfaceDensity: [0, 100], controlDensityOffset: [-30, 30], readingDensityOffset: [-30, 30], navigationDensityOffset: [-30, 30] };
+  const surfaceKeys = ['surfaceMultiplier', 'controlDensity', 'readingDensity', 'navigationDensity'];
+  const legacySurfaceKeys = ['surfaceDensity', 'controlDensityOffset', 'readingDensityOffset', 'navigationDensityOffset'];
+  const bounded = (values, key, fallback) => {
+    const value = values?.[key], [min, max] = ranges[key];
+    return Number.isFinite(value) ? Math.min(max, Math.max(min, value)) : fallback;
+  };
   // Each preference has its own storage key. A stale tab cannot replace another
   // tab's warning choice when saving an unrelated slider. The old ambient bag
   // remains a read-only fallback for upgrades from earlier versions.
   class YacSettingsStore {
+    static migrateSurfaces(values = {}) {
+      const master = bounded(values, 'surfaceDensity', 100) / 100;
+      const levels = legacySurfaceKeys.slice(1).map(key => Math.min(1, master * (1 + bounded(values, key, 0) / 100)));
+      // Preserve all three paint levels, including previously positive offsets.
+      // This fallback is read-only; unrelated saves never write a whole profile.
+      const surfaceMultiplier = Math.max(...levels);
+      const result = { surfaceMultiplier };
+      for (let i = 0; i < levels.length; i++) result[surfaceKeys[i + 1]] = surfaceMultiplier ? levels[i] / surfaceMultiplier * 100 : 100;
+      return result;
+    }
+    static surfacePalette(values = {}) {
+      const migrated = YacSettingsStore.migrateSurfaces(values);
+      const master = bounded(values, 'surfaceMultiplier', migrated.surfaceMultiplier);
+      const level = key => master * bounded(values, key, migrated[key]) / 100;
+      const controls = level('controlDensity'), reading = level('readingDensity'), navigation = level('navigationDensity');
+      const controlAlpha = .22 * controls, readingAlpha = .74 * reading, menuAlpha = .86 * navigation;
+      // These are paint coefficients, not UI percentages or measured contrast.
+      // Chat already has a reading face; its children add only the remaining shade.
+      const palette = {
+        '--yac-control-opacity': controlAlpha,
+        '--yac-control-hover-opacity': .34 * controls,
+        '--yac-control-selected-opacity': .44 * controls,
+        '--yac-control-dark-brightness': 1 - .50 * controls,
+        '--yac-control-dark-hover-brightness': 1 - .60 * controls,
+        '--yac-chip-dark-brightness': 1 - .56 * controls,
+        '--yac-control-light-contrast': 1 - .90 * controls,
+        '--yac-control-light-brightness': 1 + .80 * controls,
+        '--yac-control-blur': 12 * controls,
+        '--yac-reading-blur': 12 * reading,
+        '--yac-navigation-blur': 16 * navigation,
+        '--yac-control-feedback': controls,
+        '--yac-navigation-level': navigation,
+        '--yac-reading-opacity': readingAlpha,
+        '--yac-reading-hover-opacity': .80 * reading,
+        // Long text panes avoid backdrop filters. Their denser paint protects
+        // secondary/accent text without a per-comment blur or opacity floor.
+        '--yac-reading-pane-opacity': .94 * reading,
+        '--yac-reading-pane-hover-opacity': .98 * reading,
+        '--yac-menu-opacity': menuAlpha,
+        '--yac-guide-opacity': .78 * navigation,
+        '--yac-secondary-opacity': .90 * navigation,
+        '--yac-settings-opacity': .90 * navigation,
+        '--yac-chat-header-opacity': .04 * reading / (1 - readingAlpha),
+        '--yac-chat-overlay-opacity': Math.max(0, (menuAlpha - readingAlpha) / (1 - readingAlpha))
+      };
+      return Object.fromEntries(Object.entries(palette).map(([key, value]) => [key, value.toFixed(6) + (key.endsWith('-blur') ? 'px' : '')]));
+    }
     constructor(storage, defaults, { onChange = () => {} } = {}) {
       this.storage = storage; this.defaults = { ...defaults }; this.values = { ...defaults };
       this.onChange = onChange; this.loaded = false; this.disposed = false;
@@ -28,13 +83,18 @@
       return key === 'fps' ? Math.round(n) : n;
     }
     refresh() {
+      const oldSurfaces = { ...this.legacy };
+      for (const key of legacySurfaceKeys) if (this.overrides.has(key)) oldSurfaces[key] = this.overrides.get(key);
+      const migrated = YacSettingsStore.migrateSurfaces(oldSurfaces);
+      const hasOldSurfaces = legacySurfaceKeys.some(key => Object.hasOwn(oldSurfaces, key));
       for (const key of Object.keys(this.defaults)) {
-        this.values[key] = this.normalize(key, this.overrides.has(key) ? this.overrides.get(key) : this.legacy[key]) ?? this.defaults[key];
+        this.values[key] = this.normalize(key, this.overrides.has(key) ? this.overrides.get(key) : this.legacy[key]) ??
+          (hasOldSurfaces && surfaceKeys.includes(key) ? migrated[key] : this.defaults[key]);
       }
     }
     consume(changes) {
       if (changes.ambient) this.legacy = changes.ambient.newValue || {};
-      for (const key of Object.keys(this.defaults)) {
+      for (const key of new Set([...Object.keys(this.defaults), ...legacySurfaceKeys])) {
         const change = changes[prefix + key];
         if (!change) continue;
         if (change.newValue === undefined) this.overrides.delete(key);
@@ -47,10 +107,11 @@
     async load() {
       let error;
       try {
-        const data = await this.storage.local.get(['ambient', ...Object.keys(this.defaults).map(key => prefix + key)]);
+        const keys = new Set([...Object.keys(this.defaults), ...legacySurfaceKeys]);
+        const data = await this.storage.local.get(['ambient', ...[...keys].map(key => prefix + key)]);
         if (this.disposed) return;
         this.legacy = data.ambient || {}; this.overrides.clear();
-        for (const key of Object.keys(this.defaults)) {
+        for (const key of keys) {
           if (Object.hasOwn(data, prefix + key)) this.overrides.set(key, data[prefix + key]);
         }
         this.refresh();

@@ -2,7 +2,8 @@
 const assert = require('node:assert/strict');
 const Store = require('../settings-store.js');
 const defaults = { enabled: true, radial: true, avoidBars: true, fillBars: true, flashWarning: true,
-  strength: 65, blur: 90, saturation: 145, inset: 0, fps: 30, language: 'ja' };
+  strength: 65, blur: 90, saturation: 145, inset: 0, fps: 30, language: 'ja',
+  surfaceDensity: 100, controlDensityOffset: 0, readingDensityOffset: 0, navigationDensityOffset: 0 };
 function backend(initial = {}, hold = false) {
   const data = structuredClone(initial), listeners = new Set(), reads = [], writes = [];
   const storage = { onChanged: { addListener: f => listeners.add(f), removeListener: f => listeners.delete(f) }, local: {
@@ -53,11 +54,162 @@ function assertAnySaveError(change, expected) {
   assert.ok(expected.some(([key, error]) => change.saveError.key === key && change.saveError.error === error),
     'The visible save error belongs to one of the unresolved keys');
 }
+function checkSurfacePalette() {
+  const bounds = {
+    '--yac-control-opacity': [0, .22], '--yac-control-hover-opacity': [0, .34],
+    '--yac-control-selected-opacity': [0, .44], '--yac-control-dark-brightness': [.50, 1],
+    '--yac-control-dark-hover-brightness': [.40, 1], '--yac-chip-dark-brightness': [.44, 1],
+    '--yac-control-light-contrast': [.1, 1], '--yac-control-light-brightness': [1, 1.8],
+    '--yac-control-blur': [0, 12], '--yac-reading-blur': [0, 12], '--yac-navigation-blur': [0, 16],
+    '--yac-control-feedback': [0, 1], '--yac-navigation-level': [0, 1],
+    '--yac-reading-opacity': [0, .74], '--yac-reading-hover-opacity': [0, .80],
+    '--yac-reading-pane-opacity': [0, .94], '--yac-reading-pane-hover-opacity': [0, .98],
+    '--yac-menu-opacity': [0, .86], '--yac-guide-opacity': [0, .78],
+    '--yac-secondary-opacity': [0, .90], '--yac-settings-opacity': [0, .90],
+    '--yac-chat-header-opacity': [0, 1], '--yac-chat-overlay-opacity': [0, 1]
+  };
+  const defaultPalette = Store.surfacePalette();
+  assert.deepEqual(Object.keys(defaultPalette).sort(), Object.keys(bounds).sort());
+  assert.deepEqual(Store.surfacePalette(null), defaultPalette);
+  const densityKeys = ['surfaceDensity', 'controlDensityOffset', 'readingDensityOffset', 'navigationDensityOffset'];
+  for (const key of densityKeys) {
+    for (const value of [NaN, Infinity, -Infinity, null, '35', {}, []]) {
+      assert.deepEqual(Store.surfacePalette({ [key]: value }), defaultPalette, `${key}: invalid values use the default palette`);
+    }
+    const range = key === 'surfaceDensity' ? [0, 100] : [-30, 30];
+    assert.deepEqual(Store.surfacePalette({ [key]: -1000 }), Store.surfacePalette({ [key]: range[0] }));
+    assert.deepEqual(Store.surfacePalette({ [key]: 1000 }), Store.surfacePalette({ [key]: range[1] }));
+  }
+  const composite = (base, layer) => base + (1 - base) * layer;
+  let cases = 0;
+  for (const surfaceDensity of [0, 35, 100]) {
+    for (const controlDensityOffset of [-30, 0, 30]) {
+      for (const readingDensityOffset of [-30, 0, 30]) {
+        for (const navigationDensityOffset of [-30, 0, 30]) {
+          const input = Object.freeze({ surfaceDensity, controlDensityOffset, readingDensityOffset, navigationDensityOffset });
+          const tokens = Store.surfacePalette(input), palette = Object.fromEntries(Object.entries(tokens).map(([key, value]) => [key, parseFloat(value)]));
+          for (const [key, [min, max]] of Object.entries(bounds)) {
+            assert.match(tokens[key], key.endsWith('-blur') ? /^\d+\.\d{6}px$/ : /^\d+\.\d{6}$/, `${key} is a finite CSS value`);
+            assert.ok(palette[key] >= min && palette[key] <= max, `${key} stays within its surface bounds`);
+          }
+          assert.ok(palette['--yac-control-opacity'] <= palette['--yac-control-hover-opacity']);
+          assert.ok(palette['--yac-control-hover-opacity'] <= palette['--yac-control-selected-opacity']);
+          assert.ok(palette['--yac-reading-hover-opacity'] >= palette['--yac-reading-opacity']);
+          assert.ok(palette['--yac-reading-pane-hover-opacity'] >= palette['--yac-reading-pane-opacity']);
+          if (surfaceDensity === 0) {
+            for (const key of Object.keys(bounds).filter(key => key.endsWith('-opacity') || key.endsWith('-blur') || key === '--yac-control-feedback' || key === '--yac-navigation-level')) {
+              assert.equal(palette[key], 0, `${key}: zero is completely clear, including positive category adjustments`);
+            }
+            for (const key of ['--yac-control-dark-brightness', '--yac-control-dark-hover-brightness', '--yac-chip-dark-brightness', '--yac-control-light-contrast', '--yac-control-light-brightness']) {
+              assert.equal(palette[key], 1, `${key}: zero does not dim or brighten the backdrop`);
+            }
+          }
+          const reading = palette['--yac-reading-opacity'], menu = palette['--yac-menu-opacity'];
+          const overlay = composite(reading, palette['--yac-chat-overlay-opacity']);
+          assert.ok(overlay + .00003 >= Math.max(reading, menu), 'Chat overlay is not thinner than either reading or menu surface');
+          assert.ok(overlay <= Math.max(reading, menu) + .00003, 'Chat overlay adds only the target shade, not a second complete face');
+          assert.ok(Math.abs(composite(reading, palette['--yac-chat-header-opacity']) - reading - .04 * reading / .74) < .00003,
+            'Chat header feedback scales down with the reading face');
+          cases++;
+        }
+      }
+    }
+  }
+  const baseline = Store.surfacePalette(defaults);
+  assert.ok(Math.abs(composite(Number(baseline['--yac-reading-opacity']), Number(baseline['--yac-chat-overlay-opacity'])) - .86) < .00003,
+    'Dense chat menus use the existing 86% face without an extra complete layer');
+  const quarter = Store.surfacePalette({ surfaceDensity: 25 });
+  for (const key of ['--yac-control-opacity', '--yac-reading-opacity', '--yac-reading-pane-opacity', '--yac-reading-pane-hover-opacity', '--yac-menu-opacity', '--yac-settings-opacity']) {
+    assert.equal(Number(quarter[key]), Number(baseline[key]) / 4, `${key}: the whole range is available, without a hidden opacity floor`);
+  }
+  for (const offset of [-30, 0, 30]) {
+    let previous;
+    for (let surfaceDensity = 0; surfaceDensity <= 100; surfaceDensity++) {
+      const palette = Store.surfacePalette({ surfaceDensity, controlDensityOffset: offset, readingDensityOffset: offset, navigationDensityOffset: offset });
+      if (previous) for (const key of Object.keys(bounds).filter(key => key !== '--yac-chat-overlay-opacity')) {
+        const decreasing = ['--yac-control-dark-brightness', '--yac-control-dark-hover-brightness', '--yac-chip-dark-brightness', '--yac-control-light-contrast'].includes(key);
+        assert.ok(decreasing ? parseFloat(palette[key]) <= parseFloat(previous[key]) : parseFloat(palette[key]) >= parseFloat(previous[key]), `${key} changes continuously across the master range`);
+      }
+      previous = palette;
+    }
+  }
+  const groups = {
+    controlDensityOffset: ['--yac-control-opacity', '--yac-control-hover-opacity', '--yac-control-selected-opacity', '--yac-control-dark-brightness', '--yac-control-dark-hover-brightness', '--yac-chip-dark-brightness', '--yac-control-light-contrast', '--yac-control-light-brightness', '--yac-control-blur', '--yac-control-feedback'],
+    readingDensityOffset: ['--yac-reading-opacity', '--yac-reading-hover-opacity', '--yac-reading-pane-opacity', '--yac-reading-pane-hover-opacity', '--yac-chat-header-opacity', '--yac-chat-overlay-opacity', '--yac-reading-blur'],
+    navigationDensityOffset: ['--yac-menu-opacity', '--yac-guide-opacity', '--yac-secondary-opacity', '--yac-settings-opacity', '--yac-chat-overlay-opacity', '--yac-navigation-blur', '--yac-navigation-level']
+  };
+  for (const [key, affected] of Object.entries(groups)) {
+    const adjusted = Store.surfacePalette({ [key]: -30 });
+    for (const token of Object.keys(bounds).filter(token => !affected.includes(token))) {
+      assert.equal(adjusted[token], baseline[token], `${key} leaves other surface categories unchanged`);
+    }
+    assert.ok(affected.some(token => adjusted[token] !== baseline[token]), `${key} changes its own category`);
+  }
+  return cases;
+}
+async function checkPercentages() {
+  const nextDefaults = { ...defaults, surfaceMultiplier: 1, controlDensity: 100, readingDensity: 100, navigationDensity: 100 };
+  const oldKeys = ['surfaceDensity', 'controlDensityOffset', 'readingDensityOffset', 'navigationDensityOffset'];
+  for (const key of oldKeys) delete nextDefaults[key];
+  let cases = 0;
+  for (const surfaceDensity of [0, 35, 100]) for (const controlDensityOffset of [-30, 0, 30]) {
+    for (const readingDensityOffset of [-30, 0, 30]) for (const navigationDensityOffset of [-30, 0, 30]) {
+      const legacy = { surfaceDensity, controlDensityOffset, readingDensityOffset, navigationDensityOffset };
+      const data = backend({ ambient: { ...legacy, flashWarning: false }, 'yac-setting:blur': 48 });
+      const store = new Store(data.storage, nextDefaults);await store.ready;
+      assert.deepEqual(Store.surfacePalette(store.values), Store.surfacePalette(legacy), 'upgrades preserve every surface paint level');
+      assert.equal(store.values.flashWarning, false);assert.equal(store.values.blur, 48);
+      assert.deepEqual(data.writes, [], 'upgrade fallback never rewrites existing preferences');
+      for (const key of ['controlDensity', 'readingDensity', 'navigationDensity']) assert.ok(store.values[key] >= 0 && store.values[key] <= 100);
+      assert.ok(store.values.surfaceMultiplier >= 0 && store.values.surfaceMultiplier <= 1);
+      store.dispose();cases++;
+    }
+  }
+  for (const surfaceMultiplier of [0, .4, 1]) for (const controlDensity of [0, 50, 100]) {
+    for (const readingDensity of [0, 50, 100]) for (const navigationDensity of [0, 50, 100]) {
+      const palette = Store.surfacePalette({ surfaceMultiplier, controlDensity, readingDensity, navigationDensity });
+      assert.ok(Math.abs(Number(palette['--yac-control-opacity']) - .22 * surfaceMultiplier * controlDensity / 100) < .000001);
+      assert.ok(Math.abs(Number(palette['--yac-reading-opacity']) - .74 * surfaceMultiplier * readingDensity / 100) < .000001);
+      assert.ok(Math.abs(Number(palette['--yac-reading-pane-opacity']) - .94 * surfaceMultiplier * readingDensity / 100) < .000001);
+      assert.ok(Math.abs(Number(palette['--yac-reading-pane-hover-opacity']) - .98 * surfaceMultiplier * readingDensity / 100) < .000001);
+      assert.ok(Math.abs(Number(palette['--yac-settings-opacity']) - .90 * surfaceMultiplier * navigationDensity / 100) < .000001);
+      if (!surfaceMultiplier) for (const [key, value] of Object.entries(palette)) {
+        if (key.endsWith('-opacity') || key.endsWith('-blur') || key.endsWith('-level') || key.endsWith('-feedback')) assert.equal(parseFloat(value), 0);
+      }
+      cases++;
+    }
+  }
+  const shared = backend({ ambient: { surfaceDensity: 35, controlDensityOffset: 30 }, 'yac-setting:readingDensityOffset': -30 });
+  const a = new Store(shared.storage, nextDefaults), b = new Store(shared.storage, nextDefaults);await Promise.all([a.ready, b.ready]);
+  const categoryBefore = a.values.readingDensity;
+  await a.set('surfaceMultiplier', 0, true);
+  assert.equal(b.values.surfaceMultiplier, 0);assert.equal(a.values.readingDensity, categoryBefore, 'master zero preserves individual preferences');
+  await b.set('readingDensity', 80, true);await a.set('surfaceMultiplier', .5, true);
+  assert.equal(a.values.readingDensity, 80);assert.equal(b.values.surfaceMultiplier, .5);
+  assert.equal(Store.surfacePalette(a.values)['--yac-reading-opacity'], '0.296000', 'independent cross-tab edits keep their multiplied result');
+  assert.deepEqual(shared.writes.map(write => Object.keys(write)), [['yac-setting:surfaceMultiplier'], ['yac-setting:readingDensity'], ['yac-setting:surfaceMultiplier']], 'changing shade never writes the warning choice or another category');
+  await a.set('controlDensity', -20);await a.set('navigationDensity', 120);await a.set('surfaceMultiplier', 9);
+  assert.equal(a.values.controlDensity, 0);assert.equal(a.values.navigationDensity, 100);assert.equal(a.values.surfaceMultiplier, 1);
+  const persisted = new Store(shared.storage, nextDefaults);await persisted.ready;
+  assert.equal(persisted.values.surfaceMultiplier, .5);assert.equal(persisted.values.readingDensity, 80, 'new percentages survive reload alongside old preferences');
+  a.dispose();b.dispose();persisted.dispose();
+  const waiting = backend({ 'yac-setting:surfaceDensity': 35, 'yac-setting:readingDensityOffset': -30 }, true);
+  const early = new Store(waiting.storage, nextDefaults);
+  await early.set('readingDensity', 90);waiting.reads.shift()();await early.ready;
+  assert.equal(early.values.readingDensity, 90, 'a percentage edited before load wins over the legacy fallback');
+  assert.deepEqual(waiting.writes, []);early.dispose();
+  console.log(`PASS: ${cases} percentage and upgrade combinations, multiplied categories, per-key persistence, cross-tab sync, bounds and pending reads`);
+}
 (async () => {
+  const paletteCases = checkSurfacePalette();
+  await checkPercentages();
   const old = backend({ ambient: { enabled: false, blur: 45, fps: 39.4, flashWarning: false } });
   const upgraded = new Store(old.storage, defaults);await upgraded.ready;
   assert.equal(upgraded.values.enabled, false);assert.equal(upgraded.values.blur, 45);
   assert.equal(upgraded.values.fps, 39);assert.equal(upgraded.values.flashWarning, false);
+  for (const key of ['surfaceDensity', 'controlDensityOffset', 'readingDensityOffset', 'navigationDensityOffset']) {
+    assert.equal(upgraded.values[key], defaults[key], 'Older profiles receive the new appearance defaults');
+  }
   assert.deepEqual(old.writes, [], 'Reading an older profile does not overwrite or migrate it destructively');
   upgraded.dispose();
 
@@ -71,9 +223,16 @@ function assertAnySaveError(change, expected) {
   assert.deepEqual(shared.writes.at(-1), { 'yac-setting:blur': 70 }, 'Unrelated sliders save only their own key');
   assert.equal(a.values.blur, 70);
   await Promise.all([a.set('saturation', 155, true), b.set('strength', 15, true)]);
+  const appearanceEdits = { surfaceDensity: 72, controlDensityOffset: -20, readingDensityOffset: 15, navigationDensityOffset: 30 };
+  for (const [key, value] of Object.entries(appearanceEdits)) {
+    await a.set(key, value, true);
+    assert.equal(b.values[key], value, `${key} reaches another open tab`);
+    assert.deepEqual(shared.writes.at(-1), { ['yac-setting:' + key]: value }, `${key} persists only its own preference`);
+  }
   const reload = new Store(shared.storage, defaults);await reload.ready;
   assert.equal(reload.values.saturation, 155);assert.equal(reload.values.strength, 15);
   assert.equal(reload.values.flashWarning, false);
+  for (const [key, value] of Object.entries(appearanceEdits)) assert.equal(reload.values[key], value, `${key} survives reload`);
   assert.deepEqual(shared.data.ambient, { blur: 42 }, 'The legacy bag remains intact');
   let notifications = 0;
   const deduplicated = new Store(shared.storage, defaults, { onChange: () => notifications++ });await deduplicated.ready;
@@ -105,6 +264,15 @@ function assertAnySaveError(change, expected) {
   assert.equal(normalized.values.strength, 15);assert.equal(normalized.values.blur, 160);
   assert.equal(normalized.values.fps, 60);assert.equal(normalized.values.language, 'ja');assert.equal(normalized.values.flashWarning, true);
   await normalized.set('blur', NaN, true);await normalized.set('unknown', 12, true);
+  for (const key of ['surfaceDensity', 'controlDensityOffset', 'readingDensityOffset', 'navigationDensityOffset']) {
+    for (const value of [NaN, Infinity, -Infinity, null, '35']) {
+      assert.equal(normalized.normalize(key, value), undefined);
+      await normalized.set(key, value, true);
+    }
+    assert.equal(normalized.normalize(key, -1000), key === 'surfaceDensity' ? 0 : -30);
+    assert.equal(normalized.normalize(key, 1000), key === 'surfaceDensity' ? 100 : 30);
+    assert.equal(normalized.normalize(key, 12.5), 12.5);
+  }
   assert.deepEqual(checked.writes, [], 'Malformed and unknown fields cannot be persisted');
   normalized.dispose();
   let disposedCalls = 0;
@@ -203,5 +371,5 @@ function assertAnySaveError(change, expected) {
   await abandonedBackend.fail(1, lateError);await lateFailure;
   assert.equal(abandonedSave.changes.length, beforeLateCompletion, 'Disposed tabs receive no late success or failure callback');
   assert.equal(abandonedBackend.listeners.size, 0);
-  console.log('PASS: legacy preferences, concurrent saves, live synchronization, pending-read edits, validation, persistence failures, retries, stale completions and disposal');
+  console.log(`PASS: ${paletteCases} surface palette combinations, appearance persistence and synchronization, legacy preferences, concurrent saves, pending-read edits, validation, persistence failures, retries, stale completions and disposal`);
 })().catch(error => { console.error(error);process.exitCode = 1; });

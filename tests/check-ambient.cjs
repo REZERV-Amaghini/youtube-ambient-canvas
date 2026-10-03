@@ -9,7 +9,7 @@ const vm = require('node:vm');
 function harness(workerMode = false, { videoFrameCallbacks = false, idleCallbacks = true, scrollBlend = () => 0 } = {}) {
   const nodes = [], raf = new Map(), intervals = new Map(), renders = [], inspections = [];
   const idle = new Map(), timeouts = new Map(), observers = [], videoFrames = new Map(), resizeObservers = [];
-  const stats = { surfaceScans: 0, rectReads: 0, computedStyleReads: 0, monitorSamples: 0, monitorResets: 0, activityReads: 0 };
+  const stats = { surfaceScans: 0, surfaceSubtreeQueries: 0, rectReads: 0, computedStyleReads: 0, monitorSamples: 0, monitorResets: 0, activityReads: 0 };
   const workerResponses = [];
   let now = 0, id = 0, resolveStorage, flash = false, presentedFrames = 0, worker, renderer;
   const splitOutside = (text, delimiters) => {
@@ -145,7 +145,11 @@ function harness(workerMode = false, { videoFrameCallbacks = false, idleCallback
     contains(node) { return node === this || this.children.some(child => child.contains(node)); }
     attachShadow() { this.shadowRoot = new Element('#shadow'); this.shadowRoot.host = this; return this.shadowRoot; }
     getBoundingClientRect() { stats.rectReads++; return { ...this.rect, right: this.rect.left + this.rect.width, bottom: this.rect.top + this.rect.height }; }
-    focus() { document.activeElement = this; }
+    focus() {
+      if (this.disabled || !this.isConnected) return;
+      for (let node = this; node; node = node.parentElement || node.host) if (node.hidden) return;
+      document.activeElement = this;
+    }
     click() { this.dispatchEvent(new Event('click')); }
     showModal() { this.open = true; this.modalCalls = (this.modalCalls || 0) + 1; }
     close() { this.open = false; }
@@ -153,12 +157,15 @@ function harness(workerMode = false, { videoFrameCallbacks = false, idleCallback
     matches(selector) { return matches(this, selector); }
     closest(selector) { for (let node = this; node; node = node.parentElement) if (node.matches(selector)) return node; return null; }
     querySelectorAll(selector) { const result = []; const walk = element => { for (const child of element.children) { if (child.matches(selector)) result.push(child); walk(child); } }; walk(this); return result; }
-    querySelector(selector) { return this.querySelectorAll(selector)[0] || null; }
+    querySelector(selector) {
+      if (selector.startsWith('body,ytd-app,')) stats.surfaceSubtreeQueries++;
+      return this.querySelectorAll(selector)[0] || null;
+    }
   }
   const document = new Target(); document.hidden = false; document.fullscreenElement = null;
   document.createElement = tag => new Element(tag); document.createElementNS = (_, tag) => new Element(tag);
   document.createTextNode = text => { const node = new Element('#text'); node.textContent = text; return node; };
-  document.documentElement = new Element('html'); document.body = new Element('body'); document.documentElement.append(document.body);
+  document.documentElement = new Element('html'); document.head = new Element('head'); document.body = new Element('body'); document.documentElement.append(document.head, document.body);
   document.getElementById = value => nodes.find(node => node.id === value && node.isConnected && !node.host) || null;
   document.querySelector = selector => document.documentElement.querySelector(selector);
   document.querySelectorAll = selector => { stats.surfaceScans++; return document.documentElement.querySelectorAll(selector); };
@@ -238,7 +245,7 @@ function harness(workerMode = false, { videoFrameCallbacks = false, idleCallback
     advance: delta => { now += delta; flushTasks(); },
     discover: () => { for (const callback of intervals.values()) callback(); flushTasks(); },
     resize: () => { for (const observer of resizeObservers) if (observer.target) observer.callback(); flushTasks(); },
-    event: (target, type) => target.dispatchEvent(new Event(type)),
+    event: (target, type, values = {}) => target.dispatchEvent(new Event(type, values)),
     flash: value => { flash = value; },
     get: id => nodes.find(node => node.id === id),
     enabled: () => nodes.find(node => node.localName === 'input' && node.getAttribute('aria-label') === 'アンビエント背景')
@@ -251,10 +258,83 @@ async function main() {
   assert.equal(h.document.documentElement.classList.contains('yac-active'), false, 'no startup activation before saved settings');
   assert.equal(h.renders.length, 0, 'no startup background render before settings');
   await h.load({ enabled: false });
+  const palette = h.get('yac-surface-palette');
+   const density = h.get('yac-surfaceMultiplier');
+  const backgroundStrength = h.get('yac-strength').value;
+  const originalPalette = palette.textContent;
+  density.value = 0; h.event(density, 'input');
+  assert.notEqual(palette.textContent, originalPalette, 'interface shade updates even with ambient OFF');
+  assert.match(palette.textContent, /--yac-control-opacity:0\.0000/, 'shared palette reaches fully transparent endpoint');
+  assert.equal(h.get('yac-strength').value, backgroundStrength, 'interface shade does not change video-background strength');
+  const changedPalette = palette.textContent;
+  h.tick(); h.tick();
+  assert.equal(palette.textContent, changedPalette, 'frame loop leaves interface palette alone');
+   density.value = 1; h.event(density, 'input');
+  assert.match(palette.textContent, /--yac-control-opacity:0\.2200/, 'shared palette reaches dense endpoint');
+   const roleOffset = h.get('yac-readingDensity');
+   roleOffset.value = 70; h.event(roleOffset, 'input');
+  assert.match(palette.textContent, /--yac-control-opacity:0\.2200/, 'reading adjustment leaves controls unchanged');
+  assert.match(palette.textContent, /--yac-reading-opacity:0\.5180/, 'reading adjustment changes reading palette');
   assert.equal(h.document.documentElement.classList.contains('yac-active'), false, 'saved OFF remains OFF');
   assert.equal(h.renders.length, 0);
   h.tick(); assert.ok(h.inspections.length > 0, 'OFF still samples for warnings');
-  h.get('yac-settings-button').click(); assert.equal(h.get('yac-controls').hidden, false, 'OFF settings remain accessible');
+   h.get('yac-settings-button').click(); assert.equal(h.get('yac-controls').hidden, false, 'OFF settings remain accessible');
+   const panel = h.get('yac-controls'), menu = h.get('yac-settings-menu');
+   assert.equal(h.get('yac-enabled').parentElement.parentElement, h.get('yac-launcher'), 'ambient toggle is beside the settings entrance');
+   assert.equal(panel.contains(h.get('yac-enabled')), false, 'background toggle works independently of the settings dialog');
+   assert.equal(h.player.querySelectorAll('.ytp-settings-button').length, 1, 'native settings button is preserved');
+   assert.equal(menu.children.length, 4, 'home presents four settings categories');
+   h.get('yac-menu-surfaces').click();
+    assert.equal(menu.hidden, true);assert.equal(h.get('yac-page-surfaces').hidden, false);
+    const info = h.get('yac-page-surfaces').querySelector('.info');
+    const hint = h.get('yac-surfaceMultiplier-hint'), helpParent = info.closest('.setting-row');
+    assert.equal(hint.hidden, true, 'help starts hidden in both DOM and CSS');
+    assert.equal(info.getAttribute('aria-describedby'), hint.id, 'the help trigger describes its tooltip');
+    info.focus();h.event(info, 'focus');
+    assert.equal(info.getAttribute('aria-expanded'), 'true', 'keyboard focus opens and announces help');
+    assert.equal(hint.hidden, false);
+     const detailHeight = panel.style.height;
+     h.resize();assert.equal(panel.style.height, detailHeight, 'help keeps the detail panel anchored at a stable height');
+     const helpWork = { stats: { ...h.stats }, renders: h.renders.length, samples: h.inspections.length, palette: palette.textContent };
+    h.event(panel, 'keydown', { key: 'Escape' });
+    assert.equal(info.getAttribute('aria-expanded'), 'false');assert.equal(h.document.activeElement, info, 'Escape dismisses focus-only help without moving focus');
+    assert.equal(hint.hidden, true);
+    assert.equal(h.get('yac-page-surfaces').hidden, false, 'dismissing help keeps the category open');
+    h.event(helpParent, 'pointerleave');
+    assert.equal(hint.hidden, true, 'a dismissed tooltip stays hidden while its trigger remains focused');
+    density.focus();h.event(info, 'blur');
+    h.event(info, 'pointerenter', { pointerType: 'touch' });
+    assert.equal(hint.hidden, true, 'touch hover does not open transient help');
+    h.event(info, 'pointerenter', { pointerType: 'mouse' });
+    assert.equal(hint.hidden, false, 're-entering the information button opens pointer help');
+    h.event(info, 'pointerleave', { pointerType: 'mouse', relatedTarget: hint });
+    assert.equal(hint.hidden, false, 'moving from the trigger onto its tooltip keeps help readable');
+    h.event(helpParent, 'pointerleave');
+    assert.equal(hint.hidden, true, 'unfocused transient help closes only after leaving the whole row');
+    h.event(info, 'pointerenter', { pointerType: 'mouse' });info.focus();h.event(info, 'focus');
+    info.click();h.event(helpParent, 'pointerleave');density.focus();h.event(info, 'blur');
+    assert.equal(hint.hidden, false, 'click-pinned help survives pointer and focus leaving');
+    info.focus();h.event(info, 'focus');info.click();
+    assert.equal(hint.hidden, true, 'a second click closes pinned help even while the trigger is focused');
+    assert.equal(info.getAttribute('aria-expanded'), 'false');
+     info.click();h.event(panel, 'keydown', { key: 'Escape' });
+     assert.equal(hint.hidden, true);assert.equal(h.document.activeElement, info, 'Escape also dismisses pinned help without moving focus');
+     assert.equal(h.get('yac-page-surfaces').hidden, false);
+     h.flushTasks();
+     assert.deepEqual(h.stats, helpWork.stats, 'help interactions do not rescan surfaces, probe video geometry or reset warning samples');
+     assert.equal(h.renders.length, helpWork.renders, 'help interactions do not paint an extra ambient frame');
+     assert.equal(h.inspections.length, helpWork.samples, 'help interactions do not capture an extra video sample');
+     assert.equal(palette.textContent, helpWork.palette, 'help interactions preserve all surface shades');
+   density.value = .4;h.event(density, 'input');
+   assert.match(roleOffset.getAttribute('aria-valuetext'), /28%/, 'screen reader announces the individual percentage multiplied by the master');
+   assert.match(palette.textContent, /--yac-reading-opacity:0\.2072/, 'per-category percentages use multiplication');
+   h.event(panel, 'keydown', { key: 'Escape' });
+   assert.equal(menu.hidden, false);assert.equal(panel.hidden, false, 'Escape returns from details to the menu');
+   assert.equal(h.document.activeElement, h.get('yac-menu-surfaces'), 'back navigation returns focus to the category');
+   h.get('yac-settings-close').click();
+   assert.equal(panel.hidden, true);assert.equal(h.document.activeElement, h.get('yac-settings-button'), 'close restores focus to the icon button');
+   h.get('yac-settings-button').click();
+   assert.equal(menu.hidden, false, 'reopening begins at the settings menu');
   h.enabled().checked = true; h.event(h.enabled(), 'input'); h.tick();
   assert.ok(h.renders.length > 0, 'ON paints background');
   h.enabled().checked = false; h.event(h.enabled(), 'input');
@@ -288,10 +368,55 @@ async function main() {
   assert.match(css, /background:#1c1c1c/, 'warning dialog has opaque dark background');
   assert.match(css, /dialog::backdrop/, 'warning has backdrop');
   h.event(h.document, 'yac-dispose');
+   assert.equal(palette.isConnected, false, 'dispose removes generated palette');
+   assert.equal(h.get('yac-launcher').isConnected, false, 'dispose removes both settings entrances');
   assert.equal(h.raf.size, 0); assert.equal(h.intervals.size, 0);
   assert.equal(h.storageListeners.size, 0, 'dispose removes storage subscription');
   for (const target of [h.document, h.window, h.video]) assert.ok([...target.listeners.values()].every(list => list.length === 0), 'dispose removes controller listeners');
   console.log(`PASS (${workerMode ? 'worker callback' : 'main'}): ambient startup, OFF/fullscreen monitoring, panel, seek/geometry, clip ownership, modal and disposal`);
+  for (const openerState of ['usable', 'disabled', 'hidden', 'hidden-parent', 'removed']) {
+    const focusCase = harness(workerMode);
+    await focusCase.load({ enabled: true });
+    const wrapper = focusCase.document.createElement('div'), opener = focusCase.document.createElement('button');
+    wrapper.append(opener);focusCase.player.append(wrapper);opener.focus();
+    focusCase.flash(true);focusCase.tick();
+    const modal = focusCase.get('yac-flash-warning').shadowRoot.querySelector('dialog');
+    assert.equal(modal.open, true);
+    const strength = focusCase.get('yac-strength').value;
+    if (openerState === 'disabled') opener.disabled = true;
+    else if (openerState === 'hidden') opener.hidden = true;
+    else if (openerState === 'hidden-parent') wrapper.hidden = true;
+    else if (openerState === 'removed') opener.remove();
+    if (openerState === 'usable') modal.querySelector('.actions').children[0].click();
+    else focusCase.event(modal, 'cancel');
+    assert.equal(modal.open, false);
+    assert.equal(focusCase.document.activeElement, openerState === 'usable' ? opener : focusCase.get('yac-settings-button'), openerState + ' opener has a usable focus return');
+    assert.equal(focusCase.video.paused, false, 'dismissing the warning keeps playback running');
+    assert.equal(focusCase.get('yac-strength').value, strength, 'focus return never changes ambient strength');
+    focusCase.event(focusCase.document, 'yac-dispose');
+  }
+  console.log(`PASS (${workerMode ? 'worker callback' : 'main'}): warning focus return for usable, disabled, hidden, hidden-parent and removed openers`);
+  for (const language of ['ja', 'en']) for (const initialStrength of [0, 5, 15, 65]) {
+    const reductionCase = harness(workerMode);
+    await reductionCase.load({ strength: initialStrength, language });
+    const loadedStrength = Number(reductionCase.get('yac-strength').value);
+    assert.equal(loadedStrength, Math.max(15, initialStrength), 'saved strength is normalized to the existing 15% minimum before warning interaction');
+    reductionCase.flash(true);reductionCase.tick();
+    const modal = reductionCase.get('yac-flash-warning').shadowRoot.querySelector('dialog');
+    assert.equal(modal.open, true);
+    const reduce = modal.querySelector('.actions').children[1], label = reduce.textContent;
+    reduce.click();
+    for (let settle = 0; settle < 20; settle++) await Promise.resolve();
+    const resultingStrength = Number(reductionCase.get('yac-strength').value);
+    assert.equal(resultingStrength, 15, 'warning action applies the advertised 15% preset');
+    assert.ok(resultingStrength <= loadedStrength, 'warning action must never increase the current normalized ambient strength');
+    assert.equal(modal.open, false, 'successful warning action closes the modal');
+    assert.equal(reductionCase.video.paused, false);
+    assert.ok(label.includes('15%'), 'warning action announces the actual preset');
+    assert.ok(label.includes(language === 'ja' ? '濃さを下げる' : 'Reduce strength'));
+    reductionCase.event(reductionCase.document, 'yac-dispose');
+  }
+  console.log(`PASS (${workerMode ? 'worker callback' : 'main'}): warning preset preserves the normalized minimum and reduces 65%, in Japanese and English`);
  }
 }
 module.exports = { harness };

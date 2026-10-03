@@ -8,6 +8,35 @@ const tick = h => h.tick({ delta: 1000 / 120 });
 
 (async () => {
   for (const workerMode of [false, true]) {
+    for (const videoFrameCallbacks of [false, true]) {
+      const ui = harness(workerMode, { videoFrameCallbacks });
+      await ui.load({ enabled: true, flashWarning: false, avoidBars: false, fillBars: false });
+      ui.video.paused = true; tick(ui);
+      const captures = total(ui), reads = ui.stats.rectReads;
+      for (const [key, value] of [['surfaceMultiplier', .4], ['controlDensity', 70], ['readingDensity', 60], ['navigationDensity', 50], ['language', 'en']]) {
+        const field = ui.get('yac-' + key); field.value = value; ui.event(field, 'input');
+        assert.equal(total(ui), captures, key + ' does not force a duplicate video capture');
+        assert.equal(ui.stats.rectReads, reads, key + ' does not probe background geometry');
+      }
+      assert.match(ui.get('yac-surface-palette').textContent, /--yac-reading-opacity:0\.177600/, 'UI-only edits still update their shared palette');
+      for (let n = 0; n < 16; n++) tick(ui);
+      assert.equal(total(ui), captures, 'UI edits do not leave a forced repaint latched for later ticks');
+      ui.get('yac-blur').value = 80; ui.event(ui.get('yac-blur'), 'input'); tick(ui);
+      assert.ok(total(ui) > captures, 'ambient preferences still repaint the paused current frame');
+      stop(ui);
+    }
+    if (workerMode) {
+      const heldUI = harness(true);
+      await heldUI.load({ enabled: true, flashWarning: true });
+      heldUI.tick({ flush: false });
+      assert.ok(heldUI.worker.pending, 'a real Worker submission is still outstanding');
+      const captures = total(heldUI), samples = heldUI.stats.monitorSamples;
+      heldUI.get('yac-surfaceMultiplier').value = .2; heldUI.event(heldUI.get('yac-surfaceMultiplier'), 'input');
+      heldUI.flushWorkers();
+      assert.equal(total(heldUI), captures, 'shade edit cannot enqueue another capture behind a busy Worker');
+      assert.equal(heldUI.stats.monitorSamples, samples + 1, 'shade edit preserves the in-flight frame for warning analysis');
+      stop(heldUI);
+    }
     const idle = harness(workerMode, { videoFrameCallbacks: true });
     await idle.load({ enabled: false, flashWarning: false });
     tick(idle);
